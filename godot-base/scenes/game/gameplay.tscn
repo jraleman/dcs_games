@@ -1,0 +1,82 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/game/gameplay.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+
+[node name="Gameplay" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="Background" parent="BackgroundLayer" instance=ExtResource("2_background")]
+
+[node name="Shape" type="Polygon2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(960, 540)
+color = Color(0.686275, 0.866667, 0.917647, 0.9)
+polygon = PackedVector2Array(0, -78, 72, 46, -72, 46)
+
+[node name="HUD" type="CanvasLayer" parent="."]
+unique_name_in_owner = true
+
+[node name="Overlay" type="Control" parent="HUD"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Margins" type="MarginContainer" parent="HUD/Overlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 36
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 36
+
+[node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TopBar" type="HBoxContainer" parent="HUD/Overlay/Margins/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 34
+text = "Gameplay placeholder"
+vertical_alignment = 1
+
+[node name="PauseButton" type="Button" parent="HUD/Overlay/Margins/Layout/TopBar"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Pause"
+
+[node name="Spacer" type="Control" parent="HUD/Overlay/Margins/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Hint" type="Label" parent="HUD/Overlay/Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 24
+text = "Esc or the Start button pauses"
+horizontal_alignment = 1
+
+[connection signal="pressed" from="HUD/Overlay/Margins/Layout/TopBar/PauseButton" to="." method="_on_pause_button_pressed"]

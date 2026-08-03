@@ -1,0 +1,337 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/menus/settings_menu.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+
+[node name="SettingsMenu" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+first_focus = NodePath("Margins/Layout/Header/BackButton")
+back_scene = "res://scenes/menus/main_menu.tscn"
+margins = NodePath("Margins")
+
+[node name="Background" parent="." instance=ExtResource("2_background")]
+
+[node name="Margins" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_constants/margin_left = 134
+theme_override_constants/margin_top = 54
+theme_override_constants/margin_right = 134
+theme_override_constants/margin_bottom = 54
+
+[node name="Layout" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="Header" type="HBoxContainer" parent="Margins/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="Margins/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 56
+text = "Settings"
+vertical_alignment = 1
+
+[node name="BackButton" type="Button" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "Back"
+
+[node name="Tabs" type="TabContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="Audio" type="ScrollContainer" parent="Margins/Layout/Tabs"]
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Pad" type="MarginContainer" parent="Margins/Layout/Tabs/Audio"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 22
+
+[node name="List" type="VBoxContainer" parent="Margins/Layout/Tabs/Audio/Pad"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 22
+
+[node name="MasterRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Audio/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List/MasterRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Master volume"
+vertical_alignment = 1
+
+[node name="MasterSlider" type="HSlider" parent="Margins/Layout/Tabs/Audio/Pad/List/MasterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+value = 0.8
+
+[node name="MasterValue" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List/MasterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "80%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="MusicRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Audio/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List/MusicRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Music"
+vertical_alignment = 1
+
+[node name="MusicSlider" type="HSlider" parent="Margins/Layout/Tabs/Audio/Pad/List/MusicRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+value = 0.7
+
+[node name="MusicValue" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List/MusicRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "70%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="SfxRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Audio/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List/SfxRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Sound effects"
+vertical_alignment = 1
+
+[node name="SfxSlider" type="HSlider" parent="Margins/Layout/Tabs/Audio/Pad/List/SfxRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+value = 0.8
+
+[node name="SfxValue" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List/SfxRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "80%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="MuteRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Audio/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List/MuteRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Mute everything"
+vertical_alignment = 1
+
+[node name="MuteToggle" type="CheckButton" parent="Margins/Layout/Tabs/Audio/Pad/List/MuteRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Display" type="ScrollContainer" parent="Margins/Layout/Tabs"]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Pad" type="MarginContainer" parent="Margins/Layout/Tabs/Display"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 22
+
+[node name="List" type="VBoxContainer" parent="Margins/Layout/Tabs/Display/Pad"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 22
+
+[node name="WindowModeRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Display/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Display/Pad/List/WindowModeRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Window mode"
+vertical_alignment = 1
+
+[node name="WindowMode" type="OptionButton" parent="Margins/Layout/Tabs/Display/Pad/List/WindowModeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VSyncRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Display/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Display/Pad/List/VSyncRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "V-Sync"
+vertical_alignment = 1
+
+[node name="VSyncToggle" type="CheckButton" parent="Margins/Layout/Tabs/Display/Pad/List/VSyncRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="MaxFpsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Display/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Display/Pad/List/MaxFpsRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Frame rate limit"
+vertical_alignment = 1
+
+[node name="MaxFps" type="OptionButton" parent="Margins/Layout/Tabs/Display/Pad/List/MaxFpsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="UiScaleRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Display/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Display/Pad/List/UiScaleRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Interface size"
+vertical_alignment = 1
+
+[node name="UiScaleSlider" type="HSlider" parent="Margins/Layout/Tabs/Display/Pad/List/UiScaleRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 0.75
+max_value = 1.5
+step = 0.05
+value = 1.0
+
+[node name="UiScaleValue" type="Label" parent="Margins/Layout/Tabs/Display/Pad/List/UiScaleRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Game" type="ScrollContainer" parent="Margins/Layout/Tabs"]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Pad" type="MarginContainer" parent="Margins/Layout/Tabs/Game"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 22
+
+[node name="List" type="VBoxContainer" parent="Margins/Layout/Tabs/Game/Pad"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 22
+
+[node name="ShowFpsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/ShowFpsRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Show FPS counter"
+vertical_alignment = 1
+
+[node name="ShowFpsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Game/Pad/List/ShowFpsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="ResetRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/ResetRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Restore defaults"
+vertical_alignment = 1
+
+[node name="ResetButton" type="Button" parent="Margins/Layout/Tabs/Game/Pad/List/ResetRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Reset"
+
+[node name="Hint" type="Label" parent="Margins/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.454902, 0.529412, 0.568627, 1)
+theme_override_font_sizes/font_size = 22
+text = "Changes are saved automatically  ·  F11 toggles fullscreen"
+
+[connection signal="pressed" from="Margins/Layout/Header/BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="Margins/Layout/Tabs/Game/Pad/List/ResetRow/ResetButton" to="." method="_on_reset_pressed"]

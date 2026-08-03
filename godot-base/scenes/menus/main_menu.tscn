@@ -1,0 +1,131 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/menus/main_menu.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+
+[node name="MainMenu" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+first_focus = NodePath("Margins/Layout/ButtonRow/Buttons/PlayButton")
+margins = NodePath("Margins")
+
+[node name="Background" parent="." instance=ExtResource("2_background")]
+
+[node name="Margins" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_constants/margin_left = 134
+theme_override_constants/margin_top = 54
+theme_override_constants/margin_right = 134
+theme_override_constants/margin_bottom = 54
+
+[node name="Layout" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SpacerHead" type="Control" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Header" type="VBoxContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 88
+text = "Game Title"
+autowrap_mode = 3
+
+[node name="Rule" type="ColorRect" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 5)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+color = Color(0.686275, 0.866667, 0.917647, 1)
+
+[node name="Tagline" type="Label" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 28
+text = "A DeskCanSaw Games production"
+autowrap_mode = 3
+
+[node name="SpacerTop" type="Control" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.7
+mouse_filter = 2
+
+[node name="ButtonRow" type="HBoxContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Buttons" type="VBoxContainer" parent="Margins/Layout/ButtonRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PlayButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+layout_mode = 2
+text = "Play"
+
+[node name="SettingsButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+layout_mode = 2
+text = "Settings"
+
+[node name="CreditsButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+layout_mode = 2
+text = "Credits"
+
+[node name="QuitButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Quit"
+
+[node name="SpacerBottom" type="Control" parent="Margins/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Footer" type="HBoxContainer" parent="Margins/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="FooterLeft" type="Label" parent="Margins/Layout/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.454902, 0.529412, 0.568627, 1)
+theme_override_font_sizes/font_size = 22
+text = "DeskCanSaw Games"
+
+[node name="FooterRight" type="Label" parent="Margins/Layout/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.454902, 0.529412, 0.568627, 1)
+theme_override_font_sizes/font_size = 22
+text = "v0.1.0"
+horizontal_alignment = 2
+
+[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/PlayButton" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/SettingsButton" to="." method="_on_settings_pressed"]
+[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/CreditsButton" to="." method="_on_credits_pressed"]
+[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/QuitButton" to="." method="_on_quit_pressed"]
