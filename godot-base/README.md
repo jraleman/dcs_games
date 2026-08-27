@@ -3,8 +3,8 @@
 A Godot 4 starting point for DeskCanSaw Games projects. It ships the parts every
 game needs before it is a game: the studio sting, an intro, a main menu,
 settings that persist, credits, a pause overlay and a placeholder gameplay
-scene — all built to look right from a phone in portrait to an ultrawide
-monitor.
+scene — plus the unlockable Desk-Can-Saw minigame — all built to look right
+from a phone in portrait to an ultrawide monitor.
 
 Made with **Godot 4.7** (`gl_compatibility` renderer, so it exports to web and
 mobile without changes).
@@ -18,9 +18,13 @@ godot --path .            # or open project.godot in the editor
 The first scene is `scenes/boot/studio_logo.tscn`; from there the flow is:
 
 ```
-studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_select  ──►  instructions  ──►  gameplay
- (skippable)   (skippable)                 │                         (optional)          │
-                                           ├──►  settings_menu                         └──► pause_menu
+studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_select  ──►  instructions
+ (skippable)   (skippable)                 │                         (optional)
+                                           │                              │
+                                           │                    ┌─────────┴─────────┐
+                                           │                    ▼                   ▼
+                                           │                gameplay       slice_and_slash
+                                           ├──►  settings_menu
                                            └──►  credits
 ```
 
@@ -30,9 +34,9 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_se
 | --- | --- |
 | `scripts/game_info.gd` | Studio and game identity: title, tagline, intro cards, credits, palette. **Start here when renaming the game.** |
 | `autoload/settings.gd` | Stores, persists (`user://settings.cfg`) and applies player settings. |
-| `autoload/game_session.gd` | Holds the selected single-player or multiplayer configuration while moving between scenes. |
+| `autoload/game_session.gd` | Holds the selected game, player count, CPU configuration and controller assignment while moving between scenes. |
 | `autoload/audio_manager.gd` | Music crossfades, an 8-voice SFX pool, bus volumes, UI and gameplay sound cues. |
-| `autoload/achievement_manager.gd` | Persistent achievement registry and queued global achievement toasts. |
+| `autoload/achievement_manager.gd` | Persistent achievement registry, Desk-Can-Saw progression flags and queued global achievement toasts. |
 | `autoload/share_manager.gd` | Renders reusable 1200×630 session cards, downloads them on web and saves them for desktop sharing. |
 | `autoload/router.gd` | `Router.goto(path)` — scene changes with a fade. Owns the top overlay layer (fade + FPS counter). |
 | `ui/menu_screen.gd` | `MenuScreen` base class: UI sounds, focus handling, `ui_cancel` to go back, responsive margins. |
@@ -45,6 +49,10 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_se
 | `ui/components/splash_motion.gd` | Lightweight animated geometry for logo stings and splash screens. |
 | `scenes/game/gameplay.tscn` | Score game with single-player, local multiplayer and CPU-opponent modes. |
 | `scenes/game/triangle_target.tscn` | Reusable owned target with inactive/highlighted states and tap/click activation. |
+| `scenes/game/slice_and_slash.tscn` | Unlockable Desk-Can-Saw solo/local-multiplayer mode using the existing HUD, pause and results lifecycle. |
+| `scenes/game/slice_can.gd` | Falling circular can placeholder with atomic one-time slicing. |
+| `scenes/game/chainsaw_cursor.gd` | Bounded rectangular chainsaw placeholder shared by mouse, keyboard and controller input. |
+| `scripts/slice_unlock_rules.gd` | Pure unlock and Race condition rules used by progression and regression tests. |
 
 ## Looking right on every screen
 
@@ -133,12 +141,22 @@ and the `pause` action handling, and the pause overlay works as-is.
 
 Gameplay keys can be changed under **Settings → Controls** and are saved in
 `user://settings.cfg`; assigning an occupied key swaps the two bindings.
-Controller 1 controls Player 1 and Controller 2 controls Player 2 with A, B and
-X. Single-player creates only Player 1's targets; multiplayer lets Player 2 use
-those controls or hands the red side to the CPU. Each active player has one
-bright target at a time: matching it earns a point, while choosing one of that
-player's dim targets costs a point. Human-controlled targets also accept mouse
-and touchscreen presses.
+Controller 1 controls Player 1 and Controller 2 controls Player 2. In Target
+Rush they use A, B and X. Single-player creates only Player 1's targets;
+multiplayer lets Player 2 use those controls or hands the red side to the CPU.
+Each active player has one bright target at a time: matching it earns a point,
+while choosing one of that player's dim targets costs a point. Human-controlled
+targets also accept mouse and touchscreen presses.
+
+Desk-Can-Saw uses direct movement instead: solo accepts the mouse, arrow
+keys, Controller 1's analog stick or its D-pad. In local multiplayer Player 1
+uses the mouse by default, Player 2 uses the arrow keys by default, and assigned
+controllers use the same Controller 1/Controller 2 ordering. A chainsaw is
+clamped to the playfield, and the first chainsaw to intersect a can earns that
+can's single point. The workshop wall, wood desk, power cords, aluminum cans,
+electric chainsaws, moving chain teeth, sparks, metal fragments and sawdust are
+all drawn procedurally. Chainsaw motors, startup revs, cuts and dropped-can
+clatter are synthesized at runtime and routed through the existing SFX bus.
 
 Mode selection uses a two-step setup: choose single player or multiplayer, then
 confirm the controller assignment. Multiplayer defaults to the CPU and can be
@@ -151,9 +169,28 @@ The instructions screen is shown after mode selection by default. Its
 preference can be restored under **Settings → Game**.
 
 The sample unlocks **Solo Starter** after the first completed single-player
-round and **First Win** after Player 1's first multiplayer victory. The FPS
-counter is available under **Settings → Display** and is drawn by `Router`, so
-it stays visible across scenes without each game implementing its own counter.
+round and **First Win** after Player 1's first multiplayer victory.
+Desk-Can-Saw is completely hidden until the player either scores at least 25
+in a solo Target Rush round or wins a multiplayer Target Rush round as Player 1
+with at least 25 points (Medium difficulty when the opponent is the CPU). Its
+first unlock triggers a dedicated fanfare and visual celebration. The
+Desk-Can-Saw's mode selector only shows the matching unlocked route: solo,
+local multiplayer, or both after both Target Rush conditions have been
+completed. A Player 2 win with at least 25 points awards **Race condition** but
+does not satisfy Player 1's multiplayer requirement. These flags and
+achievements are stored in `user://achievements.cfg` and never regress after
+later matches.
+
+Focused regression checks can be run headlessly:
+
+```bash
+godot --headless --path . --script res://tests/slice_and_slash_test.gd
+godot --headless --path . --script res://tests/slice_and_slash_scene_test.gd
+```
+
+The FPS counter is available under **Settings → Display** and is drawn by
+`Router`, so it stays visible across scenes without each game implementing its
+own counter.
 
 ## Placeholder assets
 

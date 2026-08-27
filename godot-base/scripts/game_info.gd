@@ -10,6 +10,10 @@ const WEBSITE := "https://deskcansaw.com"
 
 const TITLE := "DCS Base Game"
 const TAGLINE := "A DeskCanSaw Games production"
+const TARGET_RUSH_TITLE := "Target Rush"
+const SLICE_AND_SLASH_ID := "slice_and_slash"
+const DESK_CAN_SAW_TITLE := "Desk-Can-Saw"
+const RACE_CONDITION_ACHIEVEMENT_ID := "race_condition"
 
 ## Text cards shown by the placeholder intro, in order.
 const INTRO_CARDS: Array[String] = [
@@ -31,6 +35,11 @@ const ACHIEVEMENTS := {
 		"title": "First Win",
 		"description": "Win your first multiplayer round as Player 1.",
 		"badge": "WIN",
+	},
+	RACE_CONDITION_ACHIEVEMENT_ID: {
+		"title": "Race condition",
+		"description": "Lose to Player 2 after they score at least 25 points.",
+		"badge": "RACE",
 	},
 }
 

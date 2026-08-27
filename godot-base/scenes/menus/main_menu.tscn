@@ -151,6 +151,22 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Play"
 
+[node name="SliceAndSlashButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Desk-Can-Saw"
+
+[node name="SliceAndSlashRequirement" type="Label" parent="Margins/Layout/ButtonRow/Buttons"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 18
+text = "UNLOCKED"
+horizontal_alignment = 1
+autowrap_mode = 2
+
 [node name="SettingsButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
 layout_mode = 2
 text = "Settings"
@@ -190,6 +206,7 @@ text = "v0.1.0"
 horizontal_alignment = 2
 
 [connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/PlayButton" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/SliceAndSlashButton" to="." method="_on_slice_and_slash_pressed"]
 [connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/SettingsButton" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/CreditsButton" to="." method="_on_credits_pressed"]
 [connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/QuitButton" to="." method="_on_quit_pressed"]

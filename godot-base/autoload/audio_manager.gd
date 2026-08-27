@@ -9,6 +9,14 @@ const BUS_SFX := "SFX"
 
 const SFX_VOICES := 8
 const MIN_DB := -60.0
+const PROCEDURAL_MIX_RATE := 22050
+
+enum ProceduralSound {
+	CHAINSAW_LOOP,
+	CHAINSAW_START,
+	CAN_SLICE,
+	CAN_CLATTER,
+}
 
 ## Placeholder UI sounds — swap these for your own.
 const SFX_CLICK: AudioStream = preload("res://assets/audio/ui_click.wav")
@@ -20,6 +28,7 @@ var _music_next: AudioStreamPlayer
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_index := 0
 var _music_tween: Tween
+var _procedural_streams: Dictionary = {}
 
 
 func _ready() -> void:
@@ -123,9 +132,34 @@ func play_game_miss() -> void:
 	play_sfx(SFX_BACK, -1.0, 0.78)
 
 
+func chainsaw_motor_stream() -> AudioStreamWAV:
+	return _procedural_stream(ProceduralSound.CHAINSAW_LOOP)
+
+
+func play_chainsaw_start() -> void:
+	play_sfx(_procedural_stream(ProceduralSound.CHAINSAW_START), -5.0)
+
+
+func play_can_slice(streak := 1) -> void:
+	var pitch := clampf(0.94 + float(mini(streak, 10)) * 0.026, 0.94, 1.2)
+	play_sfx(_procedural_stream(ProceduralSound.CAN_SLICE), -1.0, pitch)
+	_play_delayed_sfx(SFX_FOCUS, 0.025, -8.0, pitch * 1.18)
+
+
+func play_can_clatter() -> void:
+	play_sfx(_procedural_stream(ProceduralSound.CAN_CLATTER), -7.0, 0.94)
+
+
 func play_achievement() -> void:
 	play_sfx(SFX_FOCUS, -2.0, 1.16)
 	_play_delayed_sfx(SFX_CLICK, 0.1, -1.0, 1.42)
+
+
+func play_level_unlock() -> void:
+	play_sfx(SFX_FOCUS, -1.0, 1.08)
+	_play_delayed_sfx(SFX_CLICK, 0.08, -0.5, 1.28)
+	_play_delayed_sfx(SFX_FOCUS, 0.18, -1.0, 1.42)
+	_play_delayed_sfx(SFX_CLICK, 0.3, 0.0, 1.56)
 
 
 func play_share() -> void:
@@ -149,6 +183,101 @@ func _play_delayed_sfx(
 	tween.tween_callback(
 		Callable(self, "play_sfx").bind(stream, volume_db, pitch_scale)
 	)
+
+
+func _procedural_stream(kind: int) -> AudioStreamWAV:
+	if _procedural_streams.has(kind):
+		return _procedural_streams[kind] as AudioStreamWAV
+
+	var duration := 0.3
+	var looping := false
+	match kind:
+		ProceduralSound.CHAINSAW_LOOP:
+			duration = 0.5
+			looping = true
+		ProceduralSound.CHAINSAW_START:
+			duration = 0.7
+		ProceduralSound.CAN_SLICE:
+			duration = 0.24
+		ProceduralSound.CAN_CLATTER:
+			duration = 0.38
+
+	var sample_count := maxi(int(PROCEDURAL_MIX_RATE * duration), 1)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for sample_index in range(sample_count):
+		var time := float(sample_index) / float(PROCEDURAL_MIX_RATE)
+		var progress := float(sample_index) / float(maxi(sample_count - 1, 1))
+		var sample := clampf(
+			_procedural_sample(kind, time, progress, sample_index),
+			-1.0,
+			1.0
+		)
+		data.encode_s16(sample_index * 2, roundi(sample * 32767.0))
+
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = PROCEDURAL_MIX_RATE
+	stream.stereo = false
+	stream.data = data
+	if looping:
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = sample_count
+	_procedural_streams[kind] = stream
+	return stream
+
+
+func _procedural_sample(
+	kind: int,
+	time: float,
+	progress: float,
+	sample_index: int
+) -> float:
+	match kind:
+		ProceduralSound.CHAINSAW_LOOP:
+			var motor_pulse := 0.9 + sin(TAU * 12.0 * time) * 0.08
+			return (
+				sin(TAU * 72.0 * time) * 0.3
+				+ sin(TAU * 144.0 * time + 0.35) * 0.22
+				+ sin(TAU * 432.0 * time) * 0.13
+				+ sin(TAU * 936.0 * time + 0.8) * 0.07
+			) * motor_pulse
+		ProceduralSound.CHAINSAW_START:
+			var start_envelope := sin(progress * PI)
+			var sweep := lerpf(42.0, 126.0, pow(progress, 0.72))
+			return (
+				sin(TAU * sweep * time) * 0.38
+				+ sin(TAU * sweep * 2.03 * time) * 0.2
+				+ _procedural_noise(sample_index) * 0.08
+			) * start_envelope
+		ProceduralSound.CAN_SLICE:
+			var cut_attack := minf(progress * 24.0, 1.0)
+			var cut_decay := exp(-progress * 7.5)
+			return (
+				_procedural_noise(sample_index) * 0.46
+				+ sin(TAU * (880.0 + progress * 720.0) * time) * 0.34
+				+ sin(TAU * 118.0 * time) * 0.18
+			) * cut_attack * cut_decay
+		ProceduralSound.CAN_CLATTER:
+			var clatter_attack := minf(progress * 30.0, 1.0)
+			var clatter_decay := exp(-progress * 4.8)
+			var second_impact := (
+				sin(TAU * 168.0 * (time - 0.09)) * 0.28
+				if time >= 0.09
+				else 0.0
+			)
+			return (
+				sin(TAU * 84.0 * time) * 0.34
+				+ second_impact
+				+ _procedural_noise(sample_index) * 0.2
+			) * clatter_attack * clatter_decay
+	return 0.0
+
+
+func _procedural_noise(sample_index: int) -> float:
+	var value := sin(float(sample_index) * 12.9898 + 78.233) * 43758.5453
+	return (value - floor(value)) * 2.0 - 1.0
 
 
 ## Wires click/focus sounds into every button under [param root], and makes

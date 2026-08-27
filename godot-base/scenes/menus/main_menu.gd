@@ -25,6 +25,8 @@ const BUTTON_PRESS_SCALE := Vector2(0.985, 0.985)
 @onready var _button_row: HBoxContainer = %ButtonRow
 @onready var _buttons: VBoxContainer = %Buttons
 @onready var _play_button: Button = %PlayButton
+@onready var _slice_and_slash_button: Button = %SliceAndSlashButton
+@onready var _slice_and_slash_requirement: Label = %SliceAndSlashRequirement
 @onready var _quit_button: Button = %QuitButton
 @onready var _footer_left: Label = %FooterLeft
 @onready var _footer_right: Label = %FooterRight
@@ -41,12 +43,15 @@ var _logo_focus_target := 0.0
 var _logo_kick := 0.0
 var _logo_kick_velocity := 0.0
 var _logo_scale_pulse := 0.0
+var _launching_game := false
 
 func _ready() -> void:
 	_title.text = GameInfo.TITLE
 	_tagline.text = GameInfo.TAGLINE
 	_footer_left.text = "%s  ·  %s" % [GameInfo.STUDIO, GameInfo.copyright_line()]
 	_footer_right.text = "v%s" % GameInfo.version()
+	_update_slice_and_slash_entry()
+	AchievementManager.progression_changed.connect(_on_progression_changed)
 	# Quitting is meaningless in a browser tab and unusual on mobile.
 	_quit_button.visible = not (OS.has_feature("web") or OS.has_feature("mobile"))
 
@@ -261,6 +266,25 @@ func _play_logo_intro() -> void:
 
 
 func _on_play_pressed() -> void:
+	_launch_game(false)
+
+
+func _on_slice_and_slash_pressed() -> void:
+	if not AchievementManager.is_level_unlocked(GameInfo.SLICE_AND_SLASH_ID):
+		return
+	_launch_game(true)
+
+
+func _launch_game(slice_and_slash: bool) -> void:
+	if _launching_game:
+		return
+	_launching_game = true
+	for button in _menu_buttons:
+		button.disabled = true
+	if slice_and_slash:
+		GameSession.select_slice_and_slash()
+	else:
+		GameSession.select_target_rush()
 	Router.goto(play_scene)
 
 
@@ -274,3 +298,36 @@ func _on_credits_pressed() -> void:
 
 func _on_quit_pressed() -> void:
 	Router.quit_game()
+
+
+func _update_slice_and_slash_entry() -> void:
+	var unlocked := AchievementManager.is_level_unlocked(GameInfo.SLICE_AND_SLASH_ID)
+	var single_player_unlocked := (
+		AchievementManager.is_slice_and_slash_single_player_unlocked()
+	)
+	var multiplayer_unlocked := (
+		AchievementManager.is_slice_and_slash_multiplayer_unlocked()
+	)
+	_slice_and_slash_button.visible = unlocked
+	_slice_and_slash_button.disabled = not unlocked
+	_slice_and_slash_requirement.visible = unlocked
+	if not unlocked:
+		return
+
+	_slice_and_slash_button.text = GameInfo.DESK_CAN_SAW_TITLE
+	var available_modes := PackedStringArray()
+	if single_player_unlocked:
+		available_modes.append("Single Player")
+	if multiplayer_unlocked:
+		available_modes.append("Local Multiplayer")
+	var mode_summary := " + ".join(available_modes)
+	_slice_and_slash_button.tooltip_text = "Available: %s." % mode_summary
+	_slice_and_slash_requirement.text = "UNLOCKED  |  %s" % mode_summary
+	_slice_and_slash_requirement.add_theme_color_override(
+		"font_color",
+		GameInfo.SKY
+	)
+
+
+func _on_progression_changed(_key: String, _value: bool) -> void:
+	_update_slice_and_slash_entry()

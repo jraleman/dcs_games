@@ -1,19 +1,30 @@
 extends MenuScreen
 
 @export_file("*.tscn") var instructions_scene := "res://scenes/menus/instructions.tscn"
-@export_file("*.tscn") var gameplay_scene := "res://scenes/game/gameplay.tscn"
 
 enum Step { PLAYER_COUNT, CONFIRM }
 
 @onready var _margins: MarginContainer = %Margins
+@onready var _screen_title: Label = $Margins/Layout/Header/Title
+@onready var _back_button: Button = $Margins/Layout/Header/BackButton
 @onready var _mode_grid: GridContainer = %ModeGrid
 @onready var _controller_grid: GridContainer = %ControllerGrid
 @onready var _selection_step: Control = %SelectionStep
 @onready var _confirm_step: Control = %ConfirmStep
 @onready var _selection_intro: Label = %Intro
+@onready var _single_player_card: PanelContainer = (
+	$Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer
+)
 @onready var _single_player_button: Button = %SinglePlayerButton
+@onready var _single_player_description: Label = (
+	$Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout/Description
+)
 @onready var _single_player_controls: Label = %SinglePlayerControls
 @onready var _multiplayer_card: PanelContainer = %Multiplayer
+@onready var _multiplayer_button: Button = %MultiplayerButton
+@onready var _multiplayer_description: Label = (
+	$Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout/Description
+)
 @onready var _multiplayer_controls: Label = %MultiplayerControls
 @onready var _selection_hint: Label = %SelectionHint
 @onready var _step_one_indicator: Label = %StepOneIndicator
@@ -24,6 +35,9 @@ enum Step { PLAYER_COUNT, CONFIRM }
 @onready var _confirm_description: Label = %ConfirmDescription
 @onready var _opponent_control: PanelContainer = %OpponentControl
 @onready var _player_one_control_keys: Label = %PlayerOneControlKeys
+@onready var _player_one_control_description: Label = (
+	$Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Layout/ControllerGrid/PlayerOneControl/Layout/Description
+)
 @onready var _opponent_control_title: Label = %OpponentControlTitle
 @onready var _opponent_control_keys: Label = %OpponentControlKeys
 @onready var _opponent_control_description: Label = %OpponentControlDescription
@@ -39,14 +53,17 @@ enum Step { PLAYER_COUNT, CONFIRM }
 var _step := Step.PLAYER_COUNT
 var _pending_mode := GameSession.GameMode.SINGLE_PLAYER
 var _page_tween: Tween
+var _single_player_available := true
+var _multiplayer_available := true
 
 
 func _ready() -> void:
 	first_focus = _single_player_button
 	margins = _margins
-	_opponent_toggle.set_pressed_no_signal(true)
+	_opponent_toggle.set_pressed_no_signal(not GameSession.is_slice_and_slash())
 	_populate_cpu_difficulties()
 	_cpu_difficulty.item_selected.connect(_on_cpu_difficulty_selected)
+	_configure_game_copy()
 	_configure_platform_options()
 	_update_control_copy()
 	_update_stepper()
@@ -56,7 +73,11 @@ func _ready() -> void:
 
 func _on_layout_changed(size: Vector2) -> void:
 	var portrait := Responsive.is_portrait(size)
-	_mode_grid.columns = 1 if portrait or not GameSession.multiplayer_available() else 2
+	_mode_grid.columns = (
+		1
+		if portrait or not (_single_player_available and _multiplayer_available)
+		else 2
+	)
 	_controller_grid.columns = (
 		1
 		if portrait or _pending_mode == GameSession.GameMode.SINGLE_PLAYER
@@ -65,16 +86,18 @@ func _on_layout_changed(size: Vector2) -> void:
 
 
 func _on_single_player_pressed() -> void:
+	if not _single_player_available:
+		return
 	_pending_mode = GameSession.GameMode.SINGLE_PLAYER
 	_update_confirmation()
 	_show_step(Step.CONFIRM)
 
 
 func _on_multiplayer_pressed() -> void:
-	if not GameSession.multiplayer_available():
+	if not _multiplayer_available:
 		return
 	_pending_mode = GameSession.GameMode.MULTIPLAYER
-	_opponent_toggle.set_pressed_no_signal(true)
+	_opponent_toggle.set_pressed_no_signal(not GameSession.is_slice_and_slash())
 	_update_confirmation()
 	_show_step(Step.CONFIRM)
 
@@ -97,12 +120,15 @@ func _on_previous_pressed() -> void:
 
 
 func _on_confirm_pressed() -> void:
+	if not _pending_mode_is_available():
+		push_warning("The selected game mode is not available.")
+		return
 	if _pending_mode == GameSession.GameMode.SINGLE_PLAYER:
 		GameSession.configure_single_player()
 	else:
 		var controller := (
 			GameSession.PlayerTwoController.CPU
-			if _opponent_toggle.button_pressed
+			if _opponent_toggle.button_pressed and not GameSession.is_slice_and_slash()
 			else GameSession.PlayerTwoController.HUMAN
 		)
 		GameSession.configure_multiplayer(controller, _selected_cpu_difficulty())
@@ -111,12 +137,20 @@ func _on_confirm_pressed() -> void:
 
 func _update_confirmation() -> void:
 	var single_player := _pending_mode == GameSession.GameMode.SINGLE_PLAYER
+	var slice_and_slash := GameSession.is_slice_and_slash()
+	_update_control_copy()
 	_opponent_control.visible = not single_player
-	_opponent_selector.visible = not single_player
-	var cpu_selected := not single_player and _opponent_toggle.button_pressed
+	_opponent_selector.visible = not single_player and not slice_and_slash
+	var cpu_selected := (
+		not single_player
+		and not slice_and_slash
+		and _opponent_toggle.button_pressed
+	)
 	_cpu_difficulty_panel.visible = cpu_selected
 
-	if single_player:
+	if slice_and_slash:
+		_update_slice_and_slash_confirmation(single_player)
+	elif single_player:
 		_mode_eyebrow.text = "SINGLE PLAYER"
 		_confirm_title.text = "Ready for a solo run?"
 		_confirm_description.text = (
@@ -162,8 +196,39 @@ func _update_confirmation() -> void:
 		)
 		_confirm_button.text = "Start vs CPU" if cpu_selected else "Start Local Multiplayer"
 
-	_update_toggle_labels()
+	if not slice_and_slash:
+		_update_toggle_labels()
 	_on_layout_changed(viewport_size())
+
+
+func _update_slice_and_slash_confirmation(single_player: bool) -> void:
+	if single_player:
+		_mode_eyebrow.text = "DESK-CAN-SAW · SINGLE PLAYER"
+		_confirm_title.text = "Ready to fire up the saw?"
+		_confirm_description.text = (
+			"Guide one electric chainsaw across the workshop desk and tear through "
+			+ "as many falling cans as possible before time runs out."
+		)
+		_confirm_hint.text = (
+			"Use the mouse, arrow keys, Controller 1 analog stick or its D-pad."
+		)
+		_confirm_button.text = "Start Solo Desk-Can-Saw"
+	else:
+		_mode_eyebrow.text = "DESK-CAN-SAW · LOCAL MULTIPLAYER"
+		_confirm_title.text = "Two saws, one workbench"
+		_confirm_description.text = (
+			"Race electric chainsaws across the same wood desk. Player 1 uses the "
+			+ "mouse and Player 2 uses the arrow keys by default."
+		)
+		_opponent_control_title.text = "PLAYER 2"
+		_opponent_control_keys.text = "ARROW KEYS · PAD 2 STICK / D-PAD"
+		_opponent_control_description.text = (
+			"Player 2 moves only the red chainsaw."
+		)
+		_confirm_hint.text = (
+			"P1: mouse or Pad 1   |   P2: arrows or Pad 2"
+		)
+		_confirm_button.text = "Start Local Desk-Can-Saw"
 
 
 func _populate_cpu_difficulties() -> void:
@@ -175,15 +240,100 @@ func _populate_cpu_difficulties() -> void:
 
 
 func _configure_platform_options() -> void:
-	var multiplayer_available := GameSession.multiplayer_available()
-	_multiplayer_card.visible = multiplayer_available
-	if multiplayer_available:
+	var platform_multiplayer_available := GameSession.multiplayer_available()
+	_single_player_available = true
+	_multiplayer_available = platform_multiplayer_available
+
+	if GameSession.is_slice_and_slash():
+		_single_player_available = (
+			AchievementManager.is_slice_and_slash_single_player_unlocked()
+		)
+		_multiplayer_available = (
+			platform_multiplayer_available
+			and AchievementManager.is_slice_and_slash_multiplayer_unlocked()
+		)
+
+	_single_player_card.visible = _single_player_available
+	_multiplayer_card.visible = _multiplayer_available
+	_select_default_mode()
+
+	if GameSession.is_slice_and_slash():
+		_update_slice_and_slash_availability_copy(
+			platform_multiplayer_available
+		)
+		return
+	if platform_multiplayer_available:
 		return
 	_selection_intro.text = "Mobile play is available in single-player mode."
 	_selection_hint.text = "Use touch, your remapped keys or a connected controller."
 
 
+func _select_default_mode() -> void:
+	if _single_player_available:
+		_pending_mode = GameSession.GameMode.SINGLE_PLAYER
+		first_focus = _single_player_button
+	elif _multiplayer_available:
+		_pending_mode = GameSession.GameMode.MULTIPLAYER
+		first_focus = _multiplayer_button
+	else:
+		first_focus = _back_button
+
+
+func _update_slice_and_slash_availability_copy(
+	platform_multiplayer_available: bool
+) -> void:
+	if _single_player_available and _multiplayer_available:
+		_selection_intro.text = (
+			"Choose how many electric saws are taking over the workshop desk."
+		)
+		_selection_hint.text = "You will confirm the separate player controls next."
+	elif _single_player_available:
+		_selection_intro.text = "Your unlocked single-player mode is ready."
+		_selection_hint.text = "Select Single Player to continue."
+	elif _multiplayer_available:
+		_selection_intro.text = "Your unlocked local multiplayer mode is ready."
+		_selection_hint.text = "Select Multiplayer to continue."
+	elif (
+		not platform_multiplayer_available
+		and AchievementManager.is_slice_and_slash_multiplayer_unlocked()
+	):
+		_selection_intro.text = (
+			"Your unlocked local multiplayer mode is unavailable on this device."
+		)
+		_selection_hint.text = "Return to the main menu to choose another game."
+	else:
+		_selection_intro.text = "No Desk-Can-Saw modes are available."
+		_selection_hint.text = "Return to the main menu to choose another game."
+
+
+func _configure_game_copy() -> void:
+	if not GameSession.is_slice_and_slash():
+		return
+	_screen_title.text = GameInfo.DESK_CAN_SAW_TITLE
+	_single_player_description.text = (
+		"Drive an electric chainsaw across the wood desk and shred every falling "
+		+ "can you can reach."
+	)
+	_multiplayer_description.text = (
+		"Share the workbench: Player 1 uses the mouse and Player 2 uses the arrow "
+		+ "keys, with assigned controllers available for either player."
+	)
+	_player_one_control_description.text = "Move the blue electric chainsaw."
+
+
 func _update_control_copy() -> void:
+	if GameSession.is_slice_and_slash():
+		_single_player_controls.text = "MOUSE · ARROW KEYS · PAD 1 STICK / D-PAD"
+		_multiplayer_controls.text = (
+			"P1 · MOUSE / PAD 1     P2 · ARROWS / PAD 2"
+		)
+		_player_one_control_keys.text = (
+			"MOUSE · PAD 1 STICK / D-PAD"
+			if _pending_mode == GameSession.GameMode.MULTIPLAYER
+			else "MOUSE · ARROWS · PAD 1"
+		)
+		return
+
 	var player_one_keys := Settings.control_summary(0, "  ")
 	var player_two_keys := Settings.control_summary(1, "  ")
 	_single_player_controls.text = "PLAYER 1 · KEYS %s · PAD A B X" % player_one_keys
@@ -249,11 +399,23 @@ func _center_page_pivot(page: Control) -> void:
 
 func _focus_current_step() -> void:
 	if _step == Step.PLAYER_COUNT:
-		_single_player_button.grab_focus()
-	elif _pending_mode == GameSession.GameMode.MULTIPLAYER:
+		if first_focus and first_focus.is_visible_in_tree():
+			first_focus.grab_focus()
+	elif (
+		_pending_mode == GameSession.GameMode.MULTIPLAYER
+		and not GameSession.is_slice_and_slash()
+	):
 		_opponent_toggle.grab_focus()
 	else:
 		_confirm_button.grab_focus()
+
+
+func _pending_mode_is_available() -> bool:
+	return (
+		_single_player_available
+		if _pending_mode == GameSession.GameMode.SINGLE_PLAYER
+		else _multiplayer_available
+	)
 
 
 func _update_stepper() -> void:
@@ -271,7 +433,7 @@ func _update_stepper() -> void:
 
 func _next_scene() -> String:
 	var show_instructions := bool(Settings.get_value("game/show_instructions", true))
-	return instructions_scene if show_instructions else gameplay_scene
+	return instructions_scene if show_instructions else GameSession.gameplay_scene_path()
 
 
 func go_back() -> void:

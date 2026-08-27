@@ -7,6 +7,7 @@ extends Node
 ## every transition looks the same and the tree is never swapped mid-fade.
 
 signal scene_changed(path: String)
+signal transition_finished(path: String)
 
 const FADE_TIME := 0.3
 const OVERLAY_LAYER := 128
@@ -63,6 +64,11 @@ func _process(_delta: float) -> void:
 	_fps.text = "%d FPS" % Engine.get_frames_per_second()
 
 
+func _input(_event: InputEvent) -> void:
+	if _busy:
+		get_viewport().set_input_as_handled()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_fullscreen"):
 		Settings.toggle_fullscreen()
@@ -78,6 +84,7 @@ func goto(path: String, fade := true) -> void:
 		return
 
 	_busy = true
+	_fade.mouse_filter = Control.MOUSE_FILTER_STOP
 	if fade:
 		await _fade_to(1.0)
 
@@ -95,11 +102,21 @@ func goto(path: String, fade := true) -> void:
 	if fade:
 		await _fade_to(0.0)
 	_busy = false
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	transition_finished.emit(current_scene_path)
+
+
+func is_transitioning() -> bool:
+	return _busy
 
 
 func quit_game() -> void:
 	if OS.has_feature("web"):
 		return
+	if _busy:
+		return
+	_busy = true
+	_fade.mouse_filter = Control.MOUSE_FILTER_STOP
 	await _fade_to(1.0)
 	get_tree().paused = false
 	get_tree().quit()

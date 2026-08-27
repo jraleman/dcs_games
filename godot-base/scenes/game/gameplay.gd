@@ -128,10 +128,12 @@ var _sharing := false
 var _cpu_reaction_min := 0.55
 var _cpu_reaction_max := 1.05
 var _cpu_accuracy := 0.82
+var _round_progression_notes := PackedStringArray()
 
 
 func _ready() -> void:
 	_rng.randomize()
+	GameSession.ensure_controller_assignments()
 	Settings.changed.connect(_on_setting_changed)
 	_configure_cpu_profile()
 	_configure_mode_ui()
@@ -295,10 +297,7 @@ func _target_for_controller_event(event: InputEventJoypadButton) -> TriangleTarg
 
 
 func _controller_player_index(device: int) -> int:
-	var connected_controllers := Input.get_connected_joypads()
-	connected_controllers.sort()
-	var assignment := connected_controllers.find(device)
-	return assignment if assignment == PLAYER_ONE or assignment == PLAYER_TWO else -1
+	return GameSession.controller_player_index(device)
 
 
 func _configure_mode_ui() -> void:
@@ -511,6 +510,7 @@ func _start_round() -> void:
 	_misses = [0, 0]
 	_best_streaks = [0, 0]
 	_round_achievements.clear()
+	_round_progression_notes.clear()
 	_active_targets = [null, null]
 	_cpu_action_time = -1.0
 	_round_active = true
@@ -864,6 +864,18 @@ func _spawn_round_confetti(color: Color) -> void:
 		_spawn_triangle_burst(to_global(position), color, true)
 
 
+func _celebrate_level_unlock() -> void:
+	AudioManager.play_level_unlock()
+	_show_announcement(
+		"%s UNLOCKED!" % GameInfo.DESK_CAN_SAW_TITLE.to_upper(),
+		GameInfo.SKY,
+		1.2
+	)
+	_flash_screen(GameInfo.SKY, 0.24)
+	_add_screen_shake(10.0)
+	_spawn_round_confetti(GameInfo.SKY)
+
+
 func _flash_screen(color: Color, alpha: float) -> void:
 	if _flash_tween and _flash_tween.is_valid():
 		_flash_tween.kill()
@@ -874,7 +886,11 @@ func _flash_screen(color: Color, alpha: float) -> void:
 	).set_ease(Tween.EASE_OUT)
 
 
-func _show_announcement(text: String, color: Color) -> void:
+func _show_announcement(
+	text: String,
+	color: Color,
+	hold_time := 0.28
+) -> void:
 	if _announcement_tween and _announcement_tween.is_valid():
 		_announcement_tween.kill()
 
@@ -898,7 +914,7 @@ func _show_announcement(text: String, color: Color) -> void:
 		1.0,
 		0.12
 	)
-	_announcement_tween.tween_interval(0.28)
+	_announcement_tween.tween_interval(hold_time)
 	_announcement_tween.tween_property(_announcement, "modulate:a", 0.0, 0.2)
 	_announcement_tween.parallel().tween_property(
 		_announcement,
@@ -1119,6 +1135,29 @@ func _on_round_timer_timeout() -> void:
 	elif player_one_total > player_two_total:
 		_unlock_round_achievement("first_win")
 
+	var progression_outcome := AchievementManager.record_slice_and_slash_match(
+		GameSession.is_single_player(),
+		player_one_total,
+		player_two_total,
+		GameSession.slice_unlock_multiplayer_eligible()
+	)
+	var level_unlocked_now := bool(progression_outcome.get("unlocked_now", false))
+	if level_unlocked_now:
+		_round_progression_notes.append(
+			"%s unlocked!" % GameInfo.DESK_CAN_SAW_TITLE
+		)
+	elif bool(progression_outcome.get("solo_qualified_now", false)):
+		_round_progression_notes.append("Solo unlock condition complete")
+	elif bool(progression_outcome.get("multiplayer_qualified_now", false)):
+		_round_progression_notes.append("Multiplayer unlock condition complete")
+
+	if SliceUnlockRules.earns_race_condition(
+		GameSession.is_single_player(),
+		player_one_total,
+		player_two_total
+	):
+		_unlock_round_achievement(GameInfo.RACE_CONDITION_ACHIEVEMENT_ID)
+
 	_round_highlight.text = _round_highlight_summary()
 	_round_result_color = celebration_color
 	_populate_score_screen(result_text, celebration_color)
@@ -1127,6 +1166,8 @@ func _on_round_timer_timeout() -> void:
 	_score_panel.hide()
 	_round_panel.show()
 	_animate_round_panel.call_deferred()
+	if level_unlocked_now:
+		_celebrate_level_unlock()
 	_play_again_button.grab_focus.call_deferred()
 
 
@@ -1207,13 +1248,15 @@ func _unlock_round_achievement(id: String) -> void:
 
 
 func _round_highlight_summary() -> String:
-	var summary := _best_combo_summary()
+	var parts := PackedStringArray([_best_combo_summary()])
+	parts.append_array(_round_progression_notes)
 	if _round_achievements.is_empty():
-		return summary
+		return "  |  ".join(parts)
 	var titles := PackedStringArray()
 	for achievement in _round_achievements:
 		titles.append(str(achievement.get("title", "Achievement")))
-	return "%s  |  Unlocked: %s" % [summary, ", ".join(titles)]
+	parts.append("Unlocked: %s" % ", ".join(titles))
+	return "  |  ".join(parts)
 
 
 func _share_payload() -> Dictionary:

@@ -1,7 +1,5 @@
 extends MenuScreen
 
-@export_file("*.tscn") var gameplay_scene := "res://scenes/game/gameplay.tscn"
-
 @onready var _margins: MarginContainer = %Margins
 @onready var _mode_label: Label = %ModeLabel
 @onready var _card: PanelContainer = %Card
@@ -50,6 +48,10 @@ func _on_layout_changed(size: Vector2) -> void:
 
 
 func _populate_instructions() -> void:
+	if GameSession.is_slice_and_slash():
+		_populate_slice_and_slash_instructions()
+		return
+
 	_mode_label.text = GameSession.mode_title().to_upper()
 	var player_one_actions := Settings.control_actions_for_player(0)
 	var demo_labels := [_demo_one_label, _demo_two_label, _demo_three_label]
@@ -100,8 +102,49 @@ func _populate_instructions() -> void:
 		)
 
 
+func _populate_slice_and_slash_instructions() -> void:
+	_mode_label.text = "%s · %s" % [
+		GameInfo.DESK_CAN_SAW_TITLE.to_upper(),
+		GameSession.mode_title().to_upper(),
+	]
+	_set_demo_text(_demo_one_label, "MOVE")
+	_set_demo_text(_demo_two_label, "REV")
+	_set_demo_text(_demo_three_label, "+1")
+	_demo_prompt.text = "DRIVE THE ELECTRIC CHAIN THROUGH A CAN"
+	if GameSession.is_single_player():
+		_summary.text = (
+			"Move the blue electric chainsaw over the workshop desk. Each can "
+			+ "erupts in sparks and scores exactly once."
+		)
+		_player_one_controls.text = (
+			"Mouse or arrow keys\nController 1: analog stick or D-pad"
+		)
+		_opponent_card.hide()
+	else:
+		_summary.text = (
+			"Both players work the same can-covered desk. The first electric "
+			+ "chainsaw to tear through a can earns its point."
+		)
+		_player_one_controls.text = (
+			"Player 1: mouse\nController 1: analog stick or D-pad"
+		)
+		_opponent_title.text = "PLAYER 2"
+		_opponent_controls.text = (
+			"Player 2: arrow keys\nController 2: analog stick or D-pad"
+		)
+
+
 func _set_demo_binding(label: Label, action: StringName) -> void:
 	label.text = Settings.control_key_label(action)
+	_size_demo_label(label)
+
+
+func _set_demo_text(label: Label, text: String) -> void:
+	label.text = text
+	_size_demo_label(label)
+
+
+func _size_demo_label(label: Label) -> void:
 	label.add_theme_font_size_override(
 		"font_size",
 		28 if label.text.length() <= 2 else 21 if label.text.length() <= 5 else 16
@@ -162,7 +205,7 @@ func _on_show_again_toggled(pressed: bool) -> void:
 
 
 func _on_start_pressed() -> void:
-	Router.goto(gameplay_scene)
+	Router.goto(GameSession.gameplay_scene_path())
 
 
 func _on_back_pressed() -> void:
