@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/boot/studio_logo.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/images/dcs_logo.png" id="2_logo"]
+[ext_resource type="Script" path="res://ui/components/splash_motion.gd" id="3_motion"]
 
 [node name="StudioLogo" type="Control"]
 anchors_preset = 15
@@ -20,6 +21,21 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(0.686275, 0.866667, 0.917647, 1)
+
+[node name="Motion" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_motion")
+primary_color = Color(0.054902, 0.082353, 0.098039, 1)
+secondary_color = Color(0.301961, 0.639216, 1, 1)
+shape_count = 14
+speed = 0.55
 
 [node name="Frame" type="MarginContainer" parent="."]
 unique_name_in_owner = true

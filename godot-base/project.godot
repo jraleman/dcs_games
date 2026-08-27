@@ -14,7 +14,7 @@ config/name="DeskCanSaw Game Base"
 config/description="Base Godot project for DeskCanSaw Games: studio logo, intro, main menu, settings and credits."
 config/version="0.1.0"
 run/main_scene="res://scenes/boot/studio_logo.tscn"
-config/features=PackedStringArray("4.6", "GL Compatibility")
+config/features=PackedStringArray("4.7", "GL Compatibility")
 boot_splash/bg_color=Color(0.686275, 0.866667, 0.917647, 1)
 boot_splash/show_image=false
 config/icon="res://icon.svg"
@@ -24,6 +24,9 @@ config/icon="res://icon.svg"
 Settings="*res://autoload/settings.gd"
 AudioManager="*res://autoload/audio_manager.gd"
 Router="*res://autoload/router.gd"
+GameSession="*res://autoload/game_session.gd"
+AchievementManager="*res://autoload/achievement_manager.gd"
+ShareManager="*res://autoload/share_manager.gd"
 
 [display]
 

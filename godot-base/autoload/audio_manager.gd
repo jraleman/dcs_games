@@ -114,6 +114,43 @@ func play_back() -> void:
 	play_sfx(SFX_BACK)
 
 
+func play_game_hit(streak := 1) -> void:
+	var pitch := clampf(0.98 + float(mini(streak, 10)) * 0.028, 0.98, 1.28)
+	play_sfx(SFX_CLICK, -1.0, pitch)
+
+
+func play_game_miss() -> void:
+	play_sfx(SFX_BACK, -1.0, 0.78)
+
+
+func play_achievement() -> void:
+	play_sfx(SFX_FOCUS, -2.0, 1.16)
+	_play_delayed_sfx(SFX_CLICK, 0.1, -1.0, 1.42)
+
+
+func play_share() -> void:
+	play_sfx(SFX_FOCUS, -2.0, 1.28)
+	_play_delayed_sfx(SFX_CLICK, 0.08, -2.0, 1.12)
+
+
+func play_splash() -> void:
+	play_sfx(SFX_FOCUS, -7.0, 0.72)
+	_play_delayed_sfx(SFX_CLICK, 0.16, -6.0, 0.92)
+
+
+func _play_delayed_sfx(
+	stream: AudioStream,
+	delay: float,
+	volume_db: float,
+	pitch_scale: float
+) -> void:
+	var tween := create_tween()
+	tween.tween_interval(delay)
+	tween.tween_callback(
+		Callable(self, "play_sfx").bind(stream, volume_db, pitch_scale)
+	)
+
+
 ## Wires click/focus sounds into every button under [param root], and makes
 ## hovering move the focus so mouse and gamepad highlight the same control.
 func attach_ui_sounds(root: Node) -> void:

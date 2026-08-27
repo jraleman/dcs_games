@@ -24,11 +24,16 @@ const FPS_OPTIONS := [0, 30, 60, 90, 120, 144]
 @onready var _ui_scale: HSlider = %UiScaleSlider
 @onready var _ui_scale_value: Label = %UiScaleValue
 @onready var _show_fps: CheckButton = %ShowFpsToggle
+@onready var _show_instructions: CheckButton = %ShowInstructionsToggle
+@onready var _back_button: Button = %BackButton
+@onready var _margins: MarginContainer = %Margins
 
 var _syncing := false
 
 
 func _ready() -> void:
+	first_focus = _back_button
+	margins = _margins
 	_populate_options()
 	_connect_ui()
 	_sync_from_settings()
@@ -56,6 +61,7 @@ func _connect_ui() -> void:
 	_mute.toggled.connect(_on_bool_toggled.bind("audio/muted"))
 	_vsync.toggled.connect(_on_bool_toggled.bind("display/vsync"))
 	_show_fps.toggled.connect(_on_bool_toggled.bind("ui/show_fps"))
+	_show_instructions.toggled.connect(_on_bool_toggled.bind("game/show_instructions"))
 	_window_mode.item_selected.connect(_on_window_mode_selected)
 	_max_fps.item_selected.connect(_on_max_fps_selected)
 	_ui_scale.value_changed.connect(_on_ui_scale_changed)
@@ -70,6 +76,7 @@ func _sync_from_settings() -> void:
 	_mute.button_pressed = bool(Settings.get_value("audio/muted"))
 	_vsync.button_pressed = bool(Settings.get_value("display/vsync"))
 	_show_fps.button_pressed = bool(Settings.get_value("ui/show_fps"))
+	_show_instructions.button_pressed = bool(Settings.get_value("game/show_instructions"))
 	_ui_scale.value = float(Settings.get_value("ui/scale"))
 	_select_id(_window_mode, int(Settings.get_value("display/window_mode")))
 	_select_id(_max_fps, int(Settings.get_value("display/max_fps")))

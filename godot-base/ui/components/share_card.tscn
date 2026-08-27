@@ -1,0 +1,307 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://ui/components/share_card.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_score"]
+content_margin_left = 28.0
+content_margin_top = 22.0
+content_margin_right = 28.0
+content_margin_bottom = 22.0
+bg_color = Color(0.0352941, 0.109804, 0.176471, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.301961, 0.639216, 1, 0.58)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stat"]
+content_margin_left = 22.0
+content_margin_top = 14.0
+content_margin_right = 22.0
+content_margin_bottom = 14.0
+bg_color = Color(0.686275, 0.866667, 0.917647, 0.07)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.686275, 0.866667, 0.917647, 0.18)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_achievement"]
+content_margin_left = 22.0
+content_margin_top = 16.0
+content_margin_right = 22.0
+content_margin_bottom = 16.0
+bg_color = Color(1, 0.784314, 0.341176, 0.09)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.784314, 0.341176, 0.45)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[node name="SessionShareCard" type="Control"]
+custom_minimum_size = Vector2(1200, 630)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="Margins" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 64
+theme_override_constants/margin_bottom = 34
+
+[node name="Layout" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 18
+
+[node name="Header" type="HBoxContainer" parent="Margins/Layout"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="GameTitle" type="Label" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+theme_override_font_sizes/font_size = 24
+text = "GAME TITLE"
+
+[node name="Studio" type="Label" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 18
+text = "DESKCANSAW GAMES"
+horizontal_alignment = 2
+
+[node name="Hero" type="HBoxContainer" parent="Margins/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 34
+
+[node name="Copy" type="VBoxContainer" parent="Margins/Layout/Hero"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Mode" type="Label" parent="Margins/Layout/Hero/Copy"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.75)
+theme_override_font_sizes/font_size = 18
+text = "GAME SESSION"
+
+[node name="Result" type="Label" parent="Margins/Layout/Hero/Copy"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 62
+text = "ROUND COMPLETE"
+autowrap_mode = 2
+
+[node name="Subtitle" type="Label" parent="Margins/Layout/Hero/Copy"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 22
+text = "A score worth sharing."
+autowrap_mode = 2
+
+[node name="ScorePanel" type="PanelContainer" parent="Margins/Layout/Hero"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_score")
+
+[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Hero/ScorePanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="ScoreCaption" type="Label" parent="Margins/Layout/Hero/ScorePanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.568627, 0.768627, 1, 0.9)
+theme_override_font_sizes/font_size = 17
+text = "FINAL SCORE"
+horizontal_alignment = 1
+
+[node name="Score" type="Label" parent="Margins/Layout/Hero/ScorePanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 70
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Stats" type="HBoxContainer" parent="Margins/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 14
+
+[node name="AccuracyPanel" type="PanelContainer" parent="Margins/Layout/Stats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stats/AccuracyPanel"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Caption" type="Label" parent="Margins/Layout/Stats/AccuracyPanel/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 15
+text = "ACCURACY"
+horizontal_alignment = 1
+
+[node name="Accuracy" type="Label" parent="Margins/Layout/Stats/AccuracyPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 29
+text = "0%"
+horizontal_alignment = 1
+
+[node name="HitsPanel" type="PanelContainer" parent="Margins/Layout/Stats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stats/HitsPanel"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Caption" type="Label" parent="Margins/Layout/Stats/HitsPanel/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 15
+text = "CORRECT HITS"
+horizontal_alignment = 1
+
+[node name="Hits" type="Label" parent="Margins/Layout/Stats/HitsPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 29
+text = "0"
+horizontal_alignment = 1
+
+[node name="ComboPanel" type="PanelContainer" parent="Margins/Layout/Stats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stats/ComboPanel"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Caption" type="Label" parent="Margins/Layout/Stats/ComboPanel/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 15
+text = "BEST COMBO"
+horizontal_alignment = 1
+
+[node name="Combo" type="Label" parent="Margins/Layout/Stats/ComboPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 29
+text = "x0"
+horizontal_alignment = 1
+
+[node name="Achievement" type="PanelContainer" parent="Margins/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_achievement")
+
+[node name="Layout" type="HBoxContainer" parent="Margins/Layout/Achievement"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="AchievementBadge" type="Label" parent="Margins/Layout/Achievement/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 1)
+theme_override_font_sizes/font_size = 25
+text = "NEW"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Copy" type="VBoxContainer" parent="Margins/Layout/Achievement/Layout"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="AchievementTitle" type="Label" parent="Margins/Layout/Achievement/Layout/Copy"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 0.9)
+theme_override_font_sizes/font_size = 16
+text = "NEW ACHIEVEMENT"
+
+[node name="AchievementCopy" type="Label" parent="Margins/Layout/Achievement/Layout/Copy"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 22
+text = "Solo Starter"
+autowrap_mode = 2
+
+[node name="Footer" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 15
+text = "A DeskCanSaw Games production  |  deskcansaw.com"
+horizontal_alignment = 2

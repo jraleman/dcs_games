@@ -9,14 +9,11 @@ extends MenuScreen
 @export_file("*.tscn") var settings_scene := "res://scenes/menus/settings_menu.tscn"
 @export_file("*.tscn") var main_menu_scene := "res://scenes/menus/main_menu.tscn"
 
-@onready var _quit_button: Button = %QuitButton
-
 var _settings_overlay: MenuScreen
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_quit_button.visible = not (OS.has_feature("web") or OS.has_feature("mobile"))
 	get_tree().paused = true
 	super()
 
@@ -57,10 +54,6 @@ func _on_settings_closed() -> void:
 	_focus_first()
 
 
-func _on_main_menu_pressed() -> void:
+func _on_exit_to_main_menu_pressed() -> void:
 	get_tree().paused = false
 	Router.goto(main_menu_scene)
-
-
-func _on_quit_pressed() -> void:
-	Router.quit_game()

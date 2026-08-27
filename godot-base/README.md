@@ -6,7 +6,7 @@ settings that persist, credits, a pause overlay and a placeholder gameplay
 scene — all built to look right from a phone in portrait to an ultrawide
 monitor.
 
-Made with **Godot 4.6** (`gl_compatibility` renderer, so it exports to web and
+Made with **Godot 4.7** (`gl_compatibility` renderer, so it exports to web and
 mobile without changes).
 
 ## Running it
@@ -18,8 +18,9 @@ godot --path .            # or open project.godot in the editor
 The first scene is `scenes/boot/studio_logo.tscn`; from there the flow is:
 
 ```
-studio_logo  ──►  intro  ──►  main_menu  ──┬──►  gameplay  ──►  pause_menu ──► settings (overlay)
- (skippable)   (skippable)                 ├──►  settings_menu
+studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_select  ──►  instructions  ──►  gameplay
+ (skippable)   (skippable)                 │                         (optional)          │
+                                           ├──►  settings_menu                         └──► pause_menu
                                            └──►  credits
 ```
 
@@ -29,13 +30,21 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  gamepla
 | --- | --- |
 | `scripts/game_info.gd` | Studio and game identity: title, tagline, intro cards, credits, palette. **Start here when renaming the game.** |
 | `autoload/settings.gd` | Stores, persists (`user://settings.cfg`) and applies player settings. |
-| `autoload/audio_manager.gd` | Music crossfades, an 8-voice SFX pool, bus volumes, UI sounds. |
+| `autoload/game_session.gd` | Holds the selected single-player or multiplayer configuration while moving between scenes. |
+| `autoload/audio_manager.gd` | Music crossfades, an 8-voice SFX pool, bus volumes, UI and gameplay sound cues. |
+| `autoload/achievement_manager.gd` | Persistent achievement registry and queued global achievement toasts. |
+| `autoload/share_manager.gd` | Renders reusable 1200×630 session cards, downloads them on web and saves them for desktop sharing. |
 | `autoload/router.gd` | `Router.goto(path)` — scene changes with a fade. Owns the top overlay layer (fade + FPS counter). |
 | `ui/menu_screen.gd` | `MenuScreen` base class: UI sounds, focus handling, `ui_cancel` to go back, responsive margins. |
 | `ui/responsive.gd` | Helpers for margins, portrait detection and content width. |
 | `ui/theme/dcs_theme.tres` | The whole look: buttons, panels, sliders, tabs. |
 | `ui/components/background.tscn` | Animated gradient backdrop (shader), aspect-corrected. |
-| `scenes/game/gameplay.tscn` | Placeholder — delete the bouncing triangle, keep the HUD/pause wiring. |
+| `ui/components/achievement_toast.tscn` | Small reusable unlock notification used by `AchievementManager`. |
+| `ui/components/share_card.tscn` | Default score/achievement image; swap it or pass another scene to `ShareManager`. |
+| `ui/components/share_preview.tscn` | Modal generated-image preview with close and open-original actions. |
+| `ui/components/splash_motion.gd` | Lightweight animated geometry for logo stings and splash screens. |
+| `scenes/game/gameplay.tscn` | Score game with single-player, local multiplayer and CPU-opponent modes. |
+| `scenes/game/triangle_target.tscn` | Reusable owned target with inactive/highlighted states and tap/click activation. |
 
 ## Looking right on every screen
 
@@ -79,9 +88,30 @@ a row to `scenes/menus/settings_menu.tscn` and wire it in
 on the main menu, intro or gameplay scene. Volume is already wired to the Music
 bus and its slider. Call `AudioManager.play_music(stream)` anywhere else.
 
-**Hook up your game** — replace `scenes/game/gameplay.tscn` (or point the main
-menu's `play_scene` at your own scene). Keep a `CanvasLayer` for the HUD and the
-`pause` action handling, and the pause overlay works as-is.
+**Add an achievement** — define its title, description and short badge in
+`GameInfo.ACHIEVEMENTS`, then call `AchievementManager.unlock("your_id")` at the
+game-specific unlock point. Persistence, duplicate protection, audio and the
+animated toast are automatic.
+
+**Share a result** — call
+`var result = await ShareManager.generate_score_image(session_data)`, then call
+`ShareManager.show_preview(result)` after a successful result. The default card
+expects result, score, accuracy, hits, combo and achievement fields, but any
+scene with a `configure(Dictionary)` method can be passed as the second
+argument. Web exports download the PNG; desktop exports save it under
+`user://shares` and copy the saved path to the clipboard. The preview displays
+the generated PNG and can open the saved original in the system image viewer;
+the open action is hidden in browser exports.
+
+**Tune the sample game** — the exported values on
+`scenes/game/gameplay.gd` control both players' keys and colours, target speed,
+round length, points, miss penalty, and CPU reaction speed/accuracy. The sample
+keeps rules in `gameplay.gd` and target input / movement in
+`triangle_target.gd`, so either part can be replaced independently.
+
+**Hook up your own game** — replace `scenes/game/gameplay.tscn` (or point the
+main menu's `play_scene` at your own scene). Keep a `CanvasLayer` for the HUD
+and the `pause` action handling, and the pause overlay works as-is.
 
 ## Input actions
 
@@ -91,6 +121,23 @@ menu's `play_scene` at your own scene). Keep a `CanvasLayer` for the HUD and the
 | `pause` | Esc, gamepad Start |
 | `toggle_fullscreen` | F11 |
 | `ui_accept` / `ui_cancel` | Godot defaults (menu navigation and back) |
+
+The sample gameplay reads its displayed number keys directly, so changing its
+target digits does not require adding Input Map actions. Player 1 defaults to
+1/2/3 and Player 2 to 7/8/9. Single-player creates only Player 1's targets;
+multiplayer lets Player 2 use those controls or hands the red side to the CPU.
+Each active player has one bright target at a time: matching it earns a point,
+while choosing one of that player's dim targets costs a point. Human-controlled
+targets also accept mouse and touchscreen presses.
+
+The instructions screen is shown after mode selection by default. Its
+**Show instructions when starting a mode** toggle is persisted, and the same
+preference can be restored under **Settings → Game**.
+
+The sample unlocks **Solo Starter** after the first completed single-player
+round and **First Win** after Player 1's first multiplayer victory. The FPS
+counter is available under **Settings → Display** and is drawn by `Router`, so
+it stays visible across scenes without each game implementing its own counter.
 
 ## Placeholder assets
 

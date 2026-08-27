@@ -1,24 +1,171 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scenes/game/gameplay.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+[ext_resource type="PackedScene" path="res://scenes/game/triangle_target.tscn" id="3_target"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_player_one"]
+content_margin_left = 26.0
+content_margin_top = 15.0
+content_margin_right = 26.0
+content_margin_bottom = 15.0
+bg_color = Color(0.0352941, 0.109804, 0.176471, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.301961, 0.639216, 1, 0.72)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+shadow_color = Color(0.0196078, 0.211765, 0.419608, 0.42)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_player_two"]
+content_margin_left = 26.0
+content_margin_top = 15.0
+content_margin_right = 26.0
+content_margin_bottom = 15.0
+bg_color = Color(0.176471, 0.0431373, 0.0745098, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.360784, 0.423529, 0.72)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+shadow_color = Color(0.419608, 0.0196078, 0.0941176, 0.42)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_timer"]
+content_margin_left = 28.0
+content_margin_top = 13.0
+content_margin_right = 28.0
+content_margin_bottom = 13.0
+bg_color = Color(0.054902, 0.0823529, 0.0980392, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.686275, 0.866667, 0.917647, 0.25)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+shadow_color = Color(0, 0, 0, 0.32)
+shadow_size = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_progress_background"]
+bg_color = Color(1, 1, 1, 0.075)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_progress_fill"]
+bg_color = Color(0.686275, 0.866667, 0.917647, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_color = Color(0.301961, 0.639216, 1, 0.32)
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hint"]
+content_margin_left = 28.0
+content_margin_top = 11.0
+content_margin_right = 28.0
+content_margin_bottom = 11.0
+bg_color = Color(0.0352941, 0.054902, 0.0666667, 0.78)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.686275, 0.866667, 0.917647, 0.18)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_round"]
+content_margin_left = 50.0
+content_margin_top = 40.0
+content_margin_right = 50.0
+content_margin_bottom = 40.0
+bg_color = Color(0.0431373, 0.0705882, 0.0901961, 0.97)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.686275, 0.866667, 0.917647, 0.42)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(0, 0, 0, 0.62)
+shadow_size = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stat"]
+content_margin_left = 22.0
+content_margin_top = 14.0
+content_margin_right = 22.0
+content_margin_bottom = 14.0
+bg_color = Color(0.686275, 0.866667, 0.917647, 0.065)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.686275, 0.866667, 0.917647, 0.2)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
 
 [node name="Gameplay" type="Node2D"]
 script = ExtResource("1_script")
+target_scene = ExtResource("3_target")
 
 [node name="BackgroundLayer" type="CanvasLayer" parent="."]
 layer = -1
 
 [node name="Background" parent="BackgroundLayer" instance=ExtResource("2_background")]
 
-[node name="Shape" type="Polygon2D" parent="."]
+[node name="Targets" type="Node2D" parent="."]
 unique_name_in_owner = true
-position = Vector2(960, 540)
-color = Color(0.686275, 0.866667, 0.917647, 0.9)
-polygon = PackedVector2Array(0, -78, 72, 46, -72, 46)
+
+[node name="WorldFX" type="Node2D" parent="."]
+unique_name_in_owner = true
+z_index = 10
+
+[node name="RoundTimer" type="Timer" parent="."]
+unique_name_in_owner = true
+one_shot = true
 
 [node name="HUD" type="CanvasLayer" parent="."]
 unique_name_in_owner = true
+
+[node name="ScreenFlash" type="ColorRect" parent="HUD"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0)
+
+[node name="DangerOverlay" type="ColorRect" parent="HUD"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.286275, 0.392157, 0)
 
 [node name="Overlay" type="Control" parent="HUD"]
 anchors_preset = 15
@@ -36,47 +183,753 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 48
-theme_override_constants/margin_top = 36
-theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 36
+theme_override_constants/margin_left = 42
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 42
+theme_override_constants/margin_bottom = 30
 
 [node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins"]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 10
 
 [node name="TopBar" type="HBoxContainer" parent="HUD/Overlay/Margins/Layout"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 18
 
-[node name="Title" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar"]
+[node name="PlayerOneCard" type="PanelContainer" parent="HUD/Overlay/Margins/Layout/TopBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_player_one")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard"]
+layout_mode = 2
+theme_override_constants/separation = -2
+
+[node name="Caption" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.568627, 0.768627, 1, 0.9)
+theme_override_font_sizes/font_size = 18
+text = "PLAYER 1"
+
+[node name="PlayerOneScore" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 52
+text = "0"
+
+[node name="PlayerOneStreak" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 23)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = " "
+
+[node name="TimerCard" type="PanelContainer" parent="HUD/Overlay/Margins/Layout/TopBar"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_timer")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard"]
+layout_mode = 2
+theme_override_constants/separation = -4
+
+[node name="Title" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.9)
+theme_override_font_sizes/font_size = 23
+text = "TRIANGLE RUSH"
+horizontal_alignment = 1
+
+[node name="TimeLabel" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
-theme_override_font_sizes/font_size = 34
-text = "Gameplay placeholder"
-vertical_alignment = 1
+theme_override_font_sizes/font_size = 48
+text = "30"
+horizontal_alignment = 1
+
+[node name="TimeCaption" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 0.9)
+theme_override_font_sizes/font_size = 15
+text = "SECONDS LEFT"
+horizontal_alignment = 1
+
+[node name="PlayerTwoCard" type="PanelContainer" parent="HUD/Overlay/Margins/Layout/TopBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_player_two")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard"]
+layout_mode = 2
+theme_override_constants/separation = -2
+
+[node name="Caption" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.65098, 0.690196, 0.9)
+theme_override_font_sizes/font_size = 18
+text = "PLAYER 2"
+horizontal_alignment = 2
+
+[node name="PlayerTwoScore" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 52
+text = "0"
+horizontal_alignment = 2
+
+[node name="PlayerTwoStreak" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 23)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
+theme_override_font_sizes/font_size = 18
+text = " "
+horizontal_alignment = 2
 
 [node name="PauseButton" type="Button" parent="HUD/Overlay/Margins/Layout/TopBar"]
+custom_minimum_size = Vector2(132, 0)
 layout_mode = 2
 size_flags_vertical = 4
-text = "Pause"
+theme_override_font_sizes/font_size = 21
+text = "PAUSE"
+
+[node name="TimeProgress" type="ProgressBar" parent="HUD/Overlay/Margins/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 11)
+layout_mode = 2
+mouse_filter = 2
+max_value = 30.0
+value = 30.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_progress_background")
+theme_override_styles/fill = SubResource("StyleBoxFlat_progress_fill")
+
+[node name="Callout" type="Label" parent="HUD/Overlay/Margins/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.52)
+theme_override_font_sizes/font_size = 17
+text = "FOLLOW THE PULSE - PRESS THE MATCHING KEY"
+horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="HUD/Overlay/Margins/Layout"]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="Hint" type="Label" parent="HUD/Overlay/Margins/Layout"]
+[node name="BottomRow" type="HBoxContainer" parent="HUD/Overlay/Margins/Layout"]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="HintPanel" type="PanelContainer" parent="HUD/Overlay/Margins/Layout/BottomRow"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hint")
+
+[node name="Hint" type="Label" parent="HUD/Overlay/Margins/Layout/BottomRow/HintPanel"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
-theme_override_font_sizes/font_size = 24
-text = "Esc or the Start button pauses"
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 20
+text = "P1: 1 2 3   |   P2: 7 8 9   |   Chase your glow"
 horizontal_alignment = 1
 
+[node name="RoundOver" type="Control" parent="HUD"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="HUD/RoundOver"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0117647, 0.0196078, 0.027451, 0.82)
+
+[node name="Center" type="CenterContainer" parent="HUD/RoundOver"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="RoundPanel" type="PanelContainer" parent="HUD/RoundOver/Center"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(800, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_round")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/RoundPanel"]
+layout_mode = 2
+theme_override_constants/separation = 13
+
+[node name="Eyebrow" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.72)
+theme_override_font_sizes/font_size = 18
+text = "ROUND COMPLETE"
+horizontal_alignment = 1
+
+[node name="ResultLabel" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+theme_override_font_sizes/font_size = 52
+text = "DRAW!"
+horizontal_alignment = 1
+
+[node name="RoundSubtitle" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 21
+text = "Dead even. Run it back!"
+horizontal_alignment = 1
+
+[node name="Rule" type="ColorRect" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.686275, 0.866667, 0.917647, 0.28)
+
+[node name="ScoreShowdown" type="HBoxContainer" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="PlayerOneScoreCard" type="PanelContainer" parent="HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown"]
+custom_minimum_size = Vector2(230, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_player_one")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown/PlayerOneScoreCard"]
+layout_mode = 2
+theme_override_constants/separation = -2
+
+[node name="Caption" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown/PlayerOneScoreCard/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.568627, 0.768627, 1, 0.9)
+theme_override_font_sizes/font_size = 17
+text = "PLAYER 1"
+horizontal_alignment = 1
+
+[node name="RoundPlayerOneScore" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown/PlayerOneScoreCard/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 46
+text = "0"
+horizontal_alignment = 1
+
+[node name="Versus" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown"]
+custom_minimum_size = Vector2(70, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.62)
+theme_override_font_sizes/font_size = 24
+text = "VS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlayerTwoScoreCard" type="PanelContainer" parent="HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(230, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_player_two")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown/PlayerTwoScoreCard"]
+layout_mode = 2
+theme_override_constants/separation = -2
+
+[node name="Caption" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown/PlayerTwoScoreCard/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.65098, 0.690196, 0.9)
+theme_override_font_sizes/font_size = 17
+text = "PLAYER 2"
+horizontal_alignment = 1
+
+[node name="RoundPlayerTwoScore" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown/PlayerTwoScoreCard/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
+theme_override_font_sizes/font_size = 46
+text = "0"
+horizontal_alignment = 1
+
+[node name="RoundHighlight" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 1)
+theme_override_font_sizes/font_size = 20
+text = "Shared top combo: x0"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="RoundInstructions" type="Label" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 17
+text = "Correct match: +1 | Wrong key or triangle: -1"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Actions" type="GridContainer" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 2
+
+[node name="SeeScoreButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(310, 0)
+layout_mode = 2
+text = "See Score"
+
+[node name="ShareButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(310, 0)
+layout_mode = 2
+text = "Share Result"
+
+[node name="PlayAgainButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(310, 0)
+layout_mode = 2
+text = "Play Again"
+
+[node name="ExitToMainMenuButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(310, 0)
+layout_mode = 2
+text = "Main Menu"
+
+[node name="ScorePanel" type="PanelContainer" parent="HUD/RoundOver/Center"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(1180, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_round")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel"]
+layout_mode = 2
+theme_override_constants/separation = 13
+
+[node name="Eyebrow" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.72)
+theme_override_font_sizes/font_size = 17
+text = "MATCH REPORT"
+horizontal_alignment = 1
+
+[node name="ScoreScreenTitle" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 42
+text = "DRAW!"
+horizontal_alignment = 1
+
+[node name="ScoreScreenSubtitle" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 19
+text = "Dead even. Run it back!"
+horizontal_alignment = 1
+
+[node name="Overview" type="HBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Duration" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview/Duration"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Caption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview/Duration/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 15
+text = "ROUND TIME"
+horizontal_alignment = 1
+
+[node name="GameDurationStat" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview/Duration/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 29
+text = "30 SEC"
+horizontal_alignment = 1
+
+[node name="Hits" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview/Hits"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Caption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview/Hits/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 15
+text = "TOTAL HITS"
+horizontal_alignment = 1
+
+[node name="GameHitsStat" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview/Hits/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 29
+text = "0"
+horizontal_alignment = 1
+
+[node name="Accuracy" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview/Accuracy"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Caption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview/Accuracy/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 15
+text = "OVERALL ACCURACY"
+horizontal_alignment = 1
+
+[node name="GameAccuracyStat" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Overview/Accuracy/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 29
+text = "0%"
+horizontal_alignment = 1
+
+[node name="Rule" type="ColorRect" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.686275, 0.866667, 0.917647, 0.22)
+
+[node name="Players" type="HBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="PlayerOne" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_player_one")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="Title" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.568627, 0.768627, 1, 0.9)
+theme_override_font_sizes/font_size = 18
+text = "PLAYER 1"
+horizontal_alignment = 1
+
+[node name="PlayerOneStatsScore" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 46
+text = "0"
+horizontal_alignment = 1
+
+[node name="ScoreCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 0.85)
+theme_override_font_sizes/font_size = 14
+text = "FINAL SCORE"
+horizontal_alignment = 1
+
+[node name="Rule" type="ColorRect" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.301961, 0.639216, 1, 0.3)
+
+[node name="Stats" type="GridContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+layout_mode = 2
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 6
+columns = 2
+
+[node name="HitsCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 17
+text = "Correct hits"
+
+[node name="PlayerOneStatsHits" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2
+
+[node name="MissesCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 17
+text = "Misses"
+
+[node name="PlayerOneStatsMisses" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2
+
+[node name="AccuracyCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 17
+text = "Accuracy"
+
+[node name="PlayerOneStatsAccuracy" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "0%"
+horizontal_alignment = 2
+
+[node name="StreakCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 17
+text = "Best combo"
+
+[node name="PlayerOneStatsStreak" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "x0"
+horizontal_alignment = 2
+
+[node name="Versus" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players"]
+custom_minimum_size = Vector2(62, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.55)
+theme_override_font_sizes/font_size = 24
+text = "VS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlayerTwo" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_player_two")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="Title" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.65098, 0.690196, 0.9)
+theme_override_font_sizes/font_size = 18
+text = "PLAYER 2"
+horizontal_alignment = 1
+
+[node name="PlayerTwoStatsScore" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
+theme_override_font_sizes/font_size = 46
+text = "0"
+horizontal_alignment = 1
+
+[node name="ScoreCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 0.85)
+theme_override_font_sizes/font_size = 14
+text = "FINAL SCORE"
+horizontal_alignment = 1
+
+[node name="Rule" type="ColorRect" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 0.360784, 0.423529, 0.3)
+
+[node name="Stats" type="GridContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+layout_mode = 2
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 6
+columns = 2
+
+[node name="HitsCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 17
+text = "Correct hits"
+
+[node name="PlayerTwoStatsHits" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2
+
+[node name="MissesCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 17
+text = "Misses"
+
+[node name="PlayerTwoStatsMisses" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2
+
+[node name="AccuracyCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 17
+text = "Accuracy"
+
+[node name="PlayerTwoStatsAccuracy" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "0%"
+horizontal_alignment = 2
+
+[node name="StreakCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 17
+text = "Best combo"
+
+[node name="PlayerTwoStatsStreak" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "x0"
+horizontal_alignment = 2
+
+[node name="Actions" type="GridContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 2
+
+[node name="BackToResultsButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+text = "Back to Results"
+
+[node name="StatsShareButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+text = "Share Result"
+
+[node name="StatsPlayAgainButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+text = "Play Again"
+
+[node name="StatsExitToMainMenuButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+text = "Main Menu"
+
+[node name="ShareStatus" type="Label" parent="HUD/RoundOver"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -72.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+theme_override_colors/font_outline_color = Color(0.0117647, 0.0196078, 0.027451, 0.95)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 20
+text = "Share image ready."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Announcement" type="Label" parent="HUD"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_colors/font_outline_color = Color(0.0117647, 0.0196078, 0.027451, 0.9)
+theme_override_constants/outline_size = 12
+theme_override_font_sizes/font_size = 82
+text = "GO!"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="timeout" from="RoundTimer" to="." method="_on_round_timer_timeout"]
 [connection signal="pressed" from="HUD/Overlay/Margins/Layout/TopBar/PauseButton" to="." method="_on_pause_button_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/SeeScoreButton" to="." method="_on_see_score_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/ShareButton" to="." method="_on_share_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/PlayAgainButton" to="." method="_on_play_again_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/ExitToMainMenuButton" to="." method="_on_exit_to_main_menu_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/BackToResultsButton" to="." method="_on_back_to_results_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/StatsShareButton" to="." method="_on_share_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/StatsPlayAgainButton" to="." method="_on_play_again_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/StatsExitToMainMenuButton" to="." method="_on_exit_to_main_menu_pressed"]

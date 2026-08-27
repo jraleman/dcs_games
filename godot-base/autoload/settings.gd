@@ -31,6 +31,7 @@ const DEFAULTS := {
 	"display/max_fps": 0,
 	"ui/scale": 1.0,
 	"ui/show_fps": false,
+	"game/show_instructions": true,
 }
 
 var _values: Dictionary = {}

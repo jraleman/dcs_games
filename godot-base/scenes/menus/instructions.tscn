@@ -1,0 +1,165 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/menus/instructions.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+
+[node name="Instructions" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+back_scene = "res://scenes/menus/mode_select.tscn"
+
+[node name="Background" parent="." instance=ExtResource("2_background")]
+
+[node name="Margins" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_constants/margin_left = 134
+theme_override_constants/margin_top = 54
+theme_override_constants/margin_right = 134
+theme_override_constants/margin_bottom = 54
+
+[node name="Layout" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="Header" type="HBoxContainer" parent="Margins/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="Margins/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 56
+text = "How to Play"
+
+[node name="BackButton" type="Button" parent="Margins/Layout/Header"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Back"
+
+[node name="ModeLabel" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+theme_override_font_sizes/font_size = 19
+text = "SINGLE PLAYER"
+
+[node name="Card" type="PanelContainer" parent="Margins/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Card"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Headline" type="Label" parent="Margins/Layout/Card/Layout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 38
+text = "Follow the glowing triangle"
+horizontal_alignment = 1
+
+[node name="Summary" type="Label" parent="Margins/Layout/Card/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 22
+text = "Score as many correct hits as possible before time runs out."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Rule" type="ColorRect" parent="Margins/Layout/Card/Layout"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.686275, 0.866667, 0.917647, 0.25)
+
+[node name="ControlGrid" type="GridContainer" parent="Margins/Layout/Card/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 20
+columns = 2
+
+[node name="PlayerOneCard" type="PanelContainer" parent="Margins/Layout/Card/Layout/ControlGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Card/Layout/ControlGrid/PlayerOneCard"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Margins/Layout/Card/Layout/ControlGrid/PlayerOneCard/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "PLAYER 1"
+
+[node name="Controls" type="Label" parent="Margins/Layout/Card/Layout/ControlGrid/PlayerOneCard/Layout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Keyboard: 1, 2, 3\nMouse/touch: select blue triangles"
+autowrap_mode = 2
+
+[node name="OpponentCard" type="PanelContainer" parent="Margins/Layout/Card/Layout/ControlGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Card/Layout/ControlGrid/OpponentCard"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="OpponentTitle" type="Label" parent="Margins/Layout/Card/Layout/ControlGrid/OpponentCard/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
+theme_override_font_sizes/font_size = 24
+text = "PLAYER 2"
+
+[node name="OpponentControls" type="Label" parent="Margins/Layout/Card/Layout/ControlGrid/OpponentCard/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Keyboard: 7, 8, 9\nMouse/touch: select red triangles"
+autowrap_mode = 2
+
+[node name="Rules" type="Label" parent="Margins/Layout/Card/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 1)
+theme_override_font_sizes/font_size = 21
+text = "Bright target = correct  ·  Correct hit +1  ·  Wrong target -1  ·  Esc pauses"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="Margins/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="ShowAgainToggle" type="CheckButton" parent="Margins/Layout/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Show instructions when starting a mode"
+
+[node name="StartButton" type="Button" parent="Margins/Layout/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(330, 0)
+layout_mode = 2
+text = "Start Game"
+
+[connection signal="pressed" from="Margins/Layout/Header/BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="Margins/Layout/Actions/StartButton" to="." method="_on_start_pressed"]

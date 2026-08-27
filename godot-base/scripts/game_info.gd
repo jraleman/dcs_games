@@ -18,16 +18,32 @@ const INTRO_CARDS: Array[String] = [
 	"Replace this scene with your own intro.",
 ]
 
+## Achievement definitions consumed by AchievementManager. Keep game-specific
+## unlock conditions in gameplay code and presentation/persistence in the
+## reusable manager.
+const ACHIEVEMENTS := {
+	"first_single_player_game": {
+		"title": "Solo Starter",
+		"description": "Finish your first single-player round.",
+		"badge": "1P",
+	},
+	"first_win": {
+		"title": "First Win",
+		"description": "Win your first multiplayer round as Player 1.",
+		"badge": "WIN",
+	},
+}
+
 ## Credits sections rendered by the credits screen.
 ## Each entry is { "heading": String, "lines": Array }.
 const CREDITS: Array[Dictionary] = [
 	{
 		"heading": "Design & Code",
-		"lines": ["Your Name Here"],
+		"lines": ["DeskCanSaw"],
 	},
 	{
 		"heading": "Art",
-		"lines": ["Your Name Here"],
+		"lines": ["DeskCanSaw"],
 	},
 	{
 		"heading": "Music & Sound",
