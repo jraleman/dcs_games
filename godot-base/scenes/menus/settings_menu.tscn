@@ -293,6 +293,174 @@ text = "100%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
+[node name="Controls" type="ScrollContainer" parent="Margins/Layout/Tabs"]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Pad" type="MarginContainer" parent="Margins/Layout/Tabs/Controls"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 22
+
+[node name="List" type="VBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
+
+[node name="Intro" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 20
+text = "Select a binding, then press a key. Assigning a key already in use swaps the two bindings."
+autowrap_mode = 2
+
+[node name="PlayerOneHeading" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "PLAYER 1"
+
+[node name="PlayerOneTargetOneRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerOneTargetOneRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target 1"
+vertical_alignment = 1
+
+[node name="PlayerOneTargetOne" type="Button" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerOneTargetOneRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1"
+
+[node name="PlayerOneTargetTwoRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerOneTargetTwoRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target 2"
+vertical_alignment = 1
+
+[node name="PlayerOneTargetTwo" type="Button" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerOneTargetTwoRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "2"
+
+[node name="PlayerOneTargetThreeRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerOneTargetThreeRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target 3"
+vertical_alignment = 1
+
+[node name="PlayerOneTargetThree" type="Button" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerOneTargetThreeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "3"
+
+[node name="PlayerTwoHeading" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
+theme_override_font_sizes/font_size = 22
+text = "PLAYER 2"
+
+[node name="PlayerTwoTargetOneRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerTwoTargetOneRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target 1"
+vertical_alignment = 1
+
+[node name="PlayerTwoTargetOne" type="Button" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerTwoTargetOneRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "7"
+
+[node name="PlayerTwoTargetTwoRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerTwoTargetTwoRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target 2"
+vertical_alignment = 1
+
+[node name="PlayerTwoTargetTwo" type="Button" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerTwoTargetTwoRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "8"
+
+[node name="PlayerTwoTargetThreeRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerTwoTargetThreeRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target 3"
+vertical_alignment = 1
+
+[node name="PlayerTwoTargetThree" type="Button" parent="Margins/Layout/Tabs/Controls/Pad/List/PlayerTwoTargetThreeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "9"
+
+[node name="BindingStatus" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 1)
+theme_override_font_sizes/font_size = 19
+text = "Controller 1 controls Player 1 and Controller 2 controls Player 2 with A, B and X."
+autowrap_mode = 2
+
+[node name="ResetControlsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/ResetControlsRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Restore gameplay keys"
+vertical_alignment = 1
+
+[node name="ResetControlsButton" type="Button" parent="Margins/Layout/Tabs/Controls/Pad/List/ResetControlsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Reset Keys"
+
 [node name="Game" type="ScrollContainer" parent="Margins/Layout/Tabs"]
 visible = false
 layout_mode = 2

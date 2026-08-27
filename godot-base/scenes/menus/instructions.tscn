@@ -1,7 +1,26 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/menus/instructions.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+[ext_resource type="Script" path="res://ui/components/splash_motion.gd" id="3_motion"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_key"]
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+bg_color = Color(0.0352941, 0.109804, 0.176471, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.301961, 0.639216, 1, 0.7)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0.0196078, 0.211765, 0.419608, 0.34)
+shadow_size = 8
 
 [node name="Instructions" type="Control"]
 anchors_preset = 15
@@ -13,6 +32,20 @@ script = ExtResource("1_script")
 back_scene = "res://scenes/menus/mode_select.tscn"
 
 [node name="Background" parent="." instance=ExtResource("2_background")]
+
+[node name="Motion" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+modulate = Color(1, 1, 1, 0.55)
+script = ExtResource("3_motion")
+secondary_color = Color(1, 0.360784, 0.423529, 1)
+shape_count = 9
+speed = 0.3
 
 [node name="Margins" type="MarginContainer" parent="."]
 unique_name_in_owner = true
@@ -56,6 +89,7 @@ theme_override_font_sizes/font_size = 19
 text = "SINGLE PLAYER"
 
 [node name="Card" type="PanelContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -64,6 +98,7 @@ layout_mode = 2
 theme_override_constants/separation = 20
 
 [node name="Headline" type="Label" parent="Margins/Layout/Card/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 38
 text = "Follow the glowing triangle"
@@ -78,7 +113,68 @@ text = "Score as many correct hits as possible before time runs out."
 horizontal_alignment = 1
 autowrap_mode = 2
 
+[node name="TargetDemo" type="HBoxContainer" parent="Margins/Layout/Card/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="DemoPrompt" type="Label" parent="Margins/Layout/Card/Layout/TargetDemo"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.82)
+theme_override_font_sizes/font_size = 18
+text = "WATCH PLAYER 1'S BLUE GLOW"
+vertical_alignment = 1
+
+[node name="DemoTargets" type="HBoxContainer" parent="Margins/Layout/Card/Layout/TargetDemo"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="DemoOne" type="PanelContainer" parent="Margins/Layout/Card/Layout/TargetDemo/DemoTargets"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(76, 62)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_key")
+
+[node name="DemoOneLabel" type="Label" parent="Margins/Layout/Card/Layout/TargetDemo/DemoTargets/DemoOne"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DemoTwo" type="PanelContainer" parent="Margins/Layout/Card/Layout/TargetDemo/DemoTargets"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(76, 62)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_key")
+
+[node name="DemoTwoLabel" type="Label" parent="Margins/Layout/Card/Layout/TargetDemo/DemoTargets/DemoTwo"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "2"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DemoThree" type="PanelContainer" parent="Margins/Layout/Card/Layout/TargetDemo/DemoTargets"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(76, 62)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_key")
+
+[node name="DemoThreeLabel" type="Label" parent="Margins/Layout/Card/Layout/TargetDemo/DemoTargets/DemoThree"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "3"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="Rule" type="ColorRect" parent="Margins/Layout/Card/Layout"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 mouse_filter = 2
@@ -107,10 +203,11 @@ theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 24
 text = "PLAYER 1"
 
-[node name="Controls" type="Label" parent="Margins/Layout/Card/Layout/ControlGrid/PlayerOneCard/Layout"]
+[node name="PlayerOneControls" type="Label" parent="Margins/Layout/Card/Layout/ControlGrid/PlayerOneCard/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = "Keyboard: 1, 2, 3\nMouse/touch: select blue triangles"
+text = "Keyboard: 1, 2, 3\nController 1: A, B, X\nMouse/touch: select blue triangles"
 autowrap_mode = 2
 
 [node name="OpponentCard" type="PanelContainer" parent="Margins/Layout/Card/Layout/ControlGrid"]
@@ -134,7 +231,7 @@ text = "PLAYER 2"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = "Keyboard: 7, 8, 9\nMouse/touch: select red triangles"
+text = "Keyboard: 7, 8, 9\nController 2: A, B, X\nMouse/touch: select red triangles"
 autowrap_mode = 2
 
 [node name="Rules" type="Label" parent="Margins/Layout/Card/Layout"]
@@ -146,6 +243,7 @@ horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="Actions" type="HBoxContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 18
 
@@ -159,6 +257,7 @@ text = "Show instructions when starting a mode"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(330, 0)
 layout_mode = 2
+theme_type_variation = &"PrimaryButton"
 text = "Start Game"
 
 [connection signal="pressed" from="Margins/Layout/Header/BackButton" to="." method="_on_back_pressed"]

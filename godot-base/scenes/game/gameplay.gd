@@ -5,8 +5,6 @@ extends Node2D
 @export_file("*.tscn") var pause_scene := "res://scenes/menus/pause_menu.tscn"
 @export_file("*.tscn") var main_menu_scene := "res://scenes/menus/main_menu.tscn"
 @export var target_scene: PackedScene
-@export var player_one_letters: PackedStringArray = ["1", "2", "3"]
-@export var player_two_letters: PackedStringArray = ["7", "8", "9"]
 @export var player_one_inactive_color := Color("31556f")
 @export var player_one_highlight_color := Color("4da3ff")
 @export var player_two_inactive_color := Color("6b343d")
@@ -16,9 +14,6 @@ extends Node2D
 @export_range(5.0, 180.0, 1.0) var round_duration := 30.0
 @export_range(1, 100, 1) var points_per_match := 1
 @export_range(1, 100, 1) var miss_penalty := 1
-@export_range(0.1, 3.0, 0.05) var cpu_reaction_min := 0.55
-@export_range(0.1, 3.0, 0.05) var cpu_reaction_max := 1.05
-@export_range(0.0, 1.0, 0.05) var cpu_accuracy := 0.82
 
 ## Drop a gameplay track here to have it fade in when the scene starts.
 @export var music: AudioStream
@@ -26,8 +21,8 @@ extends Node2D
 const PLAYER_ONE := 0
 const PLAYER_TWO := 1
 const PLAYER_COUNT := 2
-const FIRST_TARGET_KEY := KEY_0
-const LAST_TARGET_KEY := KEY_9
+const CONTROLLER_TARGET_BUTTONS := [JOY_BUTTON_A, JOY_BUTTON_B, JOY_BUTTON_X]
+const CONTROLLER_TARGET_LABELS := ["A", "B", "X"]
 const SIDE_CLEARANCE := 38.0
 const TOP_CLEARANCE := 190.0
 const BOTTOM_CLEARANCE := 105.0
@@ -107,7 +102,7 @@ const DANGER_COLOR := Color("ff4964")
 @onready var _share_status: Label = %ShareStatus
 
 var _targets: Array[TriangleTarget] = []
-var _targets_by_keycode: Dictionary = {}
+var _targets_by_action: Dictionary = {}
 var _active_targets := [null, null]
 var _scores := [0, 0]
 var _streaks := [0, 0]
@@ -130,10 +125,15 @@ var _cpu_action_time := -1.0
 var _round_achievements: Array[Dictionary] = []
 var _round_result_color := GameInfo.SKY
 var _sharing := false
+var _cpu_reaction_min := 0.55
+var _cpu_reaction_max := 1.05
+var _cpu_accuracy := 0.82
 
 
 func _ready() -> void:
 	_rng.randomize()
+	Settings.changed.connect(_on_setting_changed)
+	_configure_cpu_profile()
 	_configure_mode_ui()
 	_player_one_score.add_theme_color_override("font_color", player_one_highlight_color)
 	_player_two_score.add_theme_color_override("font_color", player_two_highlight_color)
@@ -246,16 +246,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		open_pause_menu()
 		return
 
-	if not _round_active or not event is InputEventKey:
+	if not _round_active:
 		return
 
-	var key_event := event as InputEventKey
-	if not key_event.pressed or key_event.echo:
+	var target: TriangleTarget
+	if event is InputEventKey:
+		var key_event := event as InputEventKey
+		if not key_event.pressed or key_event.echo:
+			return
+		target = _target_for_keyboard_event(key_event)
+	elif event is InputEventJoypadButton:
+		var joypad_event := event as InputEventJoypadButton
+		if not joypad_event.pressed:
+			return
+		target = _target_for_controller_event(joypad_event)
+	else:
 		return
 
-	var target := _targets_by_keycode.get(key_event.keycode) as TriangleTarget
-	if target == null:
-		target = _targets_by_keycode.get(key_event.physical_keycode) as TriangleTarget
 	if target == null:
 		return
 	if not _player_accepts_human_input(target.player_index):
@@ -265,22 +272,78 @@ func _unhandled_input(event: InputEvent) -> void:
 	_attempt_target(target)
 
 
+func _target_for_keyboard_event(event: InputEventKey) -> TriangleTarget:
+	for action: StringName in _targets_by_action:
+		if event.is_action_pressed(action):
+			return _targets_by_action[action] as TriangleTarget
+	return null
+
+
+func _target_for_controller_event(event: InputEventJoypadButton) -> TriangleTarget:
+	var target_index := CONTROLLER_TARGET_BUTTONS.find(event.button_index)
+	if target_index < 0:
+		return null
+
+	var player_index := _controller_player_index(event.device)
+	if not _player_accepts_human_input(player_index):
+		return null
+
+	var actions := Settings.control_actions_for_player(player_index)
+	if target_index >= actions.size():
+		return null
+	return _targets_by_action.get(actions[target_index]) as TriangleTarget
+
+
+func _controller_player_index(device: int) -> int:
+	var connected_controllers := Input.get_connected_joypads()
+	connected_controllers.sort()
+	var assignment := connected_controllers.find(device)
+	return assignment if assignment == PLAYER_ONE or assignment == PLAYER_TWO else -1
+
+
 func _configure_mode_ui() -> void:
 	var player_two_enabled := GameSession.player_two_enabled()
 	var player_two_title := GameSession.player_two_name().to_upper()
+	var player_one_keys := Settings.control_summary(PLAYER_ONE, "  ")
+	var player_two_keys := Settings.control_summary(PLAYER_TWO, "  ")
+	var controller_keys := "  ".join(CONTROLLER_TARGET_LABELS)
 
-	_player_one_caption.text = "PLAYER 1" if player_two_enabled else "PLAYER 1 · SOLO"
+	_player_one_caption.text = (
+		"PLAYER 1 · KEYS %s · PAD %s" % [player_one_keys, controller_keys]
+		if player_two_enabled
+		else "PLAYER 1 · SOLO · KEYS %s · PAD %s" % [player_one_keys, controller_keys]
+	)
 	_player_one_card.size_flags_horizontal = (
 		Control.SIZE_SHRINK_BEGIN if player_two_enabled else Control.SIZE_EXPAND_FILL
 	)
 	_player_two_card.visible = player_two_enabled
-	_player_two_caption.text = player_two_title
+	_player_two_caption.text = (
+		"%s · %s · AUTO" % [player_two_title, GameSession.cpu_difficulty_title().to_upper()]
+		if GameSession.player_two_is_cpu()
+		else "%s · KEYS %s · PAD 2 %s" % [
+			player_two_title,
+			player_two_keys,
+			controller_keys,
+		]
+	)
 	_round_versus.visible = player_two_enabled
 	_round_player_two_card.visible = player_two_enabled
 	_round_player_two_caption.text = player_two_title
 	_stats_versus.visible = player_two_enabled
 	_player_two_stats_card.visible = player_two_enabled
 	_player_two_stats_title.text = player_two_title
+
+
+func _on_setting_changed(key: String, _value: Variant) -> void:
+	if not key.begins_with("controls/"):
+		return
+
+	for action: StringName in _targets_by_action:
+		var target := _targets_by_action[action] as TriangleTarget
+		if is_instance_valid(target):
+			target.set_display_letter(Settings.control_key_label(action).to_upper())
+	_configure_mode_ui()
+	_update_hint()
 
 
 func _active_player_indices() -> Array[int]:
@@ -298,6 +361,13 @@ func _player_accepts_human_input(player_index: int) -> bool:
 	)
 
 
+func _configure_cpu_profile() -> void:
+	var profile := GameSession.cpu_profile()
+	_cpu_reaction_min = float(profile.get("reaction_min", _cpu_reaction_min))
+	_cpu_reaction_max = float(profile.get("reaction_max", _cpu_reaction_max))
+	_cpu_accuracy = float(profile.get("accuracy", _cpu_accuracy))
+
+
 func _update_cpu(delta: float) -> void:
 	if not _round_active or not GameSession.player_two_is_cpu():
 		return
@@ -312,7 +382,7 @@ func _update_cpu(delta: float) -> void:
 		return
 
 	var chosen_target := active_target
-	if _rng.randf() > cpu_accuracy:
+	if _rng.randf() > _cpu_accuracy:
 		var alternatives := _targets_for_player(PLAYER_TWO)
 		alternatives.erase(active_target)
 		if not alternatives.is_empty():
@@ -324,8 +394,8 @@ func _update_cpu(delta: float) -> void:
 
 
 func _schedule_cpu_action() -> void:
-	var minimum := minf(cpu_reaction_min, cpu_reaction_max)
-	var maximum := maxf(cpu_reaction_min, cpu_reaction_max)
+	var minimum := minf(_cpu_reaction_min, _cpu_reaction_max)
+	var maximum := maxf(_cpu_reaction_min, _cpu_reaction_max)
 	_cpu_action_time = _rng.randf_range(minimum, maximum)
 
 
@@ -344,14 +414,20 @@ func _update_hint() -> void:
 				miss_penalty,
 			]
 	else:
+		var controller_keys := " ".join(CONTROLLER_TARGET_LABELS)
 		if GameSession.is_single_player():
-			_hint.text = "P1: %s   |   Chase the blue glow" % _letters_hint(PLAYER_ONE)
+			_hint.text = "P1 keys: %s   |   Pad: %s   |   Chase the blue glow" % [
+				_letters_hint(PLAYER_ONE),
+				controller_keys,
+			]
 		elif GameSession.player_two_is_cpu():
-			_hint.text = "P1: %s   |   CPU controls red   |   Chase the blue glow" % (
-				_letters_hint(PLAYER_ONE)
-			)
+			_hint.text = "P1: %s / pad %s   |   CPU %s controls red" % [
+				_letters_hint(PLAYER_ONE),
+				controller_keys,
+				GameSession.cpu_difficulty_title(),
+			]
 		else:
-			_hint.text = "P1: %s   |   P2: %s   |   Chase your glow" % [
+			_hint.text = "P1: %s / pad 1   |   P2: %s / pad 2   |   A B X" % [
 				_letters_hint(PLAYER_ONE),
 				_letters_hint(PLAYER_TWO),
 			]
@@ -374,45 +450,22 @@ func _create_targets() -> void:
 		_hint.text = "No target scene is configured."
 		return
 
-	var used_keycodes := {}
-	if not _create_player_targets(PLAYER_ONE, player_one_letters, used_keycodes):
+	if not _create_player_targets(PLAYER_ONE):
 		return
-	if GameSession.player_two_enabled() and not _create_player_targets(
-		PLAYER_TWO,
-		player_two_letters,
-		used_keycodes
-	):
+	if GameSession.player_two_enabled() and not _create_player_targets(PLAYER_TWO):
 		return
 
 	if not _has_targets_for_every_player():
-		_hint.text = "Each player needs at least one unique 0-9 target key."
+		_hint.text = "Each active player needs three configured target controls."
 
 
-func _create_player_targets(
-	player_index: int,
-	raw_letters: PackedStringArray,
-	used_keycodes: Dictionary
-) -> bool:
-	for raw_letter in raw_letters:
-		var letter := raw_letter.strip_edges().to_upper()
-		if letter.length() != 1:
-			push_warning(
-				"Ignoring %s target '%s'; use one 0-9 digit."
-				% [_player_name(player_index), raw_letter]
-			)
-			continue
+func _create_player_targets(player_index: int) -> bool:
+	var actions := Settings.control_actions_for_player(player_index)
+	if actions.is_empty():
+		push_error("%s has no configured target actions." % _player_name(player_index))
+		return false
 
-		var keycode := letter.unicode_at(0)
-		if keycode < FIRST_TARGET_KEY or keycode > LAST_TARGET_KEY:
-			push_warning(
-				"Ignoring %s target '%s'; use one 0-9 digit."
-				% [_player_name(player_index), raw_letter]
-			)
-			continue
-		if used_keycodes.has(keycode):
-			push_warning("Ignoring duplicate target key '%s'." % letter)
-			continue
-
+	for action: StringName in actions:
 		var instance := target_scene.instantiate()
 		var target := instance as TriangleTarget
 		if target == null:
@@ -423,7 +476,7 @@ func _create_player_targets(
 
 		_targets_root.add_child(target)
 		target.configure(
-			letter,
+			Settings.control_key_label(action).to_upper(),
 			player_index,
 			_player_inactive_color(player_index),
 			_player_highlight_color(player_index),
@@ -431,8 +484,7 @@ func _create_player_targets(
 		)
 		target.activated.connect(_on_target_activated)
 		_targets.append(target)
-		_targets_by_keycode[keycode] = target
-		used_keycodes[keycode] = true
+		_targets_by_action[action] = target
 	return true
 
 

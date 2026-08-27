@@ -1,8 +1,13 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scenes/game/gameplay.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
 [ext_resource type="PackedScene" path="res://scenes/game/triangle_target.tscn" id="3_target"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_replay.svg" id="4_replay"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_score.svg" id="5_score"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_share.svg" id="6_share"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_home.svg" id="7_home"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_back.svg" id="8_back"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_player_one"]
 content_margin_left = 26.0
@@ -497,35 +502,47 @@ text = "Correct match: +1 | Wrong key or triangle: -1"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="Actions" type="GridContainer" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+[node name="Actions" type="VBoxContainer" parent="HUD/RoundOver/Center/RoundPanel/Layout"]
+custom_minimum_size = Vector2(650, 0)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_constants/h_separation = 14
-theme_override_constants/v_separation = 14
-columns = 2
-
-[node name="SeeScoreButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(310, 0)
-layout_mode = 2
-text = "See Score"
-
-[node name="ShareButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(310, 0)
-layout_mode = 2
-text = "Share Result"
+theme_override_constants/separation = 12
 
 [node name="PlayAgainButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(310, 0)
 layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+icon = ExtResource("4_replay")
+icon_max_width = 28
 text = "Play Again"
+
+[node name="UtilityActions" type="HBoxContainer" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SeeScoreButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions/UtilityActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(319, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+icon = ExtResource("5_score")
+icon_max_width = 28
+text = "View Scorecard"
+
+[node name="ShareButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions/UtilityActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(319, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+icon = ExtResource("6_share")
+icon_max_width = 28
+text = "Share Result"
 
 [node name="ExitToMainMenuButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(310, 0)
 layout_mode = 2
+icon = ExtResource("7_home")
+icon_max_width = 28
 text = "Main Menu"
 
 [node name="ScorePanel" type="PanelContainer" parent="HUD/RoundOver/Center"]
@@ -855,34 +872,46 @@ theme_override_font_sizes/font_size = 18
 text = "x0"
 horizontal_alignment = 2
 
-[node name="Actions" type="GridContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+[node name="Actions" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+custom_minimum_size = Vector2(594, 0)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_constants/h_separation = 14
-theme_override_constants/v_separation = 14
-columns = 2
-
-[node name="BackToResultsButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 0)
-layout_mode = 2
-text = "Back to Results"
-
-[node name="StatsShareButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 0)
-layout_mode = 2
-text = "Share Result"
+theme_override_constants/separation = 10
 
 [node name="StatsPlayAgainButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
-custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+icon = ExtResource("4_replay")
+icon_max_width = 26
 text = "Play Again"
+
+[node name="UtilityActions" type="HBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BackToResultsButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(292, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+icon = ExtResource("8_back")
+icon_max_width = 26
+text = "Back to Results"
+
+[node name="StatsShareButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(292, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+icon = ExtResource("6_share")
+icon_max_width = 26
+text = "Share Result"
 
 [node name="StatsExitToMainMenuButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
+icon = ExtResource("7_home")
+icon_max_width = 26
 text = "Main Menu"
 
 [node name="ShareStatus" type="Label" parent="HUD/RoundOver"]
@@ -925,11 +954,11 @@ vertical_alignment = 1
 
 [connection signal="timeout" from="RoundTimer" to="." method="_on_round_timer_timeout"]
 [connection signal="pressed" from="HUD/Overlay/Margins/Layout/TopBar/PauseButton" to="." method="_on_pause_button_pressed"]
-[connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/SeeScoreButton" to="." method="_on_see_score_pressed"]
-[connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/ShareButton" to="." method="_on_share_pressed"]
 [connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/PlayAgainButton" to="." method="_on_play_again_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/UtilityActions/SeeScoreButton" to="." method="_on_see_score_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/UtilityActions/ShareButton" to="." method="_on_share_pressed"]
 [connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/ExitToMainMenuButton" to="." method="_on_exit_to_main_menu_pressed"]
-[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/BackToResultsButton" to="." method="_on_back_to_results_pressed"]
-[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/StatsShareButton" to="." method="_on_share_pressed"]
 [connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/StatsPlayAgainButton" to="." method="_on_play_again_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions/BackToResultsButton" to="." method="_on_back_to_results_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions/StatsShareButton" to="." method="_on_share_pressed"]
 [connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/StatsExitToMainMenuButton" to="." method="_on_exit_to_main_menu_pressed"]

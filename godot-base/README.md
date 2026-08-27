@@ -1,4 +1,4 @@
-# DeskCanSaw Game Base
+# DCS Base Game
 
 A Godot 4 starting point for DeskCanSaw Games projects. It ships the parts every
 game needs before it is a game: the studio sting, an intro, a main menu,
@@ -72,7 +72,12 @@ breaks the layout on the next resize.
 ## Common changes
 
 **Rename the game** — edit `scripts/game_info.gd` (`TITLE`, `TAGLINE`,
-`INTRO_CARDS`, `CREDITS`) and `application/config/name` in `project.godot`.
+`INTRO_CARDS`, `CREDITS`), `application/config/name` and
+`application/config/custom_user_dir_name` in `project.godot`. Give every
+derived game a unique custom user directory before release, then keep it stable
+so later display-name changes do not strand saves. When renaming a released
+project that previously used Godot's default directory, add its old project
+name to `Settings.LEGACY_PROJECT_NAMES` for the one-time desktop migration.
 
 **Replace the intro** — either edit the `cards` array on
 `scenes/boot/intro.tscn`, or build a new scene and point
@@ -101,12 +106,14 @@ scene with a `configure(Dictionary)` method can be passed as the second
 argument. Web exports download the PNG; desktop exports save it under
 `user://shares` and copy the saved path to the clipboard. The preview displays
 the generated PNG and can open the saved original in the system image viewer;
-the open action is hidden in browser exports.
+the open action is hidden in browser exports. The default card includes
+`assets/images/dcs_logo.png` in its header.
 
 **Tune the sample game** — the exported values on
-`scenes/game/gameplay.gd` control both players' keys and colours, target speed,
-round length, points, miss penalty, and CPU reaction speed/accuracy. The sample
-keeps rules in `gameplay.gd` and target input / movement in
+`scenes/game/gameplay.gd` control colours, target speed, round length, points
+and miss penalty. Keyboard bindings are persisted by `Settings`, while the CPU
+difficulty profiles live in `GameSession`. The sample keeps rules in
+`gameplay.gd` and target input / movement in
 `triangle_target.gd`, so either part can be replaced independently.
 
 **Hook up your own game** — replace `scenes/game/gameplay.tscn` (or point the
@@ -120,15 +127,24 @@ and the `pause` action handling, and the pause overlay works as-is.
 | `skip` | Space, Enter, left mouse button, gamepad A |
 | `pause` | Esc, gamepad Start |
 | `toggle_fullscreen` | F11 |
+| `player_one_target_1/2/3` | Remappable; defaults to 1, 2 and 3 |
+| `player_two_target_1/2/3` | Remappable; defaults to 7, 8 and 9 |
 | `ui_accept` / `ui_cancel` | Godot defaults (menu navigation and back) |
 
-The sample gameplay reads its displayed number keys directly, so changing its
-target digits does not require adding Input Map actions. Player 1 defaults to
-1/2/3 and Player 2 to 7/8/9. Single-player creates only Player 1's targets;
-multiplayer lets Player 2 use those controls or hands the red side to the CPU.
-Each active player has one bright target at a time: matching it earns a point,
-while choosing one of that player's dim targets costs a point. Human-controlled
-targets also accept mouse and touchscreen presses.
+Gameplay keys can be changed under **Settings → Controls** and are saved in
+`user://settings.cfg`; assigning an occupied key swaps the two bindings.
+Controller 1 controls Player 1 and Controller 2 controls Player 2 with A, B and
+X. Single-player creates only Player 1's targets; multiplayer lets Player 2 use
+those controls or hands the red side to the CPU. Each active player has one
+bright target at a time: matching it earns a point, while choosing one of that
+player's dim targets costs a point. Human-controlled targets also accept mouse
+and touchscreen presses.
+
+Mode selection uses a two-step setup: choose single player or multiplayer, then
+confirm the controller assignment. Multiplayer defaults to the CPU and can be
+switched to a local human player. CPU opponents offer Easy (Baby seed), Medium
+(Hard seed) and Hard (Impossible seed) profiles, which adjust reaction time and
+accuracy. Android and iOS builds expose single-player mode only.
 
 The instructions screen is shown after mode selection by default. Its
 **Show instructions when starting a mode** toggle is persisted, and the same

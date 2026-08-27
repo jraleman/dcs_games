@@ -25,15 +25,34 @@ const FPS_OPTIONS := [0, 30, 60, 90, 120, 144]
 @onready var _ui_scale_value: Label = %UiScaleValue
 @onready var _show_fps: CheckButton = %ShowFpsToggle
 @onready var _show_instructions: CheckButton = %ShowInstructionsToggle
+@onready var _player_one_target_one: Button = %PlayerOneTargetOne
+@onready var _player_one_target_two: Button = %PlayerOneTargetTwo
+@onready var _player_one_target_three: Button = %PlayerOneTargetThree
+@onready var _player_two_target_one: Button = %PlayerTwoTargetOne
+@onready var _player_two_target_two: Button = %PlayerTwoTargetTwo
+@onready var _player_two_target_three: Button = %PlayerTwoTargetThree
+@onready var _binding_status: Label = %BindingStatus
+@onready var _reset_controls_button: Button = %ResetControlsButton
 @onready var _back_button: Button = %BackButton
 @onready var _margins: MarginContainer = %Margins
 
 var _syncing := false
+var _writing_settings := false
+var _binding_buttons: Dictionary = {}
+var _listening_action: StringName = &""
 
 
 func _ready() -> void:
 	first_focus = _back_button
 	margins = _margins
+	_binding_buttons = {
+		Settings.PLAYER_ONE_ACTIONS[0]: _player_one_target_one,
+		Settings.PLAYER_ONE_ACTIONS[1]: _player_one_target_two,
+		Settings.PLAYER_ONE_ACTIONS[2]: _player_one_target_three,
+		Settings.PLAYER_TWO_ACTIONS[0]: _player_two_target_one,
+		Settings.PLAYER_TWO_ACTIONS[1]: _player_two_target_two,
+		Settings.PLAYER_TWO_ACTIONS[2]: _player_two_target_three,
+	}
 	_populate_options()
 	_connect_ui()
 	_sync_from_settings()
@@ -65,6 +84,10 @@ func _connect_ui() -> void:
 	_window_mode.item_selected.connect(_on_window_mode_selected)
 	_max_fps.item_selected.connect(_on_max_fps_selected)
 	_ui_scale.value_changed.connect(_on_ui_scale_changed)
+	for action: StringName in _binding_buttons:
+		var button := _binding_buttons[action] as Button
+		button.pressed.connect(_on_binding_pressed.bind(action))
+	_reset_controls_button.pressed.connect(_on_reset_controls_pressed)
 
 
 ## Pushes the stored values into the widgets without echoing them back.
@@ -82,6 +105,7 @@ func _sync_from_settings() -> void:
 	_select_id(_max_fps, int(Settings.get_value("display/max_fps")))
 	_syncing = false
 	_refresh_value_labels()
+	_refresh_control_buttons()
 
 
 func _select_id(option: OptionButton, id: int) -> void:
@@ -96,42 +120,120 @@ func _refresh_value_labels() -> void:
 	_ui_scale_value.text = "%d%%" % roundi(_ui_scale.value * 100.0)
 
 
+func _refresh_control_buttons() -> void:
+	for action: StringName in _binding_buttons:
+		var button := _binding_buttons[action] as Button
+		button.text = (
+			"Press a key..."
+			if action == _listening_action
+			else Settings.control_key_label(action)
+		)
+
+
 # --- Widget handlers --------------------------------------------------------
 
 func _on_volume_changed(value: float, key: String) -> void:
 	_refresh_value_labels()
 	if _syncing:
 		return
-	Settings.set_value(key, value)
+	_set_setting(key, value)
 
 
 func _on_bool_toggled(pressed: bool, key: String) -> void:
 	if _syncing:
 		return
-	Settings.set_value(key, pressed)
+	_set_setting(key, pressed)
 
 
 func _on_window_mode_selected(index: int) -> void:
 	if _syncing:
 		return
-	Settings.set_value("display/window_mode", _window_mode.get_item_id(index))
+	_set_setting("display/window_mode", _window_mode.get_item_id(index))
 
 
 func _on_max_fps_selected(index: int) -> void:
 	if _syncing:
 		return
-	Settings.set_value("display/max_fps", _max_fps.get_item_id(index))
+	_set_setting("display/max_fps", _max_fps.get_item_id(index))
 
 
 func _on_ui_scale_changed(value: float) -> void:
 	_refresh_value_labels()
 	if _syncing:
 		return
-	Settings.set_value("ui/scale", value)
+	_set_setting("ui/scale", value)
+
+
+func _set_setting(key: String, value: Variant) -> void:
+	_writing_settings = true
+	Settings.set_value(key, value)
+	_writing_settings = false
+
+
+func _on_binding_pressed(action: StringName) -> void:
+	_listening_action = action
+	_binding_status.text = (
+		"Press a key for %s. Esc cancels." % Settings.control_action_title(action)
+	)
+	_refresh_control_buttons()
+
+
+func _input(event: InputEvent) -> void:
+	if _listening_action.is_empty() or not event is InputEventKey:
+		return
+
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return
+	get_viewport().set_input_as_handled()
+
+	var keycode := (
+		key_event.physical_keycode
+		if key_event.physical_keycode != KEY_NONE
+		else key_event.keycode
+	)
+	if keycode == KEY_ESCAPE or key_event.keycode == KEY_ESCAPE:
+		_cancel_binding("Binding cancelled.")
+		return
+	if not Settings.is_control_key_allowed(keycode):
+		_binding_status.text = "Esc and F11 are reserved. Press another key."
+		return
+
+	var action := _listening_action
+	_listening_action = &""
+	_writing_settings = true
+	var assigned := Settings.set_control_key(action, keycode)
+	_writing_settings = false
+	if assigned:
+		_binding_status.text = "%s now uses %s." % [
+			Settings.control_action_title(action),
+			Settings.control_key_label(action),
+		]
+	else:
+		_binding_status.text = "That key could not be assigned."
+	_refresh_control_buttons()
+
+
+func _cancel_binding(message: String) -> void:
+	_listening_action = &""
+	_binding_status.text = message
+	_refresh_control_buttons()
+
+
+func _on_reset_controls_pressed() -> void:
+	_listening_action = &""
+	_writing_settings = true
+	Settings.reset_controls_to_defaults()
+	_writing_settings = false
+	_binding_status.text = "Gameplay keys restored to their defaults."
+	_refresh_control_buttons()
 
 
 func _on_reset_pressed() -> void:
+	_listening_action = &""
+	_writing_settings = true
 	Settings.reset_to_defaults()
+	_writing_settings = false
 	_sync_from_settings()
 
 
@@ -142,5 +244,5 @@ func _on_back_pressed() -> void:
 ## Keeps the widgets honest when something else changes a setting
 ## (F11 for fullscreen, for instance).
 func _on_setting_changed(_key: String, _value: Variant) -> void:
-	if not _syncing:
+	if not _syncing and not _writing_settings:
 		_sync_from_settings()

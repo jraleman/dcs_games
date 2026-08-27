@@ -56,8 +56,14 @@ func _process(delta: float) -> void:
 	_shake_strength = move_toward(_shake_strength, 0.0, delta * 42.0)
 
 	var target_color := _highlight_color if highlighted else _inactive_color
-	_display_color = _display_color.lerp(target_color, clampf(delta * 10.0, 0.0, 1.0))
-	_update_palette()
+	if not _display_color.is_equal_approx(target_color):
+		_display_color = _display_color.lerp(
+			target_color,
+			clampf(delta * 10.0, 0.0, 1.0)
+		)
+		if _display_color.is_equal_approx(target_color):
+			_display_color = target_color
+		_update_palette()
 
 	var base_scale := 1.13 if highlighted else 0.88
 	var pulse_speed := 6.2 if highlighted else 2.4
@@ -88,15 +94,23 @@ func configure(
 	highlight_color: Color,
 	speed: float
 ) -> void:
-	letter = display_letter
 	player_index = owner_index
 	_inactive_color = inactive_color
 	_highlight_color = highlight_color
 	_display_color = inactive_color
 	move_speed = speed
-	_letter_label.text = letter
+	set_display_letter(display_letter)
 	set_highlighted(false)
 	_update_palette()
+
+
+func set_display_letter(display_letter: String) -> void:
+	letter = display_letter
+	_letter_label.text = letter
+	_letter_label.add_theme_font_size_override(
+		"font_size",
+		38 if letter.length() <= 2 else 25 if letter.length() <= 5 else 18
+	)
 
 
 func set_highlighted(value: bool) -> void:

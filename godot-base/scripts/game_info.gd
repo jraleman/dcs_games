@@ -8,7 +8,7 @@ const STUDIO := "DeskCanSaw Games"
 const STUDIO_SHORT := "DeskCanSaw"
 const WEBSITE := "https://deskcansaw.com"
 
-const TITLE := "Game Title"
+const TITLE := "DCS Base Game"
 const TAGLINE := "A DeskCanSaw Games production"
 
 ## Text cards shown by the placeholder intro, in order.
