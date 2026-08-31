@@ -69,6 +69,11 @@ func generate_score_image(
 			"message": "Share images require a rendering display.",
 		}
 
+	var prepared_result := _prepare_card_data(data)
+	if not bool(prepared_result.get("ok", false)):
+		return prepared_result
+	var card_data: Dictionary = prepared_result["data"]
+
 	_busy = true
 	var scene := card_scene if card_scene != null else DEFAULT_CARD
 	var viewport := SubViewport.new()
@@ -90,7 +95,7 @@ func generate_score_image(
 		viewport.add_child(card)
 		if card is Control:
 			(card as Control).set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		card.call("configure", data)
+		card.call("configure", card_data)
 
 		await get_tree().process_frame
 		await get_tree().process_frame
@@ -104,7 +109,11 @@ func generate_score_image(
 				"message": "The share image could not be rendered.",
 			}
 		else:
-			result = _store_and_share(image, str(data.get("game_title", GameInfo.TITLE)))
+			result = _store_and_share(
+				image,
+				str(card_data.get("game_title", GameInfo.TITLE)),
+				str(card_data.get("stats_url", ""))
+			)
 
 	viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	viewport.queue_free()
@@ -113,7 +122,46 @@ func generate_score_image(
 	return result
 
 
-func _store_and_share(image: Image, game_title: String) -> Dictionary:
+func _prepare_card_data(data: Dictionary) -> Dictionary:
+	var prepared := data.duplicate(true)
+	var game_id := str(
+		prepared.get("game_id", GameInfo.TARGET_RUSH_ID)
+	).strip_edges()
+	if game_id.is_empty():
+		game_id = GameInfo.TARGET_RUSH_ID
+
+	var stats_url := str(
+		prepared.get("stats_url", GameInfo.stats_url_for(game_id))
+	).strip_edges()
+	var validation_error := ShareQrCode.validation_error(stats_url)
+	if not validation_error.is_empty():
+		return {
+			"ok": false,
+			"message": validation_error,
+		}
+
+	var qr_texture := ShareQrCode.create_texture(stats_url)
+	if qr_texture == null:
+		return {
+			"ok": false,
+			"message": "The stats QR code could not be generated.",
+		}
+
+	prepared["game_id"] = game_id
+	prepared["stats_url"] = stats_url
+	prepared["website"] = str(prepared.get("website", GameInfo.WEBSITE))
+	prepared["qr_texture"] = qr_texture
+	return {
+		"ok": true,
+		"data": prepared,
+	}
+
+
+func _store_and_share(
+	image: Image,
+	game_title: String,
+	stats_url: String
+) -> Dictionary:
 	var png := image.save_png_to_buffer()
 	if png.is_empty():
 		return {
@@ -130,6 +178,7 @@ func _store_and_share(image: Image, game_title: String) -> Dictionary:
 			"path": filename,
 			"filename": filename,
 			"png": png,
+			"stats_url": stats_url,
 			"can_open_original": false,
 			"message": "Share image downloaded.",
 		}
@@ -164,6 +213,7 @@ func _store_and_share(image: Image, game_title: String) -> Dictionary:
 		"global_path": global_path,
 		"filename": filename,
 		"png": png,
+		"stats_url": stats_url,
 		"can_open_original": true,
 		"message": "Share image saved and its path copied to the clipboard.",
 	}

@@ -972,7 +972,7 @@ func _best_combo_summary() -> String:
 
 
 func _populate_score_screen(result_text: String, result_color: Color) -> void:
-	var total_slices: int = _scores[PLAYER_ONE] + _scores[PLAYER_TWO]
+	var total_slices := _total_slice_count()
 	_score_screen_title.text = result_text
 	_score_screen_title.add_theme_color_override("font_color", result_color)
 	_score_screen_subtitle.text = _round_subtitle.text
@@ -986,17 +986,18 @@ func _populate_score_screen(result_text: String, result_color: Color) -> void:
 
 func _populate_player_stats(player_index: int) -> void:
 	var score: int = _scores[player_index]
-	var misses := maxi(_spawned_cans - score, 0)
-	var accuracy := _accuracy_percent(score, _spawned_cans)
+	var slices := _player_slice_count(player_index)
+	var misses := maxi(_spawned_cans - slices, 0)
+	var accuracy := _accuracy_percent(slices, _spawned_cans)
 	if player_index == PLAYER_ONE:
 		_player_one_stats_score.text = "%d" % score
-		_player_one_stats_hits.text = "%d" % score
+		_player_one_stats_hits.text = "%d" % slices
 		_player_one_stats_misses.text = "%d" % misses
 		_player_one_stats_accuracy.text = "%d%%" % accuracy
 		_player_one_stats_streak.text = "x%d" % _best_streaks[player_index]
 	else:
 		_player_two_stats_score.text = "%d" % score
-		_player_two_stats_hits.text = "%d" % score
+		_player_two_stats_hits.text = "%d" % slices
 		_player_two_stats_misses.text = "%d" % misses
 		_player_two_stats_accuracy.text = "%d%%" % accuracy
 		_player_two_stats_streak.text = "x%d" % _best_streaks[player_index]
@@ -1006,6 +1007,17 @@ func _accuracy_percent(hits: int, opportunities: int) -> int:
 	if opportunities <= 0:
 		return 0
 	return roundi(float(hits) / float(opportunities) * 100.0)
+
+
+func _player_slice_count(player_index: int) -> int:
+	return floori(float(_scores[player_index]) / float(maxi(points_per_can, 1)))
+
+
+func _total_slice_count() -> int:
+	return (
+		_player_slice_count(PLAYER_ONE)
+		+ _player_slice_count(PLAYER_TWO)
+	)
 
 
 func _spawn_slice_effect(
@@ -1494,11 +1506,18 @@ func _on_share_pressed() -> void:
 
 
 func _share_payload() -> Dictionary:
-	var total_slices: int = _scores[PLAYER_ONE] + _scores[PLAYER_TWO]
+	var total_slices := _total_slice_count()
 	var best_combo := maxi(_best_streaks[PLAYER_ONE], _best_streaks[PLAYER_TWO])
+	var accuracy := _accuracy_percent(total_slices, _spawned_cans)
+	var score_values: Array[int] = [_scores[PLAYER_ONE]]
+	if GameSession.player_two_enabled():
+		score_values.append(_scores[PLAYER_TWO])
 	return {
+		"game_id": GameInfo.SLICE_AND_SLASH_ID,
 		"game_title": GameInfo.DESK_CAN_SAW_TITLE,
 		"studio": GameInfo.STUDIO,
+		"website": GameInfo.WEBSITE,
+		"stats_url": GameInfo.stats_url_for(GameInfo.SLICE_AND_SLASH_ID),
 		"mode": GameSession.mode_title(),
 		"result": _result_label.text,
 		"subtitle": _round_subtitle.text,
@@ -1508,9 +1527,14 @@ func _share_payload() -> Dictionary:
 			if GameSession.is_single_player()
 			else "%d - %d" % [_scores[PLAYER_ONE], _scores[PLAYER_TWO]]
 		),
-		"accuracy": "%d%%" % _accuracy_percent(total_slices, _spawned_cans),
+		"accuracy": "%d%%" % accuracy,
 		"hits": str(total_slices),
 		"combo": "x%d" % best_combo,
+		"score_values": score_values,
+		"accuracy_value": accuracy,
+		"hits_value": total_slices,
+		"misses_value": maxi(_spawned_cans - total_slices, 0),
+		"combo_value": best_combo,
 		"achievements": _share_achievement_titles(),
 		"achievements_are_new": false,
 		"achievement_count": AchievementManager.unlocked_count(),
@@ -1521,7 +1545,7 @@ func _share_payload() -> Dictionary:
 			else player_two_color
 		),
 		"secondary_color": player_two_color if GameSession.player_two_enabled() else player_one_color,
-		"footer": "%s  |  %s" % [GameInfo.TAGLINE, GameInfo.WEBSITE],
+		"footer": "%s  |  %s" % [GameInfo.TAGLINE, GameInfo.website_label()],
 	}
 
 

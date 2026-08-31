@@ -135,13 +135,21 @@ animated toast are automatic.
 **Share a result** — call
 `var result = await ShareManager.generate_score_image(session_data)`, then call
 `ShareManager.show_preview(result)` after a successful result. The default card
-expects result, score, accuracy, hits, combo and achievement fields, but any
-scene with a `configure(Dictionary)` method can be passed as the second
-argument. Web exports download the PNG; desktop exports save it under
-`user://shares` and copy the saved path to the clipboard. The preview displays
-the generated PNG and can open the saved original in the system image viewer;
-the open action is hidden in browser exports. The default card includes
-`assets/images/dcs_logo.png` in its header.
+expects a game ID, result, score, accuracy, hits, combo and achievement fields.
+It renders game-specific promotional art plus a QR information panel containing
+the game name, website and stats link. Set `stats_url` in the payload to use a
+published per-run URL, or configure the short per-game defaults under
+`share/stats_urls` in `project.godot`. Keep stats URLs at 42 UTF-8 bytes or less
+so the QR modules remain scan-safe after the card is resized to 600×315.
+
+Any scene with a `configure(Dictionary)` method can still be passed as the
+second argument. `ShareManager` supplies that scene with `website`,
+`stats_url`, and a generated `qr_texture`. Web exports download the PNG;
+desktop exports save it under `user://shares` and copy the saved path to the
+clipboard. The preview displays the generated PNG and can open the saved
+original in the system image viewer; the open action is hidden in browser
+exports. QR generation uses the MIT-licensed GDScript implementation vendored
+under `third_party/greaby_qrcode`.
 
 **Tune the sample game** — the exported values on
 `scenes/game/gameplay.gd` control colours, target speed, round length, points
@@ -225,6 +233,7 @@ godot --headless --path . --script res://tests/slice_and_slash_scene_test.gd
 godot --headless --path . --script res://tests/visual_effects_test.gd
 godot --headless --path . --script res://tests/accessibility_test.gd
 godot --headless --path . --script res://tests/target_rush_options_test.gd
+godot --headless --path . --script res://tests/share_card_test.gd
 ```
 
 The FPS counter is available under **Settings → Display** and is drawn by

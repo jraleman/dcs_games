@@ -100,3 +100,8 @@ player_two_target_3={
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.054902, 0.082353, 0.098039, 1)
+
+[share]
+
+stats_urls/target_rush="https://deskcansaw.com/stats/tr"
+stats_urls/slice_and_slash="https://deskcansaw.com/stats/dcs"

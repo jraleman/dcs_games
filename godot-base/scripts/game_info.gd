@@ -10,10 +10,13 @@ const WEBSITE := "https://deskcansaw.com"
 
 const TITLE := "DCS Base Game"
 const TAGLINE := "A DeskCanSaw Games production"
+const TARGET_RUSH_ID := "target_rush"
 const TARGET_RUSH_TITLE := "Target Rush"
 const SLICE_AND_SLASH_ID := "slice_and_slash"
 const DESK_CAN_SAW_TITLE := "Desk-Can-Saw"
 const RACE_CONDITION_ACHIEVEMENT_ID := "race_condition"
+const TARGET_RUSH_STATS_URL := WEBSITE + "/stats/tr"
+const DESK_CAN_SAW_STATS_URL := WEBSITE + "/stats/dcs"
 
 ## Text cards shown by the placeholder intro, in order.
 const INTRO_CARDS: Array[String] = [
@@ -79,6 +82,24 @@ const MUTED := Color("93a6b0")
 
 static func version() -> String:
 	return str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
+
+
+static func stats_url_for(game_id: String) -> String:
+	var fallback := (
+		DESK_CAN_SAW_STATS_URL
+		if game_id == SLICE_AND_SLASH_ID
+		else TARGET_RUSH_STATS_URL
+	)
+	return str(
+		ProjectSettings.get_setting(
+			"share/stats_urls/%s" % game_id,
+			fallback
+		)
+	).strip_edges()
+
+
+static func website_label() -> String:
+	return WEBSITE.trim_prefix("https://").trim_prefix("http://").trim_suffix("/")
 
 
 static func copyright_line() -> String:

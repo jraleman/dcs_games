@@ -1512,9 +1512,16 @@ func _share_payload() -> Dictionary:
 
 	var achievement_titles := _share_achievement_titles()
 	var achievements_are_new := not _round_achievements.is_empty()
+	var accuracy := _accuracy_percent(total_hits, total_attempts)
+	var score_values: Array[int] = [_scores[PLAYER_ONE]]
+	if GameSession.player_two_enabled():
+		score_values.append(_scores[PLAYER_TWO])
 	return {
-		"game_title": GameInfo.TITLE,
+		"game_id": GameInfo.TARGET_RUSH_ID,
+		"game_title": GameInfo.TARGET_RUSH_TITLE,
 		"studio": GameInfo.STUDIO,
+		"website": GameInfo.WEBSITE,
+		"stats_url": GameInfo.stats_url_for(GameInfo.TARGET_RUSH_ID),
 		"mode": GameSession.mode_title(),
 		"result": _result_label.text,
 		"subtitle": _round_subtitle.text,
@@ -1524,9 +1531,14 @@ func _share_payload() -> Dictionary:
 			if GameSession.is_single_player()
 			else "%d - %d" % [_scores[PLAYER_ONE], _scores[PLAYER_TWO]]
 		),
-		"accuracy": "%d%%" % _accuracy_percent(total_hits, total_attempts),
+		"accuracy": "%d%%" % accuracy,
 		"hits": str(total_hits),
 		"combo": "x%d" % best_combo,
+		"score_values": score_values,
+		"accuracy_value": accuracy,
+		"hits_value": total_hits,
+		"misses_value": total_attempts - total_hits,
+		"combo_value": best_combo,
 		"achievements": achievement_titles,
 		"achievements_are_new": achievements_are_new,
 		"achievement_count": AchievementManager.unlocked_count(),
@@ -1541,7 +1553,7 @@ func _share_payload() -> Dictionary:
 			if GameSession.player_two_enabled()
 			else player_one_highlight_color
 		),
-		"footer": "%s  |  %s" % [GameInfo.TAGLINE, GameInfo.WEBSITE],
+		"footer": "%s  |  %s" % [GameInfo.TAGLINE, GameInfo.website_label()],
 	}
 
 
