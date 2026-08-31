@@ -14,6 +14,9 @@ var _time := 0.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if Settings.reduced_motion_enabled():
+		set_process(false)
+		queue_redraw()
 
 
 func _process(delta: float) -> void:

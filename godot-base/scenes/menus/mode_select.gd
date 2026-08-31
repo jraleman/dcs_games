@@ -55,9 +55,11 @@ var _pending_mode := GameSession.GameMode.SINGLE_PLAYER
 var _page_tween: Tween
 var _single_player_available := true
 var _multiplayer_available := true
+var _reduced_motion := false
 
 
 func _ready() -> void:
+	_reduced_motion = Settings.reduced_motion_enabled()
 	first_focus = _single_player_button
 	margins = _margins
 	_opponent_toggle.set_pressed_no_signal(not GameSession.is_slice_and_slash())
@@ -154,11 +156,13 @@ func _update_confirmation() -> void:
 		_mode_eyebrow.text = "SINGLE PLAYER"
 		_confirm_title.text = "Ready for a solo run?"
 		_confirm_description.text = (
-			"Only Player 1 enters the arena. Chase the blue glow and set a high score."
+			"Only Player 1 enters the arena. Follow the highlighted target and "
+			+ "set a high score."
 		)
-		_confirm_hint.text = "Player 1 uses %s or Controller 1 buttons A, B and X." % (
-			Settings.control_summary(0)
-		)
+		_confirm_hint.text = "Player 1 uses %s or Controller 1 %s." % [
+			Settings.control_summary(0),
+			_target_pad_copy(),
+		]
 		_confirm_button.text = "Start Single Player"
 	else:
 		var difficulty := _selected_cpu_difficulty()
@@ -177,12 +181,15 @@ func _update_confirmation() -> void:
 		_opponent_control_keys.text = (
 			"AUTO · %s" % GameSession.cpu_preset_title(difficulty).to_upper()
 			if cpu_selected
-			else "KEYS %s · PAD 2 A B X" % Settings.control_summary(1, " · ")
+			else "KEYS %s · PAD 2 %s" % [
+				Settings.control_summary(1, " · "),
+				Settings.controller_target_summary(" · "),
+			]
 		)
 		_opponent_control_description.text = (
-			str(profile.get("description", "The red side plays automatically."))
+			str(profile.get("description", "Player 2 plays automatically."))
 			if cpu_selected
-			else "Follow the red glow with the Player 2 bindings."
+			else "Follow Player 2's highlighted target with the Player 2 bindings."
 		)
 		_confirm_hint.text = (
 			"%s CPU · %s" % [
@@ -190,9 +197,10 @@ func _update_confirmation() -> void:
 				GameSession.cpu_preset_title(difficulty),
 			]
 			if cpu_selected
-			else "Player 2 uses %s or Controller 2 buttons A, B and X." % (
-				Settings.control_summary(1)
-			)
+			else "Player 2 uses %s or Controller 2 %s." % [
+				Settings.control_summary(1),
+				_target_pad_copy(),
+			]
 		)
 		_confirm_button.text = "Start vs CPU" if cpu_selected else "Start Local Multiplayer"
 
@@ -210,7 +218,8 @@ func _update_slice_and_slash_confirmation(single_player: bool) -> void:
 			+ "as many falling cans as possible before time runs out."
 		)
 		_confirm_hint.text = (
-			"Use the mouse, arrow keys, Controller 1 analog stick or its D-pad."
+			"Use the mouse, arrow keys or Controller 1 with %s."
+			% Settings.controller_movement_scheme_label()
 		)
 		_confirm_button.text = "Start Solo Desk-Can-Saw"
 	else:
@@ -221,9 +230,11 @@ func _update_slice_and_slash_confirmation(single_player: bool) -> void:
 			+ "mouse and Player 2 uses the arrow keys by default."
 		)
 		_opponent_control_title.text = "PLAYER 2"
-		_opponent_control_keys.text = "ARROW KEYS · PAD 2 STICK / D-PAD"
+		_opponent_control_keys.text = "ARROW KEYS · PAD 2 %s" % (
+			Settings.controller_movement_scheme_label().to_upper()
+		)
 		_opponent_control_description.text = (
-			"Player 2 moves only the red chainsaw."
+			"These controls move Player 2's chainsaw only."
 		)
 		_confirm_hint.text = (
 			"P1: mouse or Pad 1   |   P2: arrows or Pad 2"
@@ -318,31 +329,50 @@ func _configure_game_copy() -> void:
 		"Share the workbench: Player 1 uses the mouse and Player 2 uses the arrow "
 		+ "keys, with assigned controllers available for either player."
 	)
-	_player_one_control_description.text = "Move the blue electric chainsaw."
+	_player_one_control_description.text = "Move Player 1's electric chainsaw."
 
 
 func _update_control_copy() -> void:
 	if GameSession.is_slice_and_slash():
-		_single_player_controls.text = "MOUSE · ARROW KEYS · PAD 1 STICK / D-PAD"
+		var movement_copy := Settings.controller_movement_scheme_label().to_upper()
+		_single_player_controls.text = "MOUSE · ARROW KEYS · PAD 1 %s" % movement_copy
 		_multiplayer_controls.text = (
 			"P1 · MOUSE / PAD 1     P2 · ARROWS / PAD 2"
 		)
 		_player_one_control_keys.text = (
-			"MOUSE · PAD 1 STICK / D-PAD"
+			"MOUSE · PAD 1 %s" % movement_copy
 			if _pending_mode == GameSession.GameMode.MULTIPLAYER
-			else "MOUSE · ARROWS · PAD 1"
+			else "MOUSE · ARROWS · PAD 1 %s" % movement_copy
 		)
 		return
 
 	var player_one_keys := Settings.control_summary(0, "  ")
 	var player_two_keys := Settings.control_summary(1, "  ")
-	_single_player_controls.text = "PLAYER 1 · KEYS %s · PAD A B X" % player_one_keys
+	var mapped_buttons := Settings.controller_target_summary(" ")
+	var pad_copy := (
+		"ANY %s" % mapped_buttons
+		if Settings.one_button_target_rush_enabled()
+		else mapped_buttons
+	)
+	_single_player_controls.text = "PLAYER 1 · KEYS %s · PAD %s" % [
+		player_one_keys,
+		pad_copy,
+	]
 	_multiplayer_controls.text = "P1 · %s / PAD 1     P2 · %s / PAD 2" % [
 		player_one_keys,
 		player_two_keys,
 	]
-	_player_one_control_keys.text = "KEYS %s · PAD 1 A B X" % (
-		Settings.control_summary(0, " · ")
+	_player_one_control_keys.text = "KEYS %s · PAD 1 %s" % [
+		Settings.control_summary(0, " · "),
+		pad_copy,
+	]
+
+
+func _target_pad_copy() -> String:
+	return (
+		"any mapped button (%s)" % Settings.controller_target_summary(", ")
+		if Settings.one_button_target_rush_enabled()
+		else "buttons %s" % Settings.controller_target_summary(", ")
 	)
 
 
@@ -373,6 +403,16 @@ func _show_step(next_step: int) -> void:
 
 	if _page_tween and _page_tween.is_valid():
 		_page_tween.kill()
+
+	if _reduced_motion:
+		outgoing.hide()
+		outgoing.modulate = Color.WHITE
+		outgoing.scale = Vector2.ONE
+		incoming.show()
+		incoming.modulate = Color.WHITE
+		incoming.scale = Vector2.ONE
+		_focus_current_step.call_deferred()
+		return
 
 	_center_page_pivot(outgoing)
 	_center_page_pivot(incoming)

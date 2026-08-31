@@ -13,6 +13,7 @@ var gravity := 220.0
 var sliced := false
 var can_color := GameInfo.SKY
 var _spin_speed := 0.0
+var _reduced_motion := false
 
 
 func configure(
@@ -38,7 +39,8 @@ func advance(delta: float, play_bounds: Rect2) -> bool:
 
 	velocity.y += gravity * delta
 	position += velocity * delta
-	rotation += _spin_speed * delta
+	if not _reduced_motion:
+		rotation += _spin_speed * delta
 
 	var minimum_x := play_bounds.position.x + radius
 	var maximum_x := play_bounds.end.x - radius
@@ -52,6 +54,10 @@ func advance(delta: float, play_bounds: Rect2) -> bool:
 		velocity.x = -absf(velocity.x)
 
 	return position.y - radius > play_bounds.end.y
+
+
+func set_reduced_motion(enabled: bool) -> void:
+	_reduced_motion = enabled
 
 
 func try_slice(chainsaw_rect: Rect2) -> bool:

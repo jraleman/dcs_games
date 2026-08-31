@@ -16,9 +16,11 @@ extends Control
 
 var _tween: Tween
 var _advanced := false
+var _reduced_motion := false
 
 
 func _ready() -> void:
+	_reduced_motion = Settings.reduced_motion_enabled()
 	get_viewport().size_changed.connect(_refresh_layout)
 	_logo.resized.connect(_center_pivot)
 	_refresh_layout()
@@ -27,21 +29,33 @@ func _ready() -> void:
 	AudioManager.play_splash()
 	_motion.modulate.a = 0.0
 	_logo.modulate.a = 0.0
-	_logo.scale = Vector2(0.84, 0.84)
-	_logo.rotation = deg_to_rad(-4.0)
+	_logo.scale = Vector2.ONE if _reduced_motion else Vector2(0.84, 0.84)
+	_logo.rotation = 0.0 if _reduced_motion else deg_to_rad(-4.0)
 
 	_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	_tween.tween_property(_logo, "modulate:a", 1.0, fade_time)
 	_tween.parallel().tween_property(_motion, "modulate:a", 1.0, fade_time + 0.15)
-	_tween.parallel().tween_property(_logo, "scale", Vector2.ONE * 1.045, fade_time + 0.25)
-	_tween.parallel().tween_property(_logo, "rotation", 0.0, fade_time + 0.2)
-	_tween.tween_property(_logo, "scale", Vector2.ONE, 0.28).set_trans(
-		Tween.TRANS_BACK
-	).set_ease(Tween.EASE_OUT)
+	if not _reduced_motion:
+		_tween.parallel().tween_property(
+			_logo,
+			"scale",
+			Vector2.ONE * 1.045,
+			fade_time + 0.25
+		)
+		_tween.parallel().tween_property(_logo, "rotation", 0.0, fade_time + 0.2)
+		_tween.tween_property(_logo, "scale", Vector2.ONE, 0.28).set_trans(
+			Tween.TRANS_BACK
+		).set_ease(Tween.EASE_OUT)
 	_tween.tween_interval(hold_time)
 	_tween.tween_property(_logo, "modulate:a", 0.0, fade_time)
 	_tween.parallel().tween_property(_motion, "modulate:a", 0.0, fade_time)
-	_tween.parallel().tween_property(_logo, "scale", Vector2.ONE * 1.035, fade_time)
+	if not _reduced_motion:
+		_tween.parallel().tween_property(
+			_logo,
+			"scale",
+			Vector2.ONE * 1.035,
+			fade_time
+		)
 	_tween.tween_callback(_advance)
 
 

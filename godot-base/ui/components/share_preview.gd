@@ -63,7 +63,8 @@ func dismiss() -> void:
 	_tween = create_tween().set_parallel(true)
 	_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	_tween.tween_property(self, "modulate:a", 0.0, 0.18)
-	_tween.tween_property(_panel, "scale", Vector2.ONE * 0.96, 0.18)
+	if not Settings.reduced_motion_enabled():
+		_tween.tween_property(_panel, "scale", Vector2.ONE * 0.96, 0.18)
 	_tween.chain().tween_callback(_finish_close)
 
 
@@ -91,11 +92,16 @@ func _refresh_layout() -> void:
 func _animate_open() -> void:
 	_panel.pivot_offset = _panel.size * 0.5
 	modulate = Color(1.0, 1.0, 1.0, 0.0)
-	_panel.scale = Vector2.ONE * 0.9
+	_panel.scale = (
+		Vector2.ONE
+		if Settings.reduced_motion_enabled()
+		else Vector2.ONE * 0.9
+	)
 	_tween = create_tween().set_parallel(true)
 	_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_tween.tween_property(self, "modulate:a", 1.0, 0.18)
-	_tween.tween_property(_panel, "scale", Vector2.ONE, 0.28)
+	if not Settings.reduced_motion_enabled():
+		_tween.tween_property(_panel, "scale", Vector2.ONE, 0.28)
 
 
 func _path_description(result: Dictionary) -> String:

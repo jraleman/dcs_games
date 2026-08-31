@@ -18,6 +18,15 @@ func _ready() -> void:
 	super()
 
 
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause"):
+		get_viewport().set_input_as_handled()
+		if is_instance_valid(_settings_overlay):
+			_settings_overlay.go_back()
+		else:
+			resume()
+
+
 ## ui_cancel resumes instead of "going back" to anywhere.
 func go_back() -> void:
 	resume()
@@ -43,6 +52,7 @@ func _on_settings_pressed() -> void:
 	_settings_overlay = packed.instantiate()
 	# The tree is paused while this overlay is up.
 	_settings_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	_settings_overlay.z_index = z_index
 	_settings_overlay.closed.connect(_on_settings_closed)
 	get_parent().add_child(_settings_overlay)
 	hide()

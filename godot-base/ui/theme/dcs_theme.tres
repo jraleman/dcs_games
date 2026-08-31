@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=21 format=3]
+[gd_resource type="Theme" load_steps=24 format=3]
 
 [ext_resource type="Texture2D" path="res://assets/images/toggle_off.svg" id="1_toggle_off"]
 [ext_resource type="Texture2D" path="res://assets/images/toggle_on.svg" id="2_toggle_on"]
@@ -82,6 +82,44 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_toggle"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_toggle_hover"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(0.686275, 0.866667, 0.917647, 0.08)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.686275, 0.866667, 0.917647, 0.28)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_toggle_focus"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.686275, 0.866667, 0.917647, 0.9)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary_normal"]
 content_margin_left = 32.0
@@ -273,6 +311,12 @@ CheckButton/icons/checked = ExtResource("2_toggle_on")
 CheckButton/icons/checked_disabled = ExtResource("2_toggle_on")
 CheckButton/icons/unchecked = ExtResource("1_toggle_off")
 CheckButton/icons/unchecked_disabled = ExtResource("1_toggle_off")
+CheckButton/styles/disabled = SubResource("StyleBoxEmpty_toggle")
+CheckButton/styles/focus = SubResource("StyleBoxFlat_toggle_focus")
+CheckButton/styles/hover = SubResource("StyleBoxFlat_toggle_hover")
+CheckButton/styles/hover_pressed = SubResource("StyleBoxFlat_toggle_hover")
+CheckButton/styles/normal = SubResource("StyleBoxEmpty_toggle")
+CheckButton/styles/pressed = SubResource("StyleBoxEmpty_toggle")
 HSlider/styles/grabber_area = SubResource("StyleBoxFlat_slider_fill")
 HSlider/styles/grabber_area_highlight = SubResource("StyleBoxFlat_slider_fill_hl")
 HSlider/styles/slider = SubResource("StyleBoxFlat_slider")

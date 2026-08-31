@@ -10,6 +10,8 @@ extends Node2D
 @export var player_two_inactive_color := Color("6b343d")
 @export var player_two_highlight_color := Color("ff5c6c")
 @export_range(100.0, 800.0, 10.0) var target_speed := 320.0
+# Design-time defaults for the round; players can override the round length
+# and the end-of-round speed rush under Settings → Game.
 @export_range(0.0, 1.0, 0.05) var final_speed_boost := 0.35
 @export_range(5.0, 180.0, 1.0) var round_duration := 30.0
 @export_range(1, 100, 1) var points_per_match := 1
@@ -21,8 +23,6 @@ extends Node2D
 const PLAYER_ONE := 0
 const PLAYER_TWO := 1
 const PLAYER_COUNT := 2
-const CONTROLLER_TARGET_BUTTONS := [JOY_BUTTON_A, JOY_BUTTON_B, JOY_BUTTON_X]
-const CONTROLLER_TARGET_LABELS := ["A", "B", "X"]
 const SIDE_CLEARANCE := 38.0
 const TOP_CLEARANCE := 190.0
 const BOTTOM_CLEARANCE := 105.0
@@ -52,7 +52,9 @@ const DANGER_COLOR := Color("ff4964")
 	$HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout/Caption
 )
 @onready var _time_label: Label = %TimeLabel
+@onready var _mode_title: Label = %ModeTitle
 @onready var _time_progress: ProgressBar = %TimeProgress
+@onready var _callout: Label = %Callout
 @onready var _hint: Label = %Hint
 @onready var _announcement: Label = %Announcement
 @onready var _round_timer: Timer = %RoundTimer
@@ -113,6 +115,8 @@ var _rng := RandomNumberGenerator.new()
 var _displayed_seconds := -1
 var _round_active := false
 var _ambient_time := 0.0
+var _intense_effects_enabled := true
+var _reduced_motion_enabled := false
 var _shake_strength := 0.0
 var _pause_menu: MenuScreen
 var _score_tweens: Array = [null, null]
@@ -129,11 +133,21 @@ var _cpu_reaction_min := 0.55
 var _cpu_reaction_max := 1.05
 var _cpu_accuracy := 0.82
 var _round_progression_notes := PackedStringArray()
+var _round_length := 30.0
+var _active_round_duration := 30.0
+var _round_gameplay_speed := 1.0
+var _round_target_size := 1.0
+var _round_triangle_speed := 1.0
+var _round_triangle_size := 1.0
+var _round_speed_rush := 0.35
 
 
 func _ready() -> void:
 	_rng.randomize()
 	GameSession.ensure_controller_assignments()
+	_intense_effects_enabled = Settings.visual_effects_enabled()
+	_reduced_motion_enabled = Settings.reduced_motion_enabled()
+	_load_round_settings()
 	Settings.changed.connect(_on_setting_changed)
 	_configure_cpu_profile()
 	_configure_mode_ui()
@@ -141,8 +155,8 @@ func _ready() -> void:
 	_player_two_score.add_theme_color_override("font_color", player_two_highlight_color)
 	_player_one_streak.add_theme_color_override("font_color", player_one_highlight_color)
 	_player_two_streak.add_theme_color_override("font_color", player_two_highlight_color)
-	_time_progress.max_value = round_duration
-	_time_progress.value = round_duration
+	_time_progress.max_value = _active_round_duration
+	_time_progress.value = _active_round_duration
 	AudioManager.attach_ui_sounds(_hud)
 
 	if music:
@@ -155,7 +169,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_ambient_time += delta
+	if not _reduced_motion_enabled:
+		_ambient_time += delta
 	queue_redraw()
 	_update_screen_shake(delta)
 
@@ -163,11 +178,15 @@ func _process(delta: float) -> void:
 		return
 
 	var time_left := _round_timer.time_left
-	var time_ratio := clampf(time_left / maxf(round_duration, 0.001), 0.0, 1.0)
-	var speed_multiplier := lerpf(1.0, 1.0 + final_speed_boost, 1.0 - time_ratio)
+	var time_ratio := clampf(
+		time_left / maxf(_active_round_duration, 0.001),
+		0.0,
+		1.0
+	)
+	var speed_multiplier := lerpf(1.0, 1.0 + _round_speed_rush, 1.0 - time_ratio)
 	var bounds := _target_bounds()
 	for target in _targets:
-		target.move_speed = target_speed * speed_multiplier
+		target.move_speed = _target_move_speed(speed_multiplier)
 		target.move_and_bounce(delta, bounds)
 	_update_cpu(delta)
 
@@ -277,18 +296,23 @@ func _unhandled_input(event: InputEvent) -> void:
 func _target_for_keyboard_event(event: InputEventKey) -> TriangleTarget:
 	for action: StringName in _targets_by_action:
 		if event.is_action_pressed(action):
-			return _targets_by_action[action] as TriangleTarget
+			var target := _targets_by_action[action] as TriangleTarget
+			if Settings.one_button_target_rush_enabled() and target != null:
+				return _active_targets[target.player_index] as TriangleTarget
+			return target
 	return null
 
 
 func _target_for_controller_event(event: InputEventJoypadButton) -> TriangleTarget:
-	var target_index := CONTROLLER_TARGET_BUTTONS.find(event.button_index)
+	var target_index := Settings.controller_target_index(event.button_index)
 	if target_index < 0:
 		return null
 
 	var player_index := _controller_player_index(event.device)
 	if not _player_accepts_human_input(player_index):
 		return null
+	if Settings.one_button_target_rush_enabled():
+		return _active_targets[player_index] as TriangleTarget
 
 	var actions := Settings.control_actions_for_player(player_index)
 	if target_index >= actions.size():
@@ -305,7 +329,13 @@ func _configure_mode_ui() -> void:
 	var player_two_title := GameSession.player_two_name().to_upper()
 	var player_one_keys := Settings.control_summary(PLAYER_ONE, "  ")
 	var player_two_keys := Settings.control_summary(PLAYER_TWO, "  ")
-	var controller_keys := "  ".join(CONTROLLER_TARGET_LABELS)
+	var mapped_buttons := Settings.controller_target_summary(" / ")
+	var controller_keys := (
+		"ANY %s" % mapped_buttons
+		if Settings.one_button_target_rush_enabled()
+		else mapped_buttons
+	)
+	_mode_title.text = "TRIANGLE RUSH"
 
 	_player_one_caption.text = (
 		"PLAYER 1 · KEYS %s · PAD %s" % [player_one_keys, controller_keys]
@@ -331,9 +361,25 @@ func _configure_mode_ui() -> void:
 	_stats_versus.visible = player_two_enabled
 	_player_two_stats_card.visible = player_two_enabled
 	_player_two_stats_title.text = player_two_title
+	_update_callout()
 
 
 func _on_setting_changed(key: String, _value: Variant) -> void:
+	if key == Settings.VISUAL_EFFECTS_KEY:
+		_set_intense_effects_enabled(Settings.visual_effects_enabled())
+		return
+	if key == Settings.REDUCED_MOTION_KEY:
+		_set_reduced_motion_enabled(bool(_value))
+		return
+	if key == Settings.PLAYER_LABELS_KEY:
+		for target in _targets:
+			target.set_player_label_visible(Settings.player_labels_enabled())
+		_update_hint()
+		return
+	if key == Settings.ONE_BUTTON_TARGET_RUSH_KEY:
+		_configure_mode_ui()
+		_update_hint()
+		return
 	if not key.begins_with("controls/"):
 		return
 
@@ -343,6 +389,46 @@ func _on_setting_changed(key: String, _value: Variant) -> void:
 			target.set_display_letter(Settings.control_key_label(action).to_upper())
 	_configure_mode_ui()
 	_update_hint()
+
+
+func _set_intense_effects_enabled(value: bool) -> void:
+	_intense_effects_enabled = value
+	if not value:
+		_reset_intense_effects()
+
+
+func _set_reduced_motion_enabled(value: bool) -> void:
+	_reduced_motion_enabled = value
+	for target in _targets:
+		target.set_reduced_motion(value)
+	if value:
+		_ambient_time = 0.0
+		_reset_reduced_motion_state()
+	_update_callout()
+	queue_redraw()
+
+
+## Reads the base-game triangle options and the next-round assists together, so
+## both only take effect when a round starts.
+func _load_round_settings() -> void:
+	_round_length = Settings.triangle_round_length()
+	_round_triangle_speed = Settings.triangle_speed_scale()
+	_round_triangle_size = Settings.triangle_size_scale()
+	_round_speed_rush = Settings.triangle_speed_rush()
+	_active_round_duration = _round_length + Settings.extra_round_time()
+	_round_gameplay_speed = Settings.gameplay_speed_scale()
+	_round_target_size = Settings.target_size_scale()
+
+
+## Scene speed combined with the triangle-speed option, the assist and the
+## optional end-of-round rush.
+func _target_move_speed(rush_multiplier := 1.0) -> float:
+	return target_speed * _round_triangle_speed * _round_gameplay_speed * rush_multiplier
+
+
+## Triangle-size option combined with the handicap assist.
+func _target_size_scale() -> float:
+	return _round_triangle_size * _round_target_size
 
 
 func _active_player_indices() -> Array[int]:
@@ -401,39 +487,83 @@ func _schedule_cpu_action() -> void:
 func _update_hint() -> void:
 	if DisplayServer.is_touchscreen_available():
 		if GameSession.is_single_player():
-			_hint.text = "Tap P1's glowing blue triangle | Correct +%d | Wrong -%d" % [
+			_hint.text = "Tap P1's highlighted triangle | Correct +%d | Wrong -%d" % [
 				points_per_match,
 				miss_penalty,
 			]
 		elif GameSession.player_two_is_cpu():
-			_hint.text = "Tap P1's blue glow | CPU controls red | Correct +%d" % points_per_match
+			_hint.text = (
+				"Tap P1's highlighted triangle | CPU uses P2 | Correct +%d"
+				% points_per_match
+			)
 		else:
 			_hint.text = "Tap your glowing triangle | Correct +%d | Wrong -%d" % [
 				points_per_match,
 				miss_penalty,
 			]
-	else:
-		var controller_keys := " ".join(CONTROLLER_TARGET_LABELS)
+	elif Settings.one_button_target_rush_enabled():
+		var mapped_buttons := Settings.controller_target_summary("/")
 		if GameSession.is_single_player():
-			_hint.text = "P1 keys: %s   |   Pad: %s   |   Chase the blue glow" % [
+			_hint.text = (
+				"Press any P1 key or %s   |   " % mapped_buttons
+				+ "Follow the highlighted target   |   Correct +%d"
+				% points_per_match
+			)
+		elif GameSession.player_two_is_cpu():
+			_hint.text = (
+				"Any P1 key or %s   |   Follow your highlighted target   |   "
+				% mapped_buttons
+				+ "CPU controls P2"
+			)
+		else:
+			_hint.text = (
+				"Any assigned key or mapped controller button activates "
+				+ "each player's highlighted target"
+			)
+	else:
+		var controller_keys := Settings.controller_target_summary(" ")
+		if GameSession.is_single_player():
+			_hint.text = (
+				"P1 keys: %s   |   Pad: %s   |   Follow the highlighted target"
+			) % [
 				_letters_hint(PLAYER_ONE),
 				controller_keys,
 			]
 		elif GameSession.player_two_is_cpu():
-			_hint.text = "P1: %s / pad %s   |   CPU %s controls red" % [
+			_hint.text = "P1: %s / pad %s   |   %s CPU controls P2" % [
 				_letters_hint(PLAYER_ONE),
 				controller_keys,
 				GameSession.cpu_difficulty_title(),
 			]
 		else:
-			_hint.text = "P1: %s / pad 1   |   P2: %s / pad 2   |   A B X" % [
+			_hint.text = "P1: %s / pad 1   |   P2: %s / pad 2   |   %s" % [
 				_letters_hint(PLAYER_ONE),
 				_letters_hint(PLAYER_TWO),
+				Settings.controller_target_summary(" "),
 			]
-	_round_instructions.text = "Correct match: +%d | Wrong key or triangle: -%d" % [
-		points_per_match,
-		miss_penalty,
-	]
+	if Settings.one_button_target_rush_enabled():
+		_round_instructions.text = (
+			"Any assigned key/button hits your highlighted target: +%d | "
+			+ "Wrong triangle: -%d"
+		) % [
+			points_per_match,
+			miss_penalty,
+		]
+	else:
+		_round_instructions.text = (
+			"Correct match: +%d | Wrong key or triangle: -%d"
+			% [points_per_match, miss_penalty]
+		)
+
+
+func _update_callout() -> void:
+	var cue := "HIGHLIGHT" if _reduced_motion_enabled else "PULSE"
+	var control := (
+		"ANY ASSIGNED CONTROL"
+		if Settings.one_button_target_rush_enabled()
+		else "THE MATCHING CONTROL"
+	)
+	_callout.text = "FOLLOW THE %s - PRESS %s" % [cue, control]
 
 
 func _letters_hint(player_index: int) -> String:
@@ -479,8 +609,11 @@ func _create_player_targets(player_index: int) -> bool:
 			player_index,
 			_player_inactive_color(player_index),
 			_player_highlight_color(player_index),
-			target_speed
+			_target_move_speed()
 		)
+		target.set_player_label_visible(Settings.player_labels_enabled())
+		target.set_reduced_motion(_reduced_motion_enabled)
+		target.set_size_scale(_target_size_scale())
 		target.activated.connect(_on_target_activated)
 		_targets.append(target)
 		_targets_by_action[action] = target
@@ -504,6 +637,7 @@ func _targets_for_player(player_index: int) -> Array[TriangleTarget]:
 
 func _start_round() -> void:
 	_round_timer.stop()
+	_load_round_settings()
 	_scores = [0, 0]
 	_streaks = [0, 0]
 	_correct_hits = [0, 0]
@@ -525,7 +659,8 @@ func _start_round() -> void:
 	_update_streaks()
 
 	for target in _targets:
-		target.move_speed = target_speed
+		target.move_speed = _target_move_speed()
+		target.set_size_scale(_target_size_scale())
 		target.set_target_enabled(true)
 		target.set_highlighted(false)
 		_place_target(target)
@@ -534,10 +669,10 @@ func _start_round() -> void:
 	for player_index in _active_player_indices():
 		_select_next_target(player_index)
 
-	_time_progress.max_value = round_duration
-	_time_progress.value = round_duration
-	_round_timer.start(round_duration)
-	_update_time(int(ceil(round_duration)))
+	_time_progress.max_value = _active_round_duration
+	_time_progress.value = _active_round_duration
+	_round_timer.start(_active_round_duration)
+	_update_time(int(ceil(_active_round_duration)))
 	_show_announcement("GO!", GameInfo.CREAM)
 
 
@@ -568,6 +703,9 @@ func _attempt_target(target: TriangleTarget, automated := false) -> void:
 			_streaks[player_index]
 		)
 		AudioManager.play_game_hit(_streaks[player_index])
+		AudioManager.request_caption(
+			"%s: correct target" % _player_name(player_index)
+		)
 		_spawn_hit_effect(
 			hit_position,
 			_player_highlight_color(player_index),
@@ -592,6 +730,9 @@ func _attempt_target(target: TriangleTarget, automated := false) -> void:
 		_streaks[player_index] = 0
 		_misses[player_index] += 1
 		AudioManager.play_game_miss()
+		AudioManager.request_caption(
+			"%s: wrong target" % _player_name(player_index)
+		)
 		target.play_wrong()
 		_spawn_hit_effect(hit_position, MISS_COLOR, false, "-%d" % miss_penalty)
 		_flash_screen(DANGER_COLOR, 0.09)
@@ -648,14 +789,14 @@ func _position_is_clear(candidate: Vector2, moving_target: TriangleTarget) -> bo
 	for target in _targets:
 		if target == moving_target:
 			continue
-		if candidate.distance_to(target.position) < TriangleTarget.HIT_RADIUS * 2.35:
+		if candidate.distance_to(target.position) < _target_radius() * 2.35:
 			return false
 	return true
 
 
 func _target_bounds() -> Rect2:
 	var viewport_size := get_viewport_rect().size
-	var radius := TriangleTarget.HIT_RADIUS
+	var radius := _target_radius()
 	var minimum := Vector2(SIDE_CLEARANCE + radius, TOP_CLEARANCE + radius)
 	var maximum := Vector2(
 		viewport_size.x - SIDE_CLEARANCE - radius,
@@ -670,6 +811,10 @@ func _target_bounds() -> Rect2:
 		maximum.y = minimum.y
 
 	return Rect2(minimum, maximum - minimum)
+
+
+func _target_radius() -> float:
+	return TriangleTarget.HIT_RADIUS * _target_size_scale()
 
 
 func _update_scores() -> void:
@@ -691,6 +836,12 @@ func _update_time(seconds_left: int) -> void:
 	_time_label.text = "%02d" % _displayed_seconds
 	if _round_active and _displayed_seconds > 0 and _displayed_seconds <= 3:
 		_show_announcement(str(_displayed_seconds), DANGER_COLOR)
+		AudioManager.request_caption(
+			"%d %s remaining" % [
+				_displayed_seconds,
+				"second" if _displayed_seconds == 1 else "seconds",
+			]
+		)
 
 
 func _update_urgency(time_left: float) -> void:
@@ -702,6 +853,14 @@ func _update_urgency(time_left: float) -> void:
 		return
 
 	var urgency := 1.0 - clampf(time_left / DANGER_SECONDS, 0.0, 1.0)
+	if _reduced_motion_enabled:
+		_time_label.scale = Vector2.ONE
+		_time_label.add_theme_color_override(
+			"font_color",
+			GameInfo.CREAM.lerp(DANGER_COLOR, urgency)
+		)
+		_danger_overlay.color = _with_alpha(DANGER_COLOR, 0.0)
+		return
 	var pulse := (sin(_ambient_time * lerpf(6.0, 11.0, urgency)) + 1.0) * 0.5
 	_time_label.scale = Vector2.ONE * (1.0 + pulse * lerpf(0.03, 0.09, urgency))
 	_time_label.add_theme_color_override(
@@ -718,6 +877,10 @@ func _bump_score(player_index: int, successful: bool) -> void:
 		old_tween.kill()
 
 	score_label.pivot_offset = score_label.size * 0.5
+	if _reduced_motion_enabled:
+		score_label.scale = Vector2.ONE
+		score_label.rotation = 0.0
+		return
 	score_label.scale = Vector2.ONE * (1.28 if successful else 0.84)
 	score_label.rotation = deg_to_rad(-3.0 if player_index == PLAYER_ONE else 3.0)
 	var tween := create_tween().set_parallel(true)
@@ -735,6 +898,9 @@ func _bump_streak(player_index: int) -> void:
 		old_tween.kill()
 
 	streak_label.pivot_offset = streak_label.size * 0.5
+	if _reduced_motion_enabled:
+		streak_label.scale = Vector2.ONE
+		return
 	streak_label.scale = Vector2.ONE * 0.72
 	var tween := create_tween()
 	tween.tween_property(streak_label, "scale", Vector2.ONE, 0.2).set_trans(
@@ -749,7 +915,8 @@ func _spawn_hit_effect(
 	successful: bool,
 	score_text: String
 ) -> void:
-	_spawn_triangle_burst(world_position, color, successful)
+	if not _reduced_motion_enabled:
+		_spawn_triangle_burst(world_position, color, successful)
 
 	var label := Label.new()
 	label.text = score_text
@@ -766,6 +933,13 @@ func _spawn_hit_effect(
 	_world_fx.add_child(label)
 
 	var start_position := label.position
+	if _reduced_motion_enabled:
+		var reduced_tween := label.create_tween()
+		reduced_tween.tween_interval(0.45)
+		reduced_tween.tween_property(label, "modulate:a", 0.0, 0.15)
+		reduced_tween.finished.connect(label.queue_free)
+		return
+
 	label.scale = Vector2.ONE * 0.7
 	var tween := label.create_tween().set_parallel(true)
 	tween.tween_property(label, "position", start_position + Vector2(0.0, -82.0), 0.55).set_trans(
@@ -783,6 +957,8 @@ func _spawn_triangle_burst(
 	color: Color,
 	successful: bool
 ) -> void:
+	if _reduced_motion_enabled:
+		return
 	var local_position := _world_fx.to_local(world_position)
 	var ring := Line2D.new()
 	ring.points = PackedVector2Array([
@@ -855,6 +1031,8 @@ func _spawn_triangle_burst(
 
 
 func _spawn_round_confetti(color: Color) -> void:
+	if _reduced_motion_enabled:
+		return
 	var viewport_size := get_viewport_rect().size
 	for burst_index in range(6):
 		var position := Vector2(
@@ -866,6 +1044,7 @@ func _spawn_round_confetti(color: Color) -> void:
 
 func _celebrate_level_unlock() -> void:
 	AudioManager.play_level_unlock()
+	AudioManager.request_caption("%s unlocked" % GameInfo.DESK_CAN_SAW_TITLE)
 	_show_announcement(
 		"%s UNLOCKED!" % GameInfo.DESK_CAN_SAW_TITLE.to_upper(),
 		GameInfo.SKY,
@@ -879,6 +1058,10 @@ func _celebrate_level_unlock() -> void:
 func _flash_screen(color: Color, alpha: float) -> void:
 	if _flash_tween and _flash_tween.is_valid():
 		_flash_tween.kill()
+	if not _intense_effects_enabled:
+		_flash_tween = null
+		_screen_flash.color = _with_alpha(color, 0.0)
+		return
 	_screen_flash.color = _with_alpha(color, alpha)
 	_flash_tween = create_tween()
 	_flash_tween.tween_property(_screen_flash, "color:a", 0.0, 0.34).set_trans(
@@ -898,6 +1081,19 @@ func _show_announcement(
 	_announcement.text = text
 	_announcement.add_theme_color_override("font_color", color)
 	_announcement.pivot_offset = _announcement.size * 0.5
+	if _reduced_motion_enabled:
+		_announcement.scale = Vector2.ONE
+		_announcement.modulate = Color.WHITE
+		_announcement_tween = create_tween()
+		_announcement_tween.tween_interval(hold_time)
+		_announcement_tween.tween_property(
+			_announcement,
+			"modulate:a",
+			0.0,
+			0.16
+		)
+		_announcement_tween.finished.connect(_announcement.hide)
+		return
 	_announcement.scale = Vector2.ONE * 0.68
 	_announcement.modulate = Color(1.0, 1.0, 1.0, 0.0)
 
@@ -926,11 +1122,17 @@ func _show_announcement(
 
 
 func _add_screen_shake(amount: float) -> void:
+	if not _intense_effects_enabled or _reduced_motion_enabled:
+		return
 	_shake_strength = maxf(_shake_strength, amount)
 
 
 func _update_screen_shake(delta: float) -> void:
-	if _shake_strength <= 0.05:
+	if (
+		not _intense_effects_enabled
+		or _reduced_motion_enabled
+		or _shake_strength <= 0.05
+	):
 		_shake_strength = 0.0
 		_targets_root.position = Vector2.ZERO
 		_world_fx.position = Vector2.ZERO
@@ -945,13 +1147,49 @@ func _update_screen_shake(delta: float) -> void:
 	_shake_strength = move_toward(_shake_strength, 0.0, delta * SHAKE_DECAY)
 
 
-func _reset_motion_fx() -> void:
+func _reset_intense_effects() -> void:
+	if _flash_tween and _flash_tween.is_valid():
+		_flash_tween.kill()
+	_flash_tween = null
 	_shake_strength = 0.0
 	_targets_root.position = Vector2.ZERO
 	_world_fx.position = Vector2.ZERO
 	_screen_flash.color = _with_alpha(Color.WHITE, 0.0)
+
+
+func _reset_motion_fx() -> void:
+	_reset_intense_effects()
 	_danger_overlay.color = _with_alpha(DANGER_COLOR, 0.0)
 	_time_label.scale = Vector2.ONE
+
+
+func _reset_reduced_motion_state() -> void:
+	_shake_strength = 0.0
+	_targets_root.position = Vector2.ZERO
+	_world_fx.position = Vector2.ZERO
+	_danger_overlay.color = _with_alpha(DANGER_COLOR, 0.0)
+	_time_label.scale = Vector2.ONE
+	for child in _world_fx.get_children():
+		child.queue_free()
+	for tween in _score_tweens + _streak_tweens:
+		if tween and tween.is_valid():
+			tween.kill()
+	for label in [
+		_player_one_score,
+		_player_two_score,
+		_player_one_streak,
+		_player_two_streak,
+	]:
+		label.scale = Vector2.ONE
+		label.rotation = 0.0
+	if _announcement_tween and _announcement_tween.is_valid():
+		_announcement_tween.kill()
+	_announcement.hide()
+	if _round_panel_tween and _round_panel_tween.is_valid():
+		_round_panel_tween.kill()
+	for panel in [_round_panel, _score_panel]:
+		panel.scale = Vector2.ONE
+		panel.modulate = Color.WHITE
 
 
 func _animate_round_panel() -> void:
@@ -966,6 +1204,10 @@ func _animate_modal_panel(panel: Control) -> void:
 	if _round_panel_tween and _round_panel_tween.is_valid():
 		_round_panel_tween.kill()
 	panel.pivot_offset = panel.size * 0.5
+	if _reduced_motion_enabled:
+		panel.scale = Vector2.ONE
+		panel.modulate = Color.WHITE
+		return
 	panel.scale = Vector2.ONE * 0.78
 	panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	_round_panel_tween = create_tween().set_parallel(true)
@@ -988,7 +1230,7 @@ func _populate_score_screen(result_text: String, result_color: Color) -> void:
 	_score_screen_title.text = result_text
 	_score_screen_title.add_theme_color_override("font_color", result_color)
 	_score_screen_subtitle.text = _round_subtitle.text
-	_game_duration_stat.text = "%d SEC" % roundi(round_duration)
+	_game_duration_stat.text = "%d SEC" % roundi(_active_round_duration)
 	_game_hits_stat.text = "%d" % total_hits
 	_game_accuracy_stat.text = "%d%%" % _accuracy_percent(total_hits, total_attempts)
 
@@ -1084,7 +1326,7 @@ func _on_round_timer_timeout() -> void:
 	_cpu_action_time = -1.0
 	_update_time(0)
 	_time_progress.value = 0.0
-	_update_urgency(round_duration)
+	_update_urgency(_active_round_duration)
 	for target in _targets:
 		target.set_highlighted(false)
 		target.set_target_enabled(false)
@@ -1103,14 +1345,14 @@ func _on_round_timer_timeout() -> void:
 		_result_label.add_theme_color_override("font_color", player_one_highlight_color)
 		_round_subtitle.text = "Player 1 scored %d points in %d seconds." % [
 			player_one_total,
-			roundi(round_duration),
+			roundi(_active_round_duration),
 		]
 		celebration_color = player_one_highlight_color
 	elif player_one_total > player_two_total:
 		result_text = "PLAYER 1 WINS!"
 		_result_label.text = result_text
 		_result_label.add_theme_color_override("font_color", player_one_highlight_color)
-		_round_subtitle.text = "A %d-point victory for the blue side." % (
+		_round_subtitle.text = "Player 1 wins by %d points." % (
 			player_one_total - player_two_total
 		)
 		celebration_color = player_one_highlight_color
@@ -1127,7 +1369,7 @@ func _on_round_timer_timeout() -> void:
 		_result_label.text = result_text
 		_result_label.add_theme_color_override("font_color", GameInfo.CREAM)
 		_round_subtitle.text = "Dead even after %d seconds. Run it back!" % roundi(
-			round_duration
+			_active_round_duration
 		)
 
 	if GameSession.is_single_player():

@@ -30,16 +30,18 @@ func _play_animation() -> void:
 		return
 	pivot_offset = size * 0.5
 	modulate = Color(1.0, 1.0, 1.0, 0.0)
-	scale = Vector2.ONE * 0.84
+	scale = Vector2.ONE if Settings.reduced_motion_enabled() else Vector2.ONE * 0.84
 
 	AudioManager.play_achievement()
 	_tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_tween.tween_property(self, "modulate:a", 1.0, 0.16)
-	_tween.parallel().tween_property(self, "scale", Vector2.ONE, 0.28)
+	if not Settings.reduced_motion_enabled():
+		_tween.parallel().tween_property(self, "scale", Vector2.ONE, 0.28)
 	_tween.tween_interval(hold_time)
 	_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	_tween.tween_property(self, "modulate:a", 0.0, 0.24)
-	_tween.parallel().tween_property(self, "scale", Vector2.ONE * 0.95, 0.24)
+	if not Settings.reduced_motion_enabled():
+		_tween.parallel().tween_property(self, "scale", Vector2.ONE * 0.95, 0.24)
 	_tween.tween_callback(_finish)
 
 

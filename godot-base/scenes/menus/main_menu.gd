@@ -44,8 +44,10 @@ var _logo_kick := 0.0
 var _logo_kick_velocity := 0.0
 var _logo_scale_pulse := 0.0
 var _launching_game := false
+var _reduced_motion := false
 
 func _ready() -> void:
+	_reduced_motion = Settings.reduced_motion_enabled()
 	_title.text = GameInfo.TITLE
 	_tagline.text = GameInfo.TAGLINE
 	_footer_left.text = "%s  ·  %s" % [GameInfo.STUDIO, GameInfo.copyright_line()]
@@ -62,10 +64,12 @@ func _ready() -> void:
 	margins = _margins
 	_setup_button_motion()
 	_logo_showcase.resized.connect(_center_logo_pivot)
-	_logo_showcase.modulate.a = 0.0
-	_logo_showcase.scale = Vector2(0.88, 0.88)
+	_logo_showcase.modulate.a = 1.0 if _reduced_motion else 0.0
+	_logo_showcase.scale = Vector2.ONE if _reduced_motion else Vector2(0.88, 0.88)
 	_center_logo_pivot.call_deferred()
-	_play_logo_intro.call_deferred()
+	if not _reduced_motion:
+		_play_logo_intro.call_deferred()
+	set_process(not _reduced_motion)
 
 	super()
 
@@ -164,6 +168,9 @@ func _setup_button_motion() -> void:
 func _on_button_focused(button: Button, index: int) -> void:
 	_animate_button(button, BUTTON_FOCUS_SCALE, Color(1.04, 1.08, 1.1, 1.0), 0.16)
 	_move_focus_accent(button)
+	if _reduced_motion:
+		_focused_button_index = index
+		return
 
 	var direction := 1.0
 	if _focused_button_index >= 0:
@@ -204,6 +211,11 @@ func _animate_button(
 	if previous and previous.is_valid():
 		previous.kill()
 
+	if _reduced_motion:
+		button.scale = Vector2.ONE
+		button.self_modulate = target_tint
+		return
+
 	var tween := button.create_tween().set_parallel(true)
 	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(button, "scale", target_scale, duration)
@@ -223,6 +235,12 @@ func _move_focus_accent(button: Button) -> void:
 	if _focus_accent.modulate.a < 0.01:
 		_focus_accent.global_position = target_position
 		_focus_accent.size = target_size
+
+	if _reduced_motion:
+		_focus_accent.global_position = target_position
+		_focus_accent.size = target_size
+		_focus_accent.modulate.a = 1.0
+		return
 
 	_focus_tween = create_tween().set_parallel(true)
 	_focus_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
@@ -259,6 +277,10 @@ func _set_logo_anchors(left: float, top: float, right: float, bottom: float) -> 
 
 
 func _play_logo_intro() -> void:
+	if _reduced_motion:
+		_logo_showcase.modulate.a = 1.0
+		_logo_showcase.scale = Vector2.ONE
+		return
 	var tween := create_tween().set_parallel(true)
 	tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tween.tween_property(_logo_showcase, "modulate:a", 1.0, 0.7).set_delay(0.08)

@@ -3,6 +3,8 @@ extends Node
 ## Music playback with crossfades, a small pool of SFX voices, and the glue
 ## that keeps the audio buses in sync with the player's settings.
 
+signal caption_requested(text: String)
+
 const BUS_MASTER := "Master"
 const BUS_MUSIC := "Music"
 const BUS_SFX := "SFX"
@@ -170,6 +172,11 @@ func play_share() -> void:
 func play_splash() -> void:
 	play_sfx(SFX_FOCUS, -7.0, 0.72)
 	_play_delayed_sfx(SFX_CLICK, 0.16, -6.0, 0.92)
+
+
+func request_caption(text: String) -> void:
+	if Settings.audio_captions_enabled() and not text.is_empty():
+		caption_requested.emit(text)
 
 
 func _play_delayed_sfx(

@@ -72,6 +72,12 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 22
 
+[node name="VolumeHeading" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "VOLUME MIX"
+
 [node name="MasterRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Audio/Pad/List"]
 layout_mode = 2
 theme_override_constants/separation = 24
@@ -165,6 +171,12 @@ text = "80%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
+[node name="MuteHeading" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "QUICK CONTROL"
+
 [node name="MuteRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Audio/Pad/List"]
 layout_mode = 2
 theme_override_constants/separation = 24
@@ -196,6 +208,12 @@ theme_override_constants/margin_right = 22
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 22
+
+[node name="WindowHeading" type="Label" parent="Margins/Layout/Tabs/Display/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "WINDOW & PERFORMANCE"
 
 [node name="WindowModeRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Display/Pad/List"]
 layout_mode = 2
@@ -245,6 +263,12 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="InterfaceHeading" type="Label" parent="Margins/Layout/Tabs/Display/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "INTERFACE"
+
 [node name="ShowFpsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Display/Pad/List"]
 layout_mode = 2
 theme_override_constants/separation = 24
@@ -293,6 +317,296 @@ text = "100%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
+[node name="Accessibility" type="ScrollContainer" parent="Margins/Layout/Tabs"]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Pad" type="MarginContainer" parent="Margins/Layout/Tabs/Accessibility"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 22
+
+[node name="List" type="VBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 22
+
+[node name="VisualHeading" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "VISUAL COMFORT & FEEDBACK"
+
+[node name="VisualEffectsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/VisualEffectsRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Intense visual effects"
+vertical_alignment = 1
+
+[node name="VisualEffectsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/VisualEffectsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+button_pressed = true
+
+[node name="ReducedMotionRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ReducedMotionRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Reduced motion"
+vertical_alignment = 1
+
+[node name="ReducedMotionToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ReducedMotionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="PlayerLabelsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/PlayerLabelsRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "P1/P2 identity labels"
+vertical_alignment = 1
+
+[node name="PlayerLabelsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/PlayerLabelsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+button_pressed = true
+
+[node name="AudioCaptionsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/AudioCaptionsRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Audio captions"
+vertical_alignment = 1
+
+[node name="AudioCaptionsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/AudioCaptionsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="InputHeading" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "INPUT ASSISTS"
+
+[node name="OneButtonTargetRushRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/OneButtonTargetRushRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "One-button Target Rush"
+vertical_alignment = 1
+
+[node name="OneButtonTargetRushToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/OneButtonTargetRushRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="ControllerSpeedRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ControllerSpeedRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Desk-Can-Saw pad speed"
+vertical_alignment = 1
+
+[node name="ControllerSpeedSlider" type="HSlider" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ControllerSpeedRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 0.5
+max_value = 1.5
+step = 0.05
+value = 1.0
+
+[node name="ControllerSpeedValue" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ControllerSpeedRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="ControllerDeadzoneRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ControllerDeadzoneRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Controller stick deadzone"
+vertical_alignment = 1
+
+[node name="ControllerDeadzoneSlider" type="HSlider" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ControllerDeadzoneRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 0.05
+max_value = 0.5
+step = 0.01
+value = 0.22
+
+[node name="ControllerDeadzoneValue" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ControllerDeadzoneRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "22%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Handicap" type="ScrollContainer" parent="Margins/Layout/Tabs"]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Pad" type="MarginContainer" parent="Margins/Layout/Tabs/Handicap"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 22
+
+[node name="List" type="VBoxContainer" parent="Margins/Layout/Tabs/Handicap/Pad"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 22
+
+[node name="GameplayHeading" type="Label" parent="Margins/Layout/Tabs/Handicap/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "GAMEPLAY ASSISTS · NEXT ROUND"
+
+[node name="GameplaySpeedRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Handicap/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Handicap/Pad/List/GameplaySpeedRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Moving object speed"
+vertical_alignment = 1
+
+[node name="GameplaySpeedSlider" type="HSlider" parent="Margins/Layout/Tabs/Handicap/Pad/List/GameplaySpeedRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 0.6
+max_value = 1.0
+step = 0.05
+value = 1.0
+
+[node name="GameplaySpeedValue" type="Label" parent="Margins/Layout/Tabs/Handicap/Pad/List/GameplaySpeedRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="TargetSizeRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Handicap/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Handicap/Pad/List/TargetSizeRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target and can size"
+vertical_alignment = 1
+
+[node name="TargetSizeSlider" type="HSlider" parent="Margins/Layout/Tabs/Handicap/Pad/List/TargetSizeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 1.0
+max_value = 1.4
+step = 0.05
+value = 1.0
+
+[node name="TargetSizeValue" type="Label" parent="Margins/Layout/Tabs/Handicap/Pad/List/TargetSizeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="ExtraRoundTimeRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Handicap/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Handicap/Pad/List/ExtraRoundTimeRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Extra round time"
+vertical_alignment = 1
+
+[node name="ExtraRoundTimeSlider" type="HSlider" parent="Margins/Layout/Tabs/Handicap/Pad/List/ExtraRoundTimeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 30.0
+step = 5.0
+
+[node name="ExtraRoundTimeValue" type="Label" parent="Margins/Layout/Tabs/Handicap/Pad/List/ExtraRoundTimeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "Off"
+horizontal_alignment = 2
+vertical_alignment = 1
+
 [node name="Controls" type="ScrollContainer" parent="Margins/Layout/Tabs"]
 visible = false
 layout_mode = 2
@@ -307,14 +621,13 @@ theme_override_constants/margin_right = 22
 [node name="List" type="VBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 18
+theme_override_constants/separation = 22
 
-[node name="Intro" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+[node name="KeyboardHeading" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 20
-text = "Select a binding, then press a key. Assigning a key already in use swaps the two bindings."
-autowrap_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "KEYBOARD TARGET BINDINGS"
 
 [node name="PlayerOneHeading" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
 layout_mode = 2
@@ -436,13 +749,110 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "9"
 
+[node name="ControllerHeading" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 1)
+theme_override_font_sizes/font_size = 22
+text = "CONTROLLER LAYOUT"
+
+[node name="ControllerTargetOneRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerTargetOneRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target Rush target 1"
+vertical_alignment = 1
+
+[node name="ControllerTargetOne" type="OptionButton" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerTargetOneRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ControllerTargetTwoRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerTargetTwoRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target Rush target 2"
+vertical_alignment = 1
+
+[node name="ControllerTargetTwo" type="OptionButton" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerTargetTwoRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ControllerTargetThreeRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerTargetThreeRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Target Rush target 3"
+vertical_alignment = 1
+
+[node name="ControllerTargetThree" type="OptionButton" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerTargetThreeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ControllerPauseRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerPauseRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Pause"
+vertical_alignment = 1
+
+[node name="ControllerPause" type="OptionButton" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerPauseRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ControllerMovementRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerMovementRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Desk-Can-Saw movement"
+vertical_alignment = 1
+
+[node name="ControllerMovementScheme" type="OptionButton" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerMovementRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="BindingStatus" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 1)
 theme_override_font_sizes/font_size = 19
-text = "Controller 1 controls Player 1 and Controller 2 controls Player 2 with A, B and X."
+text = "Controller 1 controls Player 1 and Controller 2 controls Player 2."
 autowrap_mode = 2
+
+[node name="RestoreHeading" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "RESTORE DEFAULTS"
 
 [node name="ResetControlsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
 layout_mode = 2
@@ -452,14 +862,14 @@ theme_override_constants/separation = 24
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Restore gameplay keys"
+text = "Restore gameplay controls"
 vertical_alignment = 1
 
 [node name="ResetControlsButton" type="Button" parent="Margins/Layout/Tabs/Controls/Pad/List/ResetControlsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
-text = "Reset Keys"
+text = "Reset Controls"
 
 [node name="Game" type="ScrollContainer" parent="Margins/Layout/Tabs"]
 visible = false
@@ -477,6 +887,145 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 22
 
+[node name="TriangleHeading" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "TRIANGLE RUSH · NEXT ROUND"
+
+[node name="TriangleSizeRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleSizeRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Triangle size"
+vertical_alignment = 1
+
+[node name="TriangleSizeSlider" type="HSlider" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleSizeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 0.6
+max_value = 1.6
+step = 0.05
+value = 1.0
+
+[node name="TriangleSizeValue" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleSizeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="TriangleSpeedRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleSpeedRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Triangle speed"
+vertical_alignment = 1
+
+[node name="TriangleSpeedSlider" type="HSlider" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleSpeedRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 0.5
+max_value = 2.0
+step = 0.05
+value = 1.0
+
+[node name="TriangleSpeedValue" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleSpeedRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "100%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="TriangleSpeedRushRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleSpeedRushRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Final stretch speed rush"
+vertical_alignment = 1
+
+[node name="TriangleSpeedRushSlider" type="HSlider" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleSpeedRushRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 0.35
+
+[node name="TriangleSpeedRushValue" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleSpeedRushRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "+35%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="TriangleRoundLengthRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleRoundLengthRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Round length"
+vertical_alignment = 1
+
+[node name="TriangleRoundLengthSlider" type="HSlider" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleRoundLengthRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 15.0
+max_value = 90.0
+step = 5.0
+value = 30.0
+
+[node name="TriangleRoundLengthValue" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/TriangleRoundLengthRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "30 sec"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="GuidanceHeading" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "STARTUP & GUIDANCE"
+
 [node name="ShowInstructionsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
 layout_mode = 2
 theme_override_constants/separation = 24
@@ -492,6 +1041,12 @@ vertical_alignment = 1
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
+
+[node name="DefaultsHeading" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "RESTORE ALL SETTINGS"
 
 [node name="ResetRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
 layout_mode = 2
@@ -511,10 +1066,12 @@ size_flags_horizontal = 0
 text = "Reset"
 
 [node name="Hint" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.454902, 0.529412, 0.568627, 1)
 theme_override_font_sizes/font_size = 22
-text = "Changes are saved automatically  ·  F11 toggles fullscreen"
+text = "Saved automatically  ·  Hover or focus a setting for details  ·  F11 fullscreen"
+autowrap_mode = 2
 
 [connection signal="pressed" from="Margins/Layout/Header/BackButton" to="." method="_on_back_pressed"]
 [connection signal="pressed" from="Margins/Layout/Tabs/Game/Pad/List/ResetRow/ResetButton" to="." method="_on_reset_pressed"]

@@ -23,9 +23,11 @@ var _tween: Tween
 var _hint_tween: Tween
 var _progress_tween: Tween
 var _finished := false
+var _reduced_motion := false
 
 
 func _ready() -> void:
+	_reduced_motion = Settings.reduced_motion_enabled()
 	if cards.is_empty():
 		cards.assign(GameInfo.INTRO_CARDS)
 
@@ -72,11 +74,12 @@ func _show_card(index: int) -> void:
 		return
 
 	_card.text = cards[index]
-	_card.scale = Vector2(0.97, 0.97)
+	_card.scale = Vector2.ONE if _reduced_motion else Vector2(0.97, 0.97)
 
 	_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	_tween.tween_property(_card, "modulate:a", 1.0, fade_in)
-	_tween.parallel().tween_property(_card, "scale", Vector2.ONE, fade_in + 0.5)
+	if not _reduced_motion:
+		_tween.parallel().tween_property(_card, "scale", Vector2.ONE, fade_in + 0.5)
 	_tween.tween_interval(hold)
 	_tween.tween_property(_card, "modulate:a", 0.0, fade_out)
 	_tween.tween_callback(_show_card.bind(index + 1))
@@ -89,6 +92,9 @@ func _start_progress() -> void:
 
 
 func _pulse_hint() -> void:
+	if _reduced_motion:
+		_hint.modulate.a = 1.0
+		return
 	_hint_tween = create_tween().set_loops()
 	_hint_tween.tween_property(_hint, "modulate:a", 0.35, 1.1).set_trans(Tween.TRANS_SINE)
 	_hint_tween.tween_property(_hint, "modulate:a", 1.0, 1.1).set_trans(Tween.TRANS_SINE)

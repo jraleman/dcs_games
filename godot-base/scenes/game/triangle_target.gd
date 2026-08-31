@@ -11,6 +11,9 @@ const ACTIVE_TEXT_COLOR := Color("0b1117")
 const INACTIVE_TEXT_COLOR := Color("f2f7f9")
 const TRAIL_POINT_LIMIT := 14
 const TRAIL_SAMPLE_INTERVAL := 0.035
+const MIN_SIZE_SCALE := 0.5
+const MAX_SIZE_SCALE := 2.5
+const REDUCED_MOTION_SETTING := "accessibility/reduced_motion"
 
 @onready var _trail: Line2D = %Trail
 @onready var _visual: Node2D = %Visual
@@ -21,6 +24,7 @@ const TRAIL_SAMPLE_INTERVAL := 0.035
 @onready var _shine: Polygon2D = %Shine
 @onready var _edge: Line2D = %Edge
 @onready var _letter_label: Label = %Letter
+@onready var _owner_label: Label = %OwnerLabel
 
 var letter := ""
 var player_index := -1
@@ -42,12 +46,19 @@ var _trail_sample_time := 0.0
 var _last_trail_position := Vector2.ZERO
 var _has_trail_point := false
 var _feedback_tween: Tween
+var _show_player_label := true
+var _size_scale := 1.0
+var _reduced_motion := false
 
 
 func _ready() -> void:
 	_phase = randf() * TAU
 	_visual_time = _phase
 	_trail.clear_points()
+	var settings := get_node_or_null("/root/Settings")
+	if settings != null:
+		set_reduced_motion(bool(settings.call("reduced_motion_enabled")))
+		settings.connect("changed", _on_setting_changed)
 
 
 func _process(delta: float) -> void:
@@ -66,6 +77,14 @@ func _process(delta: float) -> void:
 		_update_palette()
 
 	var base_scale := 1.13 if highlighted else 0.88
+	if _reduced_motion:
+		_visual.scale = Vector2.ONE * base_scale
+		_visual.position = Vector2.ZERO
+		_body.rotation = 0.0
+		_body.position = Vector2.ZERO
+		_glow.scale = Vector2.ONE * 1.3
+		return
+
 	var pulse_speed := 6.2 if highlighted else 2.4
 	var pulse_amount := 0.055 if highlighted else 0.018
 	var pulse := 1.0 + sin(_visual_time * pulse_speed + _phase) * pulse_amount
@@ -99,6 +118,8 @@ func configure(
 	_highlight_color = highlight_color
 	_display_color = inactive_color
 	move_speed = speed
+	_owner_label.text = "P%d" % (owner_index + 1)
+	_owner_label.visible = _show_player_label
 	set_display_letter(display_letter)
 	set_highlighted(false)
 	_update_palette()
@@ -113,6 +134,38 @@ func set_display_letter(display_letter: String) -> void:
 	)
 
 
+func set_player_label_visible(value: bool) -> void:
+	_show_player_label = value
+	if _owner_label != null:
+		_owner_label.visible = value
+
+
+func set_size_scale(value: float) -> void:
+	_size_scale = clampf(value, MIN_SIZE_SCALE, MAX_SIZE_SCALE)
+	scale = Vector2.ONE * _size_scale
+
+
+func set_reduced_motion(value: bool) -> void:
+	_reduced_motion = value
+	if _feedback_tween and _feedback_tween.is_valid():
+		_feedback_tween.kill()
+	_feedback_tween = null
+	_feedback_scale = 1.0
+	_bounce_amount = 0.0
+	_shake_strength = 0.0
+	if _trail != null:
+		_trail.visible = not value
+		reset_trail()
+	if _visual != null and value:
+		_visual.position = Vector2.ZERO
+		_body.position = Vector2.ZERO
+		_body.rotation = 0.0
+
+
+func size_scale() -> float:
+	return _size_scale
+
+
 func set_highlighted(value: bool) -> void:
 	var became_highlighted := value and not highlighted
 	highlighted = value
@@ -122,7 +175,7 @@ func set_highlighted(value: bool) -> void:
 	)
 	z_index = 2 if value else 0
 
-	if became_highlighted:
+	if became_highlighted and not _reduced_motion:
 		_feedback_scale = 0.72
 		_play_scale_tween(1.12, 0.16)
 
@@ -152,16 +205,20 @@ func move_and_bounce(delta: float, center_bounds: Rect2) -> void:
 		velocity.y = -absf(velocity.y)
 		bounced = true
 
-	if bounced:
+	if bounced and not _reduced_motion:
 		_bounce_amount = 1.0
 
 
 func play_spawn() -> void:
+	if _reduced_motion:
+		return
 	_feedback_scale = 0.52
 	_play_scale_tween(1.08, 0.18)
 
 
 func play_wrong() -> void:
+	if _reduced_motion:
+		return
 	_shake_strength = 11.0
 	_feedback_scale = 0.86
 	_play_scale_tween(1.0, 0.16)
@@ -221,7 +278,7 @@ func _update_palette() -> void:
 
 
 func _update_trail(delta: float) -> void:
-	if not _enabled:
+	if not _enabled or _reduced_motion:
 		return
 
 	_trail_sample_time += delta
@@ -246,6 +303,11 @@ func _play_scale_tween(peak: float, duration: float) -> void:
 	_feedback_tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_feedback_tween.tween_property(self, "_feedback_scale", peak, duration)
 	_feedback_tween.tween_property(self, "_feedback_scale", 1.0, 0.1).set_trans(Tween.TRANS_SINE)
+
+
+func _on_setting_changed(key: String, value: Variant) -> void:
+	if key == REDUCED_MOTION_SETTING:
+		set_reduced_motion(bool(value))
 
 
 func _with_alpha(color: Color, alpha: float) -> Color:

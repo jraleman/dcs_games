@@ -23,6 +23,43 @@ const LEGACY_USER_DIRECTORIES := ["shares"]
 ## legible/tappable on small windows and phones. See _update_content_scale().
 const AUTO_SCALE_REFERENCE_HEIGHT := 700.0
 const AUTO_SCALE_MAX := 2.0
+const VISUAL_EFFECTS_KEY := "accessibility/visual_effects"
+const REDUCED_MOTION_KEY := "accessibility/reduced_motion"
+const AUDIO_CAPTIONS_KEY := "accessibility/audio_captions"
+const PLAYER_LABELS_KEY := "accessibility/player_labels"
+const ONE_BUTTON_TARGET_RUSH_KEY := "accessibility/one_button_target_rush"
+const GAMEPLAY_SPEED_KEY := "accessibility/gameplay_speed"
+const TARGET_SIZE_KEY := "accessibility/target_size"
+const EXTRA_ROUND_TIME_KEY := "accessibility/extra_round_time"
+const CONTROLLER_SPEED_KEY := "accessibility/controller_speed"
+const CONTROLLER_DEADZONE_KEY := "accessibility/controller_deadzone"
+
+## Base-game (Target Rush) tuning. These are player-facing game options rather
+## than assists, so they scale in both directions and are read when a round
+## starts, exactly like the assists above.
+const TRIANGLE_SIZE_KEY := "game/triangle_size"
+const TRIANGLE_SPEED_KEY := "game/triangle_speed"
+const TRIANGLE_SPEED_RUSH_KEY := "game/triangle_speed_rush"
+const TRIANGLE_ROUND_LENGTH_KEY := "game/triangle_round_length"
+
+const MIN_GAMEPLAY_SPEED := 0.6
+const MAX_GAMEPLAY_SPEED := 1.0
+const MIN_TARGET_SIZE := 1.0
+const MAX_TARGET_SIZE := 1.4
+const MIN_EXTRA_ROUND_TIME := 0.0
+const MAX_EXTRA_ROUND_TIME := 30.0
+const MIN_CONTROLLER_SPEED := 0.5
+const MAX_CONTROLLER_SPEED := 1.5
+const MIN_CONTROLLER_DEADZONE := 0.05
+const MAX_CONTROLLER_DEADZONE := 0.5
+const MIN_TRIANGLE_SIZE := 0.6
+const MAX_TRIANGLE_SIZE := 1.6
+const MIN_TRIANGLE_SPEED := 0.5
+const MAX_TRIANGLE_SPEED := 2.0
+const MIN_TRIANGLE_SPEED_RUSH := 0.0
+const MAX_TRIANGLE_SPEED_RUSH := 1.0
+const MIN_TRIANGLE_ROUND_LENGTH := 15.0
+const MAX_TRIANGLE_ROUND_LENGTH := 90.0
 
 enum WindowMode { WINDOWED, FULLSCREEN, BORDERLESS }
 
@@ -53,6 +90,48 @@ const CONTROL_SETTING_KEYS := {
 	&"player_two_target_3": "controls/player_two_target_3",
 }
 const RESERVED_CONTROL_KEYS := [KEY_ESCAPE, KEY_F11]
+const CONTROLLER_TARGET_KEYS := [
+	"controls/controller_target_1",
+	"controls/controller_target_2",
+	"controls/controller_target_3",
+]
+const CONTROLLER_PAUSE_KEY := "controls/controller_pause"
+const CONTROLLER_MOVEMENT_SCHEME_KEY := "controls/controller_movement_scheme"
+const CONTROLLER_BINDING_KEYS := [
+	"controls/controller_target_1",
+	"controls/controller_target_2",
+	"controls/controller_target_3",
+	"controls/controller_pause",
+]
+const CONTROLLER_BUTTON_IDS := [
+	JOY_BUTTON_A,
+	JOY_BUTTON_B,
+	JOY_BUTTON_X,
+	JOY_BUTTON_Y,
+	JOY_BUTTON_LEFT_SHOULDER,
+	JOY_BUTTON_RIGHT_SHOULDER,
+	JOY_BUTTON_LEFT_STICK,
+	JOY_BUTTON_RIGHT_STICK,
+	JOY_BUTTON_DPAD_UP,
+	JOY_BUTTON_DPAD_DOWN,
+	JOY_BUTTON_DPAD_LEFT,
+	JOY_BUTTON_DPAD_RIGHT,
+	JOY_BUTTON_START,
+	JOY_BUTTON_BACK,
+]
+const CONTROLLER_DPAD_BUTTON_IDS := [
+	JOY_BUTTON_DPAD_UP,
+	JOY_BUTTON_DPAD_DOWN,
+	JOY_BUTTON_DPAD_LEFT,
+	JOY_BUTTON_DPAD_RIGHT,
+]
+
+enum ControllerMovementScheme {
+	LEFT_STICK_AND_DPAD,
+	RIGHT_STICK_AND_DPAD,
+	LEFT_STICK_ONLY,
+	RIGHT_STICK_ONLY,
+}
 
 const DEFAULTS := {
 	"audio/master": 0.8,
@@ -64,13 +143,32 @@ const DEFAULTS := {
 	"display/max_fps": 0,
 	"ui/scale": 1.0,
 	"ui/show_fps": false,
+	"accessibility/visual_effects": true,
+	"accessibility/reduced_motion": false,
+	"accessibility/audio_captions": false,
+	"accessibility/player_labels": true,
+	"accessibility/one_button_target_rush": false,
+	"accessibility/gameplay_speed": 1.0,
+	"accessibility/target_size": 1.0,
+	"accessibility/extra_round_time": 0.0,
+	"accessibility/controller_speed": 1.0,
+	"accessibility/controller_deadzone": 0.22,
 	"game/show_instructions": true,
+	"game/triangle_size": 1.0,
+	"game/triangle_speed": 1.0,
+	"game/triangle_speed_rush": 0.35,
+	"game/triangle_round_length": 30.0,
 	"controls/player_one_target_1": KEY_1,
 	"controls/player_one_target_2": KEY_2,
 	"controls/player_one_target_3": KEY_3,
 	"controls/player_two_target_1": KEY_7,
 	"controls/player_two_target_2": KEY_8,
 	"controls/player_two_target_3": KEY_9,
+	"controls/controller_target_1": JOY_BUTTON_A,
+	"controls/controller_target_2": JOY_BUTTON_B,
+	"controls/controller_target_3": JOY_BUTTON_X,
+	"controls/controller_pause": JOY_BUTTON_START,
+	"controls/controller_movement_scheme": ControllerMovementScheme.LEFT_STICK_AND_DPAD,
 }
 
 var _values: Dictionary = {}
@@ -109,6 +207,98 @@ func get_value(key: String, default: Variant = null) -> Variant:
 	return DEFAULTS.get(key)
 
 
+func visual_effects_enabled() -> bool:
+	return bool(get_value(VISUAL_EFFECTS_KEY, true))
+
+
+func reduced_motion_enabled() -> bool:
+	return bool(get_value(REDUCED_MOTION_KEY, false))
+
+
+func audio_captions_enabled() -> bool:
+	return bool(get_value(AUDIO_CAPTIONS_KEY, false))
+
+
+func player_labels_enabled() -> bool:
+	return bool(get_value(PLAYER_LABELS_KEY, true))
+
+
+func one_button_target_rush_enabled() -> bool:
+	return bool(get_value(ONE_BUTTON_TARGET_RUSH_KEY, false))
+
+
+func gameplay_speed_scale() -> float:
+	return clampf(
+		float(get_value(GAMEPLAY_SPEED_KEY, 1.0)),
+		MIN_GAMEPLAY_SPEED,
+		MAX_GAMEPLAY_SPEED
+	)
+
+
+func target_size_scale() -> float:
+	return clampf(
+		float(get_value(TARGET_SIZE_KEY, 1.0)),
+		MIN_TARGET_SIZE,
+		MAX_TARGET_SIZE
+	)
+
+
+func extra_round_time() -> float:
+	return clampf(
+		float(get_value(EXTRA_ROUND_TIME_KEY, 0.0)),
+		MIN_EXTRA_ROUND_TIME,
+		MAX_EXTRA_ROUND_TIME
+	)
+
+
+func triangle_size_scale() -> float:
+	return clampf(
+		float(get_value(TRIANGLE_SIZE_KEY, 1.0)),
+		MIN_TRIANGLE_SIZE,
+		MAX_TRIANGLE_SIZE
+	)
+
+
+func triangle_speed_scale() -> float:
+	return clampf(
+		float(get_value(TRIANGLE_SPEED_KEY, 1.0)),
+		MIN_TRIANGLE_SPEED,
+		MAX_TRIANGLE_SPEED
+	)
+
+
+func triangle_speed_rush() -> float:
+	return clampf(
+		float(get_value(TRIANGLE_SPEED_RUSH_KEY, 0.35)),
+		MIN_TRIANGLE_SPEED_RUSH,
+		MAX_TRIANGLE_SPEED_RUSH
+	)
+
+
+func triangle_round_length() -> float:
+	return clampf(
+		float(get_value(TRIANGLE_ROUND_LENGTH_KEY, 30.0)),
+		MIN_TRIANGLE_ROUND_LENGTH,
+		MAX_TRIANGLE_ROUND_LENGTH
+	)
+
+
+func controller_movement_scale() -> float:
+	return clampf(
+		float(get_value(CONTROLLER_SPEED_KEY, 1.0)),
+		MIN_CONTROLLER_SPEED,
+		MAX_CONTROLLER_SPEED
+	)
+
+
+func controller_deadzone() -> float:
+	return clampf(
+		float(get_value(CONTROLLER_DEADZONE_KEY, 0.22)),
+		MIN_CONTROLLER_DEADZONE,
+		MAX_CONTROLLER_DEADZONE
+	)
+
+
 func set_value(key: String, value: Variant) -> void:
 	if _values.get(key) == value:
 		return
@@ -127,6 +317,12 @@ func reset_controls_to_defaults() -> void:
 	for action: StringName in CONTROL_ACTIONS:
 		var setting_key := str(CONTROL_SETTING_KEYS[action])
 		set_value(setting_key, DEFAULTS[setting_key])
+	for setting_key: String in CONTROLLER_BINDING_KEYS:
+		set_value(setting_key, DEFAULTS[setting_key])
+	set_value(
+		CONTROLLER_MOVEMENT_SCHEME_KEY,
+		DEFAULTS[CONTROLLER_MOVEMENT_SCHEME_KEY]
+	)
 
 
 func control_actions_for_player(player_index: int) -> Array[StringName]:
@@ -192,6 +388,155 @@ func set_control_key(action: StringName, keycode: int) -> bool:
 	if not conflicting_action.is_empty():
 		set_value(str(CONTROL_SETTING_KEYS[conflicting_action]), previous_keycode)
 	set_value(setting_key, keycode)
+	return true
+
+
+func controller_target_button(target_index: int) -> int:
+	if target_index < 0 or target_index >= CONTROLLER_TARGET_KEYS.size():
+		return -1
+	var setting_key: String = CONTROLLER_TARGET_KEYS[target_index]
+	return int(get_value(setting_key, DEFAULTS[setting_key]))
+
+
+func controller_target_index(button: int) -> int:
+	for target_index in range(CONTROLLER_TARGET_KEYS.size()):
+		if controller_target_button(target_index) == button:
+			return target_index
+	return -1
+
+
+func controller_target_summary(separator := "  ") -> String:
+	var labels := PackedStringArray()
+	for target_index in range(CONTROLLER_TARGET_KEYS.size()):
+		labels.append(controller_button_label(controller_target_button(target_index)))
+	return separator.join(labels)
+
+
+func controller_pause_button() -> int:
+	return int(get_value(CONTROLLER_PAUSE_KEY, DEFAULTS[CONTROLLER_PAUSE_KEY]))
+
+
+func controller_movement_scheme() -> int:
+	var selected := int(
+		get_value(
+			CONTROLLER_MOVEMENT_SCHEME_KEY,
+			ControllerMovementScheme.LEFT_STICK_AND_DPAD
+		)
+	)
+	return clampi(
+		selected,
+		ControllerMovementScheme.LEFT_STICK_AND_DPAD,
+		ControllerMovementScheme.RIGHT_STICK_ONLY
+	)
+
+
+func controller_uses_right_stick() -> bool:
+	return controller_movement_scheme() in [
+		ControllerMovementScheme.RIGHT_STICK_AND_DPAD,
+		ControllerMovementScheme.RIGHT_STICK_ONLY,
+	]
+
+
+func controller_dpad_enabled() -> bool:
+	return controller_movement_scheme() in [
+		ControllerMovementScheme.LEFT_STICK_AND_DPAD,
+		ControllerMovementScheme.RIGHT_STICK_AND_DPAD,
+	]
+
+
+func controller_movement_scheme_label(scheme: int = -1) -> String:
+	var selected := controller_movement_scheme() if scheme < 0 else scheme
+	match selected:
+		ControllerMovementScheme.RIGHT_STICK_AND_DPAD:
+			return "Right stick + D-pad"
+		ControllerMovementScheme.LEFT_STICK_ONLY:
+			return "Left stick only"
+		ControllerMovementScheme.RIGHT_STICK_ONLY:
+			return "Right stick only"
+		_:
+			return "Left stick + D-pad"
+
+
+func controller_button_label(button: int) -> String:
+	match button:
+		JOY_BUTTON_A:
+			return "A"
+		JOY_BUTTON_B:
+			return "B"
+		JOY_BUTTON_X:
+			return "X"
+		JOY_BUTTON_Y:
+			return "Y"
+		JOY_BUTTON_LEFT_SHOULDER:
+			return "LB"
+		JOY_BUTTON_RIGHT_SHOULDER:
+			return "RB"
+		JOY_BUTTON_LEFT_STICK:
+			return "L3"
+		JOY_BUTTON_RIGHT_STICK:
+			return "R3"
+		JOY_BUTTON_DPAD_UP:
+			return "D-pad Up"
+		JOY_BUTTON_DPAD_DOWN:
+			return "D-pad Down"
+		JOY_BUTTON_DPAD_LEFT:
+			return "D-pad Left"
+		JOY_BUTTON_DPAD_RIGHT:
+			return "D-pad Right"
+		JOY_BUTTON_START:
+			return "Start"
+		JOY_BUTTON_BACK:
+			return "Back"
+	return "Button %d" % button
+
+
+func is_controller_button_allowed(button: int) -> bool:
+	return CONTROLLER_BUTTON_IDS.has(button)
+
+
+func controller_button_ids_for_setting(setting_key: String) -> Array[int]:
+	var result: Array[int] = []
+	for button: int in CONTROLLER_BUTTON_IDS:
+		if is_controller_button_allowed_for_setting(setting_key, button):
+			result.append(button)
+	return result
+
+
+func is_controller_button_allowed_for_setting(
+	setting_key: String,
+	button: int
+) -> bool:
+	if not CONTROLLER_BINDING_KEYS.has(setting_key):
+		return false
+	return (
+		is_controller_button_allowed(button)
+		and not (
+			setting_key == CONTROLLER_PAUSE_KEY
+			and CONTROLLER_DPAD_BUTTON_IDS.has(button)
+		)
+	)
+
+
+func set_controller_button(setting_key: String, button: int) -> bool:
+	if (
+		not CONTROLLER_BINDING_KEYS.has(setting_key)
+		or not is_controller_button_allowed_for_setting(setting_key, button)
+	):
+		return false
+
+	var previous_button := int(get_value(setting_key, DEFAULTS[setting_key]))
+	if previous_button == button:
+		return true
+
+	var conflicting_key := ""
+	for candidate: String in CONTROLLER_BINDING_KEYS:
+		if candidate != setting_key and int(get_value(candidate)) == button:
+			conflicting_key = candidate
+			break
+
+	if not conflicting_key.is_empty():
+		set_value(conflicting_key, previous_button)
+	set_value(setting_key, button)
 	return true
 
 
@@ -371,6 +716,7 @@ func apply_controls() -> void:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
 		_apply_control_binding(action, control_keycode(action))
+	_apply_pause_control_binding(controller_pause_button())
 
 
 func _apply(key: String, value: Variant) -> void:
@@ -386,7 +732,9 @@ func _apply(key: String, value: Variant) -> void:
 		"ui/scale":
 			_update_content_scale()
 		_:
-			if key.begins_with("controls/"):
+			if key == CONTROLLER_PAUSE_KEY:
+				_apply_pause_control_binding(int(value))
+			elif key.begins_with("controls/"):
 				var action := _control_action_for_setting(key)
 				if not action.is_empty():
 					_apply_control_binding(action, int(value))
@@ -410,6 +758,25 @@ func _apply_control_binding(action: StringName, keycode: int) -> void:
 	InputMap.action_add_event(action, key_event)
 
 
+func _apply_pause_control_binding(button: int) -> void:
+	const PAUSE_ACTION := &"pause"
+	if not InputMap.has_action(PAUSE_ACTION):
+		InputMap.add_action(PAUSE_ACTION)
+
+	var retained_events: Array[InputEvent] = []
+	for event: InputEvent in InputMap.action_get_events(PAUSE_ACTION):
+		if not event is InputEventJoypadButton:
+			retained_events.append(event)
+
+	InputMap.action_erase_events(PAUSE_ACTION)
+	for event: InputEvent in retained_events:
+		InputMap.action_add_event(PAUSE_ACTION, event)
+
+	var button_event := InputEventJoypadButton.new()
+	button_event.button_index = button
+	InputMap.action_add_event(PAUSE_ACTION, button_event)
+
+
 func _control_action_for_setting(setting_key: String) -> StringName:
 	for action: StringName in CONTROL_ACTIONS:
 		if str(CONTROL_SETTING_KEYS[action]) == setting_key:
@@ -418,6 +785,7 @@ func _control_action_for_setting(setting_key: String) -> StringName:
 
 
 func _repair_control_values() -> bool:
+	var repaired := false
 	var used_keycodes := {}
 	for action: StringName in CONTROL_ACTIONS:
 		var keycode := control_keycode(action)
@@ -425,9 +793,33 @@ func _repair_control_values() -> bool:
 			for reset_action: StringName in CONTROL_ACTIONS:
 				var setting_key := str(CONTROL_SETTING_KEYS[reset_action])
 				_values[setting_key] = DEFAULTS[setting_key]
-			return true
+			repaired = true
+			break
 		used_keycodes[keycode] = true
-	return false
+
+	var used_buttons := {}
+	for setting_key: String in CONTROLLER_BINDING_KEYS:
+		var button := int(get_value(setting_key, -1))
+		if (
+			not is_controller_button_allowed_for_setting(setting_key, button)
+			or used_buttons.has(button)
+		):
+			for reset_key: String in CONTROLLER_BINDING_KEYS:
+				_values[reset_key] = DEFAULTS[reset_key]
+			repaired = true
+			break
+		used_buttons[button] = true
+
+	var movement_scheme := int(get_value(CONTROLLER_MOVEMENT_SCHEME_KEY, -1))
+	if (
+		movement_scheme < ControllerMovementScheme.LEFT_STICK_AND_DPAD
+		or movement_scheme > ControllerMovementScheme.RIGHT_STICK_ONLY
+	):
+		_values[CONTROLLER_MOVEMENT_SCHEME_KEY] = (
+			DEFAULTS[CONTROLLER_MOVEMENT_SCHEME_KEY]
+		)
+		repaired = true
+	return repaired
 
 
 ## Combines the player's UI scale with an automatic boost for small windows.

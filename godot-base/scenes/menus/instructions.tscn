@@ -101,7 +101,7 @@ theme_override_constants/separation = 20
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 38
-text = "Follow the glowing triangle"
+text = "Follow your highlighted target"
 horizontal_alignment = 1
 
 [node name="Summary" type="Label" parent="Margins/Layout/Card/Layout"]
@@ -124,7 +124,7 @@ layout_mode = 2
 size_flags_vertical = 1
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.82)
 theme_override_font_sizes/font_size = 18
-text = "WATCH PLAYER 1'S BLUE GLOW"
+text = "WATCH PLAYER 1'S HIGHLIGHTED TARGET"
 vertical_alignment = 1
 
 [node name="DemoTargets" type="HBoxContainer" parent="Margins/Layout/Card/Layout/TargetDemo"]
@@ -207,7 +207,7 @@ text = "PLAYER 1"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = "Keyboard: 1, 2, 3\nController 1: A, B, X\nMouse/touch: select blue triangles"
+text = "Keyboard: 1, 2, 3\nController 1: configured buttons\nMouse/touch: select P1 triangles"
 autowrap_mode = 2
 
 [node name="OpponentCard" type="PanelContainer" parent="Margins/Layout/Card/Layout/ControlGrid"]
@@ -231,7 +231,7 @@ text = "PLAYER 2"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = "Keyboard: 7, 8, 9\nController 2: A, B, X\nMouse/touch: select red triangles"
+text = "Keyboard: 7, 8, 9\nController 2: configured buttons\nMouse/touch: select P2 triangles"
 autowrap_mode = 2
 
 [node name="Rules" type="Label" parent="Margins/Layout/Card/Layout"]

@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scenes/game/gameplay.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" path="res://assets/images/icon_share.svg" id="6_share"]
 [ext_resource type="Texture2D" path="res://assets/images/icon_home.svg" id="7_home"]
 [ext_resource type="Texture2D" path="res://assets/images/icon_back.svg" id="8_back"]
+[ext_resource type="PackedScene" path="res://ui/components/audio_caption.tscn" id="9_caption"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_player_one"]
 content_margin_left = 26.0
@@ -245,7 +246,8 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_timer")
 layout_mode = 2
 theme_override_constants/separation = -4
 
-[node name="Title" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
+[node name="ModeTitle" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.9)
@@ -325,6 +327,7 @@ theme_override_styles/background = SubResource("StyleBoxFlat_progress_background
 theme_override_styles/fill = SubResource("StyleBoxFlat_progress_fill")
 
 [node name="Callout" type="Label" parent="HUD/Overlay/Margins/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.52)
@@ -336,6 +339,8 @@ horizontal_alignment = 1
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
+
+[node name="AudioCaption" parent="HUD/Overlay/Margins/Layout" instance=ExtResource("9_caption")]
 
 [node name="BottomRow" type="HBoxContainer" parent="HUD/Overlay/Margins/Layout"]
 layout_mode = 2

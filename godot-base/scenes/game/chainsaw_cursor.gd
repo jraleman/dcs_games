@@ -6,6 +6,7 @@ const MID_METAL := Color("52636a")
 const LIGHT_METAL := Color("c7d1d3")
 const RUBBER := Color("17191a")
 const ELECTRIC_YELLOW := Color("ffd34e")
+const REDUCED_MOTION_SETTING := "accessibility/reduced_motion"
 
 var player_index := -1
 var body_size := Vector2(164.0, 54.0)
@@ -17,6 +18,9 @@ var _chain_phase := 0.0
 var _impact := 0.0
 var _powered := false
 var _last_position := Vector2.ZERO
+var _player_label: Label
+var _show_player_label := true
+var _reduced_motion := false
 
 
 func _ready() -> void:
@@ -27,6 +31,11 @@ func _ready() -> void:
 	_motor_player.volume_db = -60.0
 	_motor_player.pitch_scale = 0.9 + float(maxi(player_index, 0)) * 0.045
 	add_child(_motor_player)
+	_create_player_label()
+	var settings := get_node_or_null("/root/Settings")
+	if settings != null:
+		set_reduced_motion(bool(settings.call("reduced_motion_enabled")))
+		settings.connect("changed", _on_setting_changed)
 
 
 func _process(delta: float) -> void:
@@ -45,11 +54,15 @@ func _process(delta: float) -> void:
 		target_motor_level,
 		1.0 - exp(-9.0 * delta)
 	)
-	_chain_phase = fmod(
-		_chain_phase + delta * lerpf(7.0, 31.0, _motor_level),
-		1.0
-	)
-	_impact = move_toward(_impact, 0.0, delta * 4.8)
+	if _reduced_motion:
+		_chain_phase = 0.0
+		_impact = 0.0
+	else:
+		_chain_phase = fmod(
+			_chain_phase + delta * lerpf(7.0, 31.0, _motor_level),
+			1.0
+		)
+		_impact = move_toward(_impact, 0.0, delta * 4.8)
 
 	if _motor_player.playing:
 		_motor_player.volume_db = lerpf(-34.0, -10.0, _motor_level)
@@ -67,6 +80,20 @@ func configure(owner_index: int, color: Color, size: Vector2 = Vector2(164.0, 54
 	player_index = owner_index
 	saw_color = color
 	body_size = size
+	_update_player_label()
+	queue_redraw()
+
+
+func set_player_label_visible(value: bool) -> void:
+	_show_player_label = value
+	_update_player_label()
+
+
+func set_reduced_motion(value: bool) -> void:
+	_reduced_motion = value
+	if value:
+		_chain_phase = 0.0
+		_impact = 0.0
 	queue_redraw()
 
 
@@ -81,7 +108,8 @@ func set_motor_stream(stream: AudioStream) -> void:
 
 
 func trigger_cut() -> void:
-	_impact = 1.0
+	if not _reduced_motion:
+		_impact = 1.0
 
 
 func collision_rect() -> Rect2:
@@ -100,6 +128,41 @@ func clamp_to(play_bounds: Rect2) -> void:
 		position.y = play_bounds.get_center().y
 	else:
 		position.y = clampf(position.y, minimum.y, maximum.y)
+
+
+func _create_player_label() -> void:
+	_player_label = Label.new()
+	_player_label.name = "PlayerLabel"
+	_player_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_player_label.z_index = 8
+	_player_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_player_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_player_label.add_theme_color_override("font_color", Color.WHITE)
+	_player_label.add_theme_color_override(
+		"font_outline_color",
+		Color(0.01, 0.02, 0.025, 0.96)
+	)
+	_player_label.add_theme_constant_override("outline_size", 6)
+	_player_label.add_theme_font_size_override("font_size", 17)
+	add_child(_player_label)
+	_update_player_label()
+
+
+func _update_player_label() -> void:
+	if _player_label == null:
+		return
+	_player_label.text = "P%d" % (player_index + 1)
+	_player_label.position = Vector2(
+		-body_size.x * 0.5 + 22.0,
+		-body_size.y * 0.5 + 7.0
+	)
+	_player_label.size = Vector2(44.0, 28.0)
+	_player_label.visible = _show_player_label and player_index >= 0
+
+
+func _on_setting_changed(key: String, value: Variant) -> void:
+	if key == REDUCED_MOTION_SETTING:
+		set_reduced_motion(bool(value))
 
 
 func _draw() -> void:

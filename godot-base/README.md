@@ -35,7 +35,7 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_se
 | `scripts/game_info.gd` | Studio and game identity: title, tagline, intro cards, credits, palette. **Start here when renaming the game.** |
 | `autoload/settings.gd` | Stores, persists (`user://settings.cfg`) and applies player settings. |
 | `autoload/game_session.gd` | Holds the selected game, player count, CPU configuration and controller assignment while moving between scenes. |
-| `autoload/audio_manager.gd` | Music crossfades, an 8-voice SFX pool, bus volumes, UI and gameplay sound cues. |
+| `autoload/audio_manager.gd` | Music crossfades, an 8-voice SFX pool, bus volumes, UI/gameplay sound cues and semantic audio-caption requests. |
 | `autoload/achievement_manager.gd` | Persistent achievement registry, Desk-Can-Saw progression flags and queued global achievement toasts. |
 | `autoload/share_manager.gd` | Renders reusable 1200×630 session cards, downloads them on web and saves them for desktop sharing. |
 | `autoload/router.gd` | `Router.goto(path)` — scene changes with a fade. Owns the top overlay layer (fade + FPS counter). |
@@ -44,6 +44,7 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_se
 | `ui/theme/dcs_theme.tres` | The whole look: buttons, panels, sliders, tabs. |
 | `ui/components/background.tscn` | Animated gradient backdrop (shader), aspect-corrected. |
 | `ui/components/achievement_toast.tscn` | Small reusable unlock notification used by `AchievementManager`. |
+| `ui/components/audio_caption.tscn` | Reusable gameplay caption panel for important sound-only events. |
 | `ui/components/share_card.tscn` | Default score/achievement image; swap it or pass another scene to `ShareManager`. |
 | `ui/components/share_preview.tscn` | Modal generated-image preview with close and open-original actions. |
 | `ui/components/splash_motion.gd` | Lightweight animated geometry for logo stings and splash screens. |
@@ -63,6 +64,31 @@ space on the other. Layouts are written in those units and adapt at runtime:
 - **`Settings._update_content_scale()`** scales the UI up on physically small
   windows (below ~700px tall), so text stays legible on a phone. The player can
   bias it further with *Settings → Display → Interface size*.
+- **Settings → Accessibility → Intense visual effects** disables full-screen
+  flashes and screen shake during gameplay while preserving other animation
+  and visual feedback.
+- **Reduced motion** freezes ambient and decorative movement, removes pulses,
+  trails, particles, shake and spatial UI animation, and keeps opacity-only
+  fades. Essential target, can and player-controlled chainsaw movement remains
+  active.
+- **Audio captions** identify correct and wrong targets, countdown cues,
+  Desk-Can-Saw power-up and unlock sounds, sliced cans and missed cans.
+- **P1/P2 identity labels** keep player ownership readable without depending
+  on blue/red color differences.
+- **Gameplay assists** live on their own **Settings → Handicap** tab: they can
+  slow moving targets and cans to 60%, enlarge them to 140%, and add up to 30
+  seconds to each round. These settings take effect when the next round starts
+  and do not disable progression or achievements.
+- **Triangle Rush options** under **Settings → Game** tune the base game
+  itself: triangle size (60–160%), triangle speed (50–200%), the final-stretch
+  speed rush added as the timer runs out (0–100%) and the round length
+  (15–90 seconds). They also apply from the next round, stack with the
+  Handicap assists (size and speed multiply, extra time is added on top) and
+  can make the game harder as well as easier.
+- **One-button Target Rush** lets any of a player's assigned keys or mapped
+  controller target buttons activate their highlighted target. Desk-Can-Saw
+  also exposes controller movement speed, stick deadzone and movement-layout
+  controls.
 - **`MenuScreen.refresh_layout()`** recomputes margins from the live viewport
   on every resize and calls `_on_layout_changed(size)`, which screens override.
   The main menu uses it to switch between a left-aligned poster layout in
@@ -119,8 +145,11 @@ the open action is hidden in browser exports. The default card includes
 
 **Tune the sample game** — the exported values on
 `scenes/game/gameplay.gd` control colours, target speed, round length, points
-and miss penalty. Keyboard bindings are persisted by `Settings`, while the CPU
-difficulty profiles live in `GameSession`. The sample keeps rules in
+and miss penalty. Round length and the final-stretch speed rush are also
+player-facing under *Settings → Game*, which overrides those exports at
+runtime; keep `Settings.DEFAULTS` in step when you change them. Keyboard
+bindings are persisted by `Settings`, while the CPU difficulty profiles live in
+`GameSession`. The sample keeps rules in
 `gameplay.gd` and target input / movement in
 `triangle_target.gd`, so either part can be replaced independently.
 
@@ -133,7 +162,7 @@ and the `pause` action handling, and the pause overlay works as-is.
 | Action | Bound to |
 | --- | --- |
 | `skip` | Space, Enter, left mouse button, gamepad A |
-| `pause` | Esc, gamepad Start |
+| `pause` | Esc plus a remappable gamepad button (Start by default) |
 | `toggle_fullscreen` | F11 |
 | `player_one_target_1/2/3` | Remappable; defaults to 1, 2 and 3 |
 | `player_two_target_1/2/3` | Remappable; defaults to 7, 8 and 9 |
@@ -142,16 +171,23 @@ and the `pause` action handling, and the pause overlay works as-is.
 Gameplay keys can be changed under **Settings → Controls** and are saved in
 `user://settings.cfg`; assigning an occupied key swaps the two bindings.
 Controller 1 controls Player 1 and Controller 2 controls Player 2. In Target
-Rush they use A, B and X. Single-player creates only Player 1's targets;
-multiplayer lets Player 2 use those controls or hands the red side to the CPU.
+Rush they share three remappable target buttons (A, B and X by default).
+Controller pause is remappable too; target and pause buttons remain unique, so
+assigning an occupied button swaps the two bindings. Pause excludes D-pad
+directions so they remain available to Desk-Can-Saw movement. Single-player
+creates only Player 1's targets; multiplayer lets Player 2 use those controls
+or hands P2 to the CPU.
 Each active player has one bright target at a time: matching it earns a point,
 while choosing one of that player's dim targets costs a point. Human-controlled
-targets also accept mouse and touchscreen presses.
+targets also accept mouse and touchscreen presses. Optional P1/P2 labels make
+ownership independent of color, and one-button mode routes any assigned
+keyboard or controller target button to the highlighted target.
 
-Desk-Can-Saw uses direct movement instead: solo accepts the mouse, arrow
-keys, Controller 1's analog stick or its D-pad. In local multiplayer Player 1
-uses the mouse by default, Player 2 uses the arrow keys by default, and assigned
-controllers use the same Controller 1/Controller 2 ordering. A chainsaw is
+Desk-Can-Saw uses direct movement instead: solo accepts the mouse, arrow keys
+or Controller 1. The shared controller layout can use the left or right stick,
+with or without D-pad input. In local multiplayer Player 1 uses the mouse by
+default, Player 2 uses the arrow keys by default, and assigned controllers use
+the same Controller 1/Controller 2 ordering and movement layout. A chainsaw is
 clamped to the playfield, and the first chainsaw to intersect a can earns that
 can's single point. The workshop wall, wood desk, power cords, aluminum cans,
 electric chainsaws, moving chain teeth, sparks, metal fragments and sawdust are
@@ -186,6 +222,9 @@ Focused regression checks can be run headlessly:
 ```bash
 godot --headless --path . --script res://tests/slice_and_slash_test.gd
 godot --headless --path . --script res://tests/slice_and_slash_scene_test.gd
+godot --headless --path . --script res://tests/visual_effects_test.gd
+godot --headless --path . --script res://tests/accessibility_test.gd
+godot --headless --path . --script res://tests/target_rush_options_test.gd
 ```
 
 The FPS counter is available under **Settings → Display** and is drawn by

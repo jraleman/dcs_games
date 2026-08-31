@@ -195,9 +195,39 @@ func _test_single_player_scene(session: Node) -> void:
 	_expect(paused, "Opening the slicing pause menu must pause the round.")
 	var pause_menu := game.get("_pause_menu") as Node
 	if pause_menu != null:
-		pause_menu.call("resume")
+		var pause_event := InputEventAction.new()
+		pause_event.action = &"pause"
+		pause_event.pressed = true
+		pause_menu.call("_input", pause_event)
 		await process_frame
-		_expect(not paused, "Resuming must unpause the slicing round.")
+		_expect(
+			not paused,
+			"The configured pause action must resume the slicing round."
+		)
+
+		game.call("open_pause_menu")
+		await process_frame
+		pause_menu = game.get("_pause_menu") as Node
+		pause_menu.call("_on_settings_pressed")
+		await process_frame
+		var settings_overlay := pause_menu.get("_settings_overlay") as Control
+		_expect(
+			settings_overlay != null
+			and settings_overlay.z_index == (pause_menu as Control).z_index,
+			"Nested pause settings must stay above gameplay captions."
+		)
+		pause_menu.call("_input", pause_event)
+		await process_frame
+		_expect(
+			paused and pause_menu.get("_settings_overlay") == null,
+			"Pause must close nested settings before it resumes gameplay."
+		)
+		pause_menu.call("_input", pause_event)
+		await process_frame
+		_expect(
+			not paused,
+			"A second pause press must resume after nested settings close."
+		)
 	else:
 		_failures.append("The slicing pause menu did not instantiate.")
 		paused = false

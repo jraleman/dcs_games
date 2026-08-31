@@ -141,7 +141,7 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 22
-text = "Chase the blue glow, build a combo and set your best score before time runs out."
+text = "Follow Player 1's highlighted target, build a combo and set your best score before time runs out."
 autowrap_mode = 2
 
 [node name="SinglePlayerControls" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout"]
@@ -182,7 +182,7 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 22
-text = "Race a CPU rival or share the keyboard with another player on the red side."
+text = "Race a CPU rival or share the keyboard with Player 2."
 autowrap_mode = 2
 
 [node name="MultiplayerControls" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout"]
@@ -252,7 +252,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 21
-text = "Only the blue side enters the arena."
+text = "Only Player 1 enters the arena."
 horizontal_alignment = 1
 autowrap_mode = 2
 
@@ -295,7 +295,7 @@ text = "KEYS  1  ·  2  ·  3"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 18
-text = "Follow the blue glow."
+text = "Follow Player 1's highlighted target."
 
 [node name="OpponentControl" type="PanelContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Layout/ControllerGrid"]
 unique_name_in_owner = true
@@ -325,7 +325,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 18
-text = "The red side plays automatically."
+text = "Player 2 plays automatically."
 
 [node name="OpponentSelector" type="PanelContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Layout"]
 unique_name_in_owner = true
