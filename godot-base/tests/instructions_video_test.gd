@@ -1,0 +1,205 @@
+extends SceneTree
+
+## Covers the tutorial video card on the instructions screen: asset wiring, the
+## play/pause/restart controls and the responsive two-column body.
+
+const INSTRUCTIONS_SCENE := "res://scenes/menus/instructions.tscn"
+
+var _failures := PackedStringArray()
+
+
+func _init() -> void:
+	call_deferred("_run")
+
+
+func _run() -> void:
+	var session := get_root().get_node_or_null("GameSession")
+	var settings := get_root().get_node_or_null("Settings")
+	if session == null or settings == null:
+		_failures.append("GameSession and Settings autoloads are required.")
+		await _finish()
+		return
+
+	var original_reduced_motion: bool = settings.call(
+		"get_value", "accessibility/reduced_motion"
+	)
+	settings.set("_values", _with_reduced_motion(settings, false))
+
+	await _test_clip_per_game(session)
+	await _test_playback_controls(session)
+	await _test_responsive_body(session)
+	await _test_reduced_motion_starts_paused(session, settings)
+
+	settings.set("_values", _with_reduced_motion(settings, original_reduced_motion))
+	await _finish()
+
+
+## Each game must present its own clip, headline and rules summary.
+func _test_clip_per_game(session: Node) -> void:
+	var expected := {
+		"select_target_rush": [
+			"res://assets/video/tutorial_target_rush.ogv",
+			"TARGET RUSH",
+		],
+		"select_slice_and_slash": [
+			"res://assets/video/tutorial_slice_and_slash.ogv",
+			"DESK-CAN-SAW",
+		],
+	}
+	var headlines := PackedStringArray()
+	var rules := PackedStringArray()
+	for selector: String in expected:
+		session.call(selector)
+		session.call("configure_single_player")
+		var screen := await _open_screen()
+		if screen == null:
+			return
+		var video := screen.get_node("%Video") as VideoStreamPlayer
+		_expect(
+			video.stream != null
+			and video.stream.resource_path == expected[selector][0],
+			"%s must load its own tutorial clip." % selector
+		)
+		_expect(
+			(screen.get_node("%PosterImage") as TextureRect).texture != null,
+			"%s must load a poster frame for the idle state." % selector
+		)
+		_expect(
+			(screen.get_node("%VideoTitle") as Label).text.contains(
+				expected[selector][1]
+			),
+			"%s must name its game above the clip." % selector
+		)
+		headlines.append((screen.get_node("%Headline") as Label).text)
+		rules.append((screen.get_node("%Rules") as Label).text)
+		await _close_screen(screen)
+
+	_expect(
+		headlines.size() == 2 and headlines[0] != headlines[1],
+		"Each game needs its own headline, not Target Rush copy for both."
+	)
+	_expect(
+		rules.size() == 2 and rules[0] != rules[1],
+		"Each game needs its own rules summary."
+	)
+
+
+func _test_playback_controls(session: Node) -> void:
+	session.call("select_target_rush")
+	session.call("configure_single_player")
+	var screen := await _open_screen()
+	if screen == null:
+		return
+	var video := screen.get_node("%Video") as VideoStreamPlayer
+	var play_button := screen.get_node("%PlayButton") as Button
+	var poster := screen.get_node("%Poster") as CenterContainer
+
+	_expect(
+		video.is_playing() and not video.paused,
+		"The clip must start playing when reduced motion is off."
+	)
+	_expect(not poster.visible, "The poster must be hidden during playback.")
+
+	play_button.emit_signal("pressed")
+	_expect(video.paused, "The play button must pause a playing clip.")
+	_expect(poster.visible, "Pausing must bring the poster prompt back.")
+	_expect(play_button.text == "Play", "A paused clip must offer to play again.")
+
+	play_button.emit_signal("pressed")
+	_expect(not video.paused, "The play button must resume a paused clip.")
+	_expect(play_button.text == "Pause", "A playing clip must offer to pause.")
+
+	await create_timer(0.4).timeout
+	(screen.get_node("%RestartButton") as Button).emit_signal("pressed")
+	_expect(
+		video.is_playing() and video.stream_position < 0.2,
+		"Restart must rewind the clip and keep playing."
+	)
+
+	screen.call("_on_video_finished")
+	_expect(
+		(screen.get_node("%PosterLabel") as Label).text == "Watch again",
+		"A finished clip must invite the viewer to replay it."
+	)
+	await _close_screen(screen)
+
+
+func _test_responsive_body(session: Node) -> void:
+	session.call("select_target_rush")
+	session.call("configure_multiplayer", 0)
+	var screen := await _open_screen()
+	if screen == null:
+		return
+	var body := screen.get_node("%Body") as GridContainer
+	var controls := screen.get_node("%ControlGrid") as GridContainer
+
+	screen.call("_on_layout_changed", Vector2(1920.0, 1080.0))
+	_expect(body.columns == 2, "Landscape must place the clip beside the details.")
+	_expect(controls.columns == 2, "Landscape multiplayer must show both players.")
+
+	screen.call("_on_layout_changed", Vector2(1080.0, 1920.0))
+	_expect(body.columns == 1, "Portrait must stack the clip above the details.")
+	_expect(controls.columns == 1, "Portrait must stack the control cards.")
+	await _close_screen(screen)
+
+
+func _test_reduced_motion_starts_paused(session: Node, settings: Node) -> void:
+	settings.set("_values", _with_reduced_motion(settings, true))
+	session.call("select_slice_and_slash")
+	session.call("configure_single_player")
+	var screen := await _open_screen()
+	if screen == null:
+		settings.set("_values", _with_reduced_motion(settings, false))
+		return
+	var video := screen.get_node("%Video") as VideoStreamPlayer
+	_expect(
+		not video.is_playing(),
+		"Reduced motion must leave the clip parked until the viewer starts it."
+	)
+	_expect(
+		(screen.get_node("%Poster") as CenterContainer).visible,
+		"Reduced motion must show the poster prompt."
+	)
+	await _close_screen(screen)
+	settings.set("_values", _with_reduced_motion(settings, false))
+
+
+## Writes straight into the settings dictionary so the test never persists a
+## value to the developer's user://settings.cfg.
+func _with_reduced_motion(settings: Node, enabled: bool) -> Dictionary:
+	var values: Dictionary = settings.get("_values").duplicate()
+	values["accessibility/reduced_motion"] = enabled
+	return values
+
+
+func _open_screen() -> Node:
+	var packed := load(INSTRUCTIONS_SCENE) as PackedScene
+	if packed == null:
+		_failures.append("Could not load %s." % INSTRUCTIONS_SCENE)
+		return null
+	var screen := packed.instantiate()
+	get_root().add_child(screen)
+	await process_frame
+	await process_frame
+	return screen
+
+
+func _close_screen(screen: Node) -> void:
+	screen.queue_free()
+	await process_frame
+
+
+func _expect(condition: bool, message: String) -> void:
+	if not condition:
+		_failures.append(message)
+
+
+func _finish() -> void:
+	await create_timer(0.3).timeout
+	if _failures.is_empty():
+		print("Instructions video tests passed.")
+		quit(0)
+		return
+	for failure in _failures:
+		push_error(failure)
+	quit(1)

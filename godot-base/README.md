@@ -54,6 +54,8 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_se
 | `scenes/game/slice_can.gd` | Falling circular can placeholder with atomic one-time slicing. |
 | `scenes/game/chainsaw_cursor.gd` | Bounded rectangular chainsaw placeholder shared by mouse, keyboard and controller input. |
 | `scripts/slice_unlock_rules.gd` | Pure unlock and Race condition rules used by progression and regression tests. |
+| `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
+| `tools/record_tutorials.ps1` | Records both tutorial clips through Godot's Movie Maker and encodes them to `assets/video/*.ogv` plus poster frames. |
 
 ## Looking right on every screen
 
@@ -212,6 +214,28 @@ The instructions screen is shown after mode selection by default. Its
 **Show instructions when starting a mode** toggle is persisted, and the same
 preference can be restored under **Settings → Game**.
 
+It leads with a captioned walkthrough clip of a real round of the selected game
+(`assets/video/tutorial_<game>.ogv`), alongside the control cards and rules
+summary. Playback starts automatically, can be paused, restarted or toggled by
+clicking the picture, and pauses on its own when **Reduced motion** is on. If a
+clip is missing the card disappears and the screen falls back to the static
+explanation, so the scene is safe to ship without the videos.
+
+Re-record the clips after changing gameplay visuals or the tutorial captions:
+
+```bash
+pwsh tools/record_tutorials.ps1 -Godot /path/to/godot
+godot --headless --path . --import
+```
+
+`tools/tutorial_capture.tscn` loads the actual gameplay scene, drives it with a
+scripted demo player and overlays numbered step captions, so the clips can never
+drift from how the game really behaves. `tools/record_tutorials.ps1` runs that
+scene through Godot's Movie Maker, encodes the result to Ogg Theora with ffmpeg
+and extracts the still poster frame shown before playback starts. Nothing
+outside `tools/` references either file — add `tools/*` to your export preset's
+exclude filter to keep the recorder out of shipped builds.
+
 The sample unlocks **Solo Starter** after the first completed single-player
 round and **First Win** after Player 1's first multiplayer victory.
 Desk-Can-Saw is completely hidden until the player either scores at least 25
@@ -234,6 +258,7 @@ godot --headless --path . --script res://tests/visual_effects_test.gd
 godot --headless --path . --script res://tests/accessibility_test.gd
 godot --headless --path . --script res://tests/target_rush_options_test.gd
 godot --headless --path . --script res://tests/share_card_test.gd
+godot --headless --path . --script res://tests/instructions_video_test.gd
 ```
 
 The FPS counter is available under **Settings → Display** and is drawn by
@@ -245,6 +270,9 @@ own counter.
 - `assets/images/dcs_logo.png` — the real DeskCanSaw Games logo.
 - `assets/audio/ui_click.wav`, `ui_focus.wav`, `ui_back.wav` — synthesised UI
   blips generated for this template; replace them with your own.
+- `assets/video/tutorial_*.ogv` and `tutorial_*_poster.webp` — generated from
+  the placeholder games by `tools/record_tutorials.ps1`; re-record them once
+  your own game replaces the sample.
 - `icon.svg` — a simple placeholder mark, not the finished studio icon.
 
 The theme uses Godot's default font. To use your own, drop a `.ttf`/`.otf` in

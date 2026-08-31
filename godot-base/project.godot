@@ -39,6 +39,11 @@ window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[editor]
+
+movie_writer/mjpeg_quality=0.95
+movie_writer/fps=30
+
 [gui]
 
 theme/custom="res://ui/theme/dcs_theme.tres"
