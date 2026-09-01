@@ -29,7 +29,7 @@ var _reduced_motion := false
 func _ready() -> void:
 	_reduced_motion = Settings.reduced_motion_enabled()
 	if cards.is_empty():
-		cards.assign(GameInfo.INTRO_CARDS)
+		cards.assign(StudioInfo.INTRO_CARDS)
 
 	_hint.text = "Tap to skip" if DisplayServer.is_touchscreen_available() else "Press any key to skip"
 	_card.modulate.a = 0.0

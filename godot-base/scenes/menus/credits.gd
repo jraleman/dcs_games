@@ -1,6 +1,6 @@
 extends MenuScreen
 
-## Credits roll. The content lives in GameInfo.CREDITS; this screen only
+## Credits roll. The content lives in StudioInfo.CREDITS; this screen only
 ## renders and scrolls it. Auto-scrolling stops the moment the player scrolls
 ## by hand, so they can read at their own pace.
 
@@ -28,15 +28,15 @@ func _build() -> void:
 		child.queue_free()
 
 	_add_spacer(40)
-	for section: Dictionary in GameInfo.CREDITS:
-		_add_label(str(section.get("heading", "")), 34, GameInfo.SKY, 0)
+	for section: Dictionary in StudioInfo.CREDITS:
+		_add_label(str(section.get("heading", "")), 34, StudioInfo.SKY, 0)
 		for line: String in section.get("lines", []):
-			_add_label(line, 27, GameInfo.CREAM, 0)
+			_add_label(line, 27, StudioInfo.CREAM, 0)
 		_add_spacer(34)
 
-	_add_label(GameInfo.STUDIO, 30, GameInfo.CREAM, 0)
-	_add_label(GameInfo.copyright_line(), 24, GameInfo.MUTED, 0)
-	_add_label(GameInfo.WEBSITE, 24, GameInfo.MUTED, 0)
+	_add_label(StudioInfo.STUDIO, 30, StudioInfo.CREAM, 0)
+	_add_label(StudioInfo.copyright_line(), 24, StudioInfo.MUTED, 0)
+	_add_label(StudioInfo.WEBSITE, 24, StudioInfo.MUTED, 0)
 	_add_spacer(60)
 
 

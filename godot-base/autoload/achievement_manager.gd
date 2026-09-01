@@ -1,8 +1,8 @@
 extends Node
 
 ## Persistent achievement registry with a global, queued toast overlay.
-## Definitions live in GameInfo so another game can replace the list without
-## changing this manager.
+## Definitions and unlock rules come from each game's [GameManifest], so this
+## manager never needs to know which games exist.
 
 signal unlocked(id: String, achievement: Dictionary)
 signal progression_changed(key: String, value: bool)
@@ -23,7 +23,8 @@ var _current_toast: AchievementToast
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	register_achievements(GameInfo.ACHIEVEMENTS)
+	for manifest in GameCatalog.all():
+		register_achievements(manifest.achievements)
 	_load_state()
 	_build_toast_overlay()
 
@@ -87,77 +88,92 @@ func unlocked_count() -> int:
 	return _unlocked.size()
 
 
-func is_level_unlocked(level_id: String) -> bool:
-	if level_id != GameInfo.SLICE_AND_SLASH_ID:
-		return false
-	return bool(
-		slice_and_slash_progress().get(SliceUnlockRules.UNLOCKED_KEY, false)
-	)
+## True when [param game_id] has no unlock rule, or its rule is satisfied.
+func is_game_unlocked(game_id: String) -> bool:
+	var manifest := GameCatalog.get_manifest(game_id)
+	if manifest == null or manifest.unlock_rule == null:
+		return manifest != null
+	return manifest.unlock_rule.is_unlocked(_progression)
 
 
-func slice_and_slash_progress() -> Dictionary:
-	return SliceUnlockRules.normalized_state(_progression)
+## Normalized progression flags for [param game_id].
+func game_progress(game_id: String) -> Dictionary:
+	var manifest := GameCatalog.get_manifest(game_id)
+	if manifest == null or manifest.unlock_rule == null:
+		return {}
+	return manifest.unlock_rule.normalized_state(_progression)
 
 
-func is_slice_and_slash_single_player_unlocked() -> bool:
-	return bool(
-		slice_and_slash_progress().get(
-			SliceUnlockRules.SOLO_QUALIFIED_KEY,
-			false
-		)
-	)
+## Player-facing description of what [param game_id] still requires.
+func game_requirement_text(game_id: String) -> String:
+	var manifest := GameCatalog.get_manifest(game_id)
+	if manifest == null or manifest.unlock_rule == null:
+		return ""
+	return manifest.unlock_rule.requirement_text(_progression)
 
 
-func is_slice_and_slash_multiplayer_unlocked() -> bool:
-	return bool(
-		slice_and_slash_progress().get(
-			SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY,
-			false
-		)
-	)
+## Offers one finished round to every game's unlock rule.
+##
+## [param result] describes the round that just ended (`single_player`,
+## `player_one_score`, `player_two_score`, `multiplayer_result_is_eligible`);
+## `source_game_id` is added automatically so a rule can require that the round
+## came from a particular game. Any achievements a rule asks for are unlocked
+## here, so gameplay code never names another game.
+##
+## Returns `{ game_id: outcome }` for every game whose progression changed.
+func record_round(source_game_id: String, result: Dictionary) -> Dictionary:
+	var payload := result.duplicate(true)
+	payload["source_game_id"] = source_game_id
 
+	var outcomes: Dictionary = {}
+	for manifest in GameCatalog.all():
+		if manifest.unlock_rule == null:
+			continue
+		payload["target_title"] = manifest.title
+		var previous: Dictionary = manifest.unlock_rule.normalized_state(_progression)
+		var outcome: Dictionary = manifest.unlock_rule.apply_result(_progression, payload)
+		var next: Dictionary = outcome.get("state", previous)
 
-func record_slice_and_slash_match(
-	single_player: bool,
-	player_one_score: int,
-	player_two_score: int,
-	multiplayer_result_is_eligible: bool
-) -> Dictionary:
-	var previous := slice_and_slash_progress()
-	var outcome := SliceUnlockRules.apply_match(
-		previous,
-		single_player,
-		player_one_score,
-		player_two_score,
-		multiplayer_result_is_eligible
-	)
-	var next: Dictionary = outcome.get("state", previous)
-	_progression = next
+		for key: String in manifest.progression_keys():
+			_progression[key] = bool(next.get(key, false))
 
-	if bool(outcome.get("changed", false)):
+		var granted: Array[Dictionary] = []
+		for raw_id: Variant in outcome.get("achievements", []):
+			var achievement_id := str(raw_id)
+			if unlock(achievement_id):
+				granted.append(get_achievement(achievement_id))
+		outcome["unlocked_achievements"] = granted
+
+		if not bool(outcome.get("changed", false)):
+			if not granted.is_empty():
+				outcomes[manifest.id] = outcome
+			continue
+
 		_save_state()
-		for key: String in SliceUnlockRules.PROGRESSION_KEYS:
+		for key: String in manifest.progression_keys():
 			if bool(previous.get(key, false)) != bool(next.get(key, false)):
 				progression_changed.emit(key, bool(next[key]))
-	return outcome
+		outcomes[manifest.id] = outcome
+	return outcomes
 
 
-func slice_and_slash_requirement_text() -> String:
-	var progress := slice_and_slash_progress()
-	var solo_state := (
-		"DONE"
-		if bool(progress[SliceUnlockRules.SOLO_QUALIFIED_KEY])
-		else "NEEDED"
-	)
-	var multiplayer_state := (
-		"DONE"
-		if bool(progress[SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY])
-		else "NEEDED"
-	)
-	return (
-		"Unlock either: Solo score 25+ [%s]  |  "
-		+ "OR P1 multiplayer win with 25+ [%s] (Medium when facing CPU)"
-	) % [solo_state, multiplayer_state]
+## Modes [param game_id] may be played in, per its unlock rule. Empty means the
+## game imposes no per-mode restriction.
+func game_unlocked_modes(game_id: String) -> PackedStringArray:
+	var manifest := GameCatalog.get_manifest(game_id)
+	if manifest == null or manifest.unlock_rule == null:
+		return PackedStringArray()
+	return manifest.unlock_rule.unlocked_modes(_progression)
+
+
+## Every progression key declared by any game, used for load and save.
+func _all_progression_keys() -> Array[String]:
+	var keys: Array[String] = []
+	for manifest in GameCatalog.all():
+		for key in manifest.progression_keys():
+			if not keys.has(key):
+				keys.append(key)
+	return keys
 
 
 func _build_toast_overlay() -> void:
@@ -214,17 +230,15 @@ func _on_toast_dismissed() -> void:
 func _load_state() -> void:
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) != OK:
-		_progression = SliceUnlockRules.normalized_state({})
 		return
 	for raw_id: Variant in _definitions:
 		var id := str(raw_id)
 		if config.has_section_key("unlocked", id):
 			_unlocked[id] = str(config.get_value("unlocked", id))
-	for key: String in SliceUnlockRules.PROGRESSION_KEYS:
+	for key: String in _all_progression_keys():
 		_progression[key] = bool(
 			config.get_value(PROGRESSION_SECTION, key, false)
 		)
-	_progression = SliceUnlockRules.normalized_state(_progression)
 
 
 func _save_state() -> void:
@@ -232,7 +246,7 @@ func _save_state() -> void:
 	for raw_id: Variant in _unlocked:
 		var id := str(raw_id)
 		config.set_value("unlocked", id, _unlocked[raw_id])
-	for key: String in SliceUnlockRules.PROGRESSION_KEYS:
+	for key: String in _all_progression_keys():
 		config.set_value(PROGRESSION_SECTION, key, bool(_progression.get(key, false)))
 	var err := config.save(SAVE_PATH)
 	if err != OK:

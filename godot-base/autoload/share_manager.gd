@@ -54,9 +54,29 @@ func open_original_image(global_path: String) -> Error:
 	return OS.shell_open(global_path)
 
 
+## Renders the score card and saves it: to `user://shares` (with the path copied
+## to the clipboard) on desktop, or straight to a browser download on the web.
 func generate_score_image(
 	data: Dictionary,
 	card_scene: PackedScene = null
+) -> Dictionary:
+	return await _render_card(data, card_scene, true)
+
+
+## Renders the same card for on-screen display only. Nothing is written to
+## disk, downloaded or copied to the clipboard, so a screen can show the card
+## as a live summary without producing a file the player never asked for.
+func preview_score_image(
+	data: Dictionary,
+	card_scene: PackedScene = null
+) -> Dictionary:
+	return await _render_card(data, card_scene, false)
+
+
+func _render_card(
+	data: Dictionary,
+	card_scene: PackedScene,
+	store: bool
 ) -> Dictionary:
 	if _busy:
 		return {
@@ -87,6 +107,9 @@ func generate_score_image(
 	var card := scene.instantiate()
 	var result: Dictionary
 	if card == null or not card.has_method("configure"):
+		# The card never gets parented to the viewport, so it would leak.
+		if card != null:
+			card.queue_free()
 		result = {
 			"ok": false,
 			"message": "The share card must implement configure(Dictionary).",
@@ -109,10 +132,17 @@ func generate_score_image(
 				"message": "The share image could not be rendered.",
 			}
 		else:
-			result = _store_and_share(
-				image,
-				str(card_data.get("game_title", GameInfo.TITLE)),
-				str(card_data.get("stats_url", ""))
+			result = (
+				_store_and_share(
+					image,
+					str(card_data.get("game_title", StudioInfo.TITLE)),
+					str(card_data.get("stats_url", ""))
+				)
+				if store
+				else _preview_result(
+					image,
+					str(card_data.get("stats_url", ""))
+				)
 			)
 
 	viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -124,14 +154,17 @@ func generate_score_image(
 
 func _prepare_card_data(data: Dictionary) -> Dictionary:
 	var prepared := data.duplicate(true)
+	var fallback := GameCatalog.current()
 	var game_id := str(
-		prepared.get("game_id", GameInfo.TARGET_RUSH_ID)
+		prepared.get("game_id", fallback.id if fallback else "")
 	).strip_edges()
-	if game_id.is_empty():
-		game_id = GameInfo.TARGET_RUSH_ID
+	var manifest := GameCatalog.get_manifest(game_id)
+	if manifest == null:
+		manifest = fallback
 
+	var default_stats_url := manifest.resolved_stats_url() if manifest else ""
 	var stats_url := str(
-		prepared.get("stats_url", GameInfo.stats_url_for(game_id))
+		prepared.get("stats_url", default_stats_url)
 	).strip_edges()
 	var validation_error := ShareQrCode.validation_error(stats_url)
 	if not validation_error.is_empty():
@@ -148,12 +181,26 @@ func _prepare_card_data(data: Dictionary) -> Dictionary:
 		}
 
 	prepared["game_id"] = game_id
+	if manifest and not prepared.has("share_art_style"):
+		prepared["share_art_style"] = manifest.share_art_style
 	prepared["stats_url"] = stats_url
-	prepared["website"] = str(prepared.get("website", GameInfo.WEBSITE))
+	prepared["website"] = str(prepared.get("website", StudioInfo.WEBSITE))
 	prepared["qr_texture"] = qr_texture
 	return {
 		"ok": true,
 		"data": prepared,
+	}
+
+
+## Wraps a rendered card as a display-only result: same texture, no file.
+func _preview_result(image: Image, stats_url: String) -> Dictionary:
+	return {
+		"ok": true,
+		"texture": ImageTexture.create_from_image(image),
+		"stats_url": stats_url,
+		"can_open_original": false,
+		"stored": false,
+		"message": "Scorecard ready.",
 	}
 
 
@@ -178,8 +225,10 @@ func _store_and_share(
 			"path": filename,
 			"filename": filename,
 			"png": png,
+			"texture": ImageTexture.create_from_image(image),
 			"stats_url": stats_url,
 			"can_open_original": false,
+			"stored": true,
 			"message": "Share image downloaded.",
 		}
 
@@ -213,8 +262,10 @@ func _store_and_share(
 		"global_path": global_path,
 		"filename": filename,
 		"png": png,
+		"texture": ImageTexture.create_from_image(image),
 		"stats_url": stats_url,
 		"can_open_original": true,
+		"stored": true,
 		"message": "Share image saved and its path copied to the clipboard.",
 	}
 

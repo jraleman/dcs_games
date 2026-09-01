@@ -1,8 +1,7 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=17 format=3]
 
-[ext_resource type="Script" path="res://scenes/game/gameplay.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/game_shell.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
-[ext_resource type="PackedScene" path="res://scenes/game/triangle_target.tscn" id="3_target"]
 [ext_resource type="Texture2D" path="res://assets/images/icon_replay.svg" id="4_replay"]
 [ext_resource type="Texture2D" path="res://assets/images/icon_score.svg" id="5_score"]
 [ext_resource type="Texture2D" path="res://assets/images/icon_share.svg" id="6_share"]
@@ -130,16 +129,15 @@ corner_radius_top_right = 14
 corner_radius_bottom_right = 14
 corner_radius_bottom_left = 14
 
-[node name="Gameplay" type="Node2D"]
+[node name="GameShell" type="Node2D"]
 script = ExtResource("1_script")
-target_scene = ExtResource("3_target")
 
 [node name="BackgroundLayer" type="CanvasLayer" parent="."]
 layer = -1
 
 [node name="Background" parent="BackgroundLayer" instance=ExtResource("2_background")]
 
-[node name="Targets" type="Node2D" parent="."]
+[node name="Playfield" type="Node2D" parent="."]
 unique_name_in_owner = true
 
 [node name="WorldFX" type="Node2D" parent="."]
@@ -252,7 +250,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.9)
 theme_override_font_sizes/font_size = 23
-text = "TRIANGLE RUSH"
+text = "GAME TITLE"
 horizontal_alignment = 1
 
 [node name="TimeLabel" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
@@ -309,6 +307,7 @@ text = " "
 horizontal_alignment = 2
 
 [node name="PauseButton" type="Button" parent="HUD/Overlay/Margins/Layout/TopBar"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(132, 0)
 layout_mode = 2
 size_flags_vertical = 4
@@ -332,7 +331,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.52)
 theme_override_font_sizes/font_size = 17
-text = "FOLLOW THE PULSE - PRESS THE MATCHING KEY"
+text = "ROUND CALLOUT"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="HUD/Overlay/Margins/Layout"]
@@ -357,7 +356,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 20
-text = "P1: 1 2 3   |   P2: 7 8 9   |   Chase your glow"
+text = "Controls hint"
 horizontal_alignment = 1
 
 [node name="RoundOver" type="Control" parent="HUD"]
@@ -503,7 +502,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
 theme_override_font_sizes/font_size = 17
-text = "Correct match: +1 | Wrong key or triangle: -1"
+text = "Round scoring goes here."
 horizontal_alignment = 1
 autowrap_mode = 2
 
@@ -532,16 +531,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 icon = ExtResource("5_score")
 icon_max_width = 28
-text = "View Scorecard"
-
-[node name="ShareButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions/UtilityActions"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(319, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-icon = ExtResource("6_share")
-icon_max_width = 28
-text = "Share Result"
+text = "See Scores"
 
 [node name="ExitToMainMenuButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
 unique_name_in_owner = true
@@ -666,27 +656,33 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(0.686275, 0.866667, 0.917647, 0.22)
 
-[node name="Players" type="HBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
+[node name="Report" type="HBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="PlayerOne" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players"]
+[node name="Players" type="HBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.45
+theme_override_constants/separation = 18
+
+[node name="PlayerOne" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_player_one")
 
-[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne"]
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne"]
 layout_mode = 2
 theme_override_constants/separation = 7
 
-[node name="Title" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+[node name="Title" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.568627, 0.768627, 1, 0.9)
 theme_override_font_sizes/font_size = 18
 text = "PLAYER 1"
 horizontal_alignment = 1
 
-[node name="PlayerOneStatsScore" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+[node name="PlayerOneStatsScore" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
@@ -694,32 +690,32 @@ theme_override_font_sizes/font_size = 46
 text = "0"
 horizontal_alignment = 1
 
-[node name="ScoreCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+[node name="ScoreCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 0.85)
 theme_override_font_sizes/font_size = 14
 text = "FINAL SCORE"
 horizontal_alignment = 1
 
-[node name="Rule" type="ColorRect" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+[node name="Rule" type="ColorRect" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout"]
 custom_minimum_size = Vector2(0, 2)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0.301961, 0.639216, 1, 0.3)
 
-[node name="Stats" type="GridContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout"]
+[node name="Stats" type="GridContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout"]
 layout_mode = 2
 theme_override_constants/h_separation = 20
 theme_override_constants/v_separation = 6
 columns = 2
 
-[node name="HitsCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+[node name="HitsCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout/Stats"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 17
 text = "Correct hits"
 
-[node name="PlayerOneStatsHits" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+[node name="PlayerOneStatsHits" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -727,13 +723,13 @@ theme_override_font_sizes/font_size = 18
 text = "0"
 horizontal_alignment = 2
 
-[node name="MissesCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+[node name="MissesCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout/Stats"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 17
 text = "Misses"
 
-[node name="PlayerOneStatsMisses" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+[node name="PlayerOneStatsMisses" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -741,13 +737,13 @@ theme_override_font_sizes/font_size = 18
 text = "0"
 horizontal_alignment = 2
 
-[node name="AccuracyCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+[node name="AccuracyCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout/Stats"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 17
 text = "Accuracy"
 
-[node name="PlayerOneStatsAccuracy" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+[node name="PlayerOneStatsAccuracy" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -755,13 +751,13 @@ theme_override_font_sizes/font_size = 18
 text = "0%"
 horizontal_alignment = 2
 
-[node name="StreakCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+[node name="StreakCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout/Stats"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 17
 text = "Best combo"
 
-[node name="PlayerOneStatsStreak" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerOne/Layout/Stats"]
+[node name="PlayerOneStatsStreak" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerOne/Layout/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -769,7 +765,7 @@ theme_override_font_sizes/font_size = 18
 text = "x0"
 horizontal_alignment = 2
 
-[node name="Versus" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players"]
+[node name="Versus" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players"]
 custom_minimum_size = Vector2(62, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.55)
@@ -778,23 +774,23 @@ text = "VS"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="PlayerTwo" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players"]
+[node name="PlayerTwo" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_player_two")
 
-[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo"]
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo"]
 layout_mode = 2
 theme_override_constants/separation = 7
 
-[node name="Title" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+[node name="Title" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.65098, 0.690196, 0.9)
 theme_override_font_sizes/font_size = 18
 text = "PLAYER 2"
 horizontal_alignment = 1
 
-[node name="PlayerTwoStatsScore" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+[node name="PlayerTwoStatsScore" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
@@ -802,32 +798,32 @@ theme_override_font_sizes/font_size = 46
 text = "0"
 horizontal_alignment = 1
 
-[node name="ScoreCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+[node name="ScoreCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 0.85)
 theme_override_font_sizes/font_size = 14
 text = "FINAL SCORE"
 horizontal_alignment = 1
 
-[node name="Rule" type="ColorRect" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+[node name="Rule" type="ColorRect" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout"]
 custom_minimum_size = Vector2(0, 2)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 0.360784, 0.423529, 0.3)
 
-[node name="Stats" type="GridContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout"]
+[node name="Stats" type="GridContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout"]
 layout_mode = 2
 theme_override_constants/h_separation = 20
 theme_override_constants/v_separation = 6
 columns = 2
 
-[node name="HitsCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+[node name="HitsCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout/Stats"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 17
 text = "Correct hits"
 
-[node name="PlayerTwoStatsHits" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+[node name="PlayerTwoStatsHits" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -835,13 +831,13 @@ theme_override_font_sizes/font_size = 18
 text = "0"
 horizontal_alignment = 2
 
-[node name="MissesCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+[node name="MissesCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout/Stats"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 17
 text = "Misses"
 
-[node name="PlayerTwoStatsMisses" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+[node name="PlayerTwoStatsMisses" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -849,13 +845,13 @@ theme_override_font_sizes/font_size = 18
 text = "0"
 horizontal_alignment = 2
 
-[node name="AccuracyCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+[node name="AccuracyCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout/Stats"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 17
 text = "Accuracy"
 
-[node name="PlayerTwoStatsAccuracy" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+[node name="PlayerTwoStatsAccuracy" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -863,13 +859,13 @@ theme_override_font_sizes/font_size = 18
 text = "0%"
 horizontal_alignment = 2
 
-[node name="StreakCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+[node name="StreakCaption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout/Stats"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
 theme_override_font_sizes/font_size = 17
 text = "Best combo"
 
-[node name="PlayerTwoStatsStreak" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Stats"]
+[node name="PlayerTwoStatsStreak" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/Players/PlayerTwo/Layout/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -877,18 +873,62 @@ theme_override_font_sizes/font_size = 18
 text = "x0"
 horizontal_alignment = 2
 
+[node name="SharePanel" type="PanelContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/SharePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Caption" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/SharePanel/Layout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 16
+text = "SHAREABLE SCORECARD"
+
+[node name="ShareFrame" type="AspectRatioContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/SharePanel/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+ratio = 1.9047619
+
+[node name="ShareCardPreview" type="TextureRect" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/SharePanel/Layout/ShareFrame"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 189)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SharePlaceholder" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/SharePanel/Layout/ShareFrame/ShareCardPreview"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 18
+text = "Drawing your scorecard..."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="ShareCardHint" type="Label" parent="HUD/RoundOver/Center/ScorePanel/Layout/Report/SharePanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 16
+text = "This card is your score. Scan its QR code for the full stats."
+autowrap_mode = 2
+
 [node name="Actions" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout"]
 custom_minimum_size = Vector2(594, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 10
-
-[node name="StatsPlayAgainButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
-layout_mode = 2
-theme_type_variation = &"PrimaryButton"
-icon = ExtResource("4_replay")
-icon_max_width = 26
-text = "Play Again"
 
 [node name="UtilityActions" type="HBoxContainer" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
 layout_mode = 2
@@ -896,28 +936,32 @@ theme_override_constants/separation = 10
 
 [node name="BackToResultsButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(292, 0)
+custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"PrimaryButton"
 icon = ExtResource("8_back")
 icon_max_width = 26
 text = "Back to Results"
 
-[node name="StatsShareButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions"]
+[node name="SaveImageButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(292, 0)
+custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 icon = ExtResource("6_share")
 icon_max_width = 26
-text = "Share Result"
+text = "Save Image"
 
-[node name="StatsExitToMainMenuButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions"]
+[node name="OpenImageButton" type="Button" parent="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions"]
 unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
-icon = ExtResource("7_home")
+size_flags_horizontal = 3
+icon = ExtResource("5_score")
 icon_max_width = 26
-text = "Main Menu"
+text = "Open Image"
 
 [node name="ShareStatus" type="Label" parent="HUD/RoundOver"]
 unique_name_in_owner = true
@@ -961,9 +1005,7 @@ vertical_alignment = 1
 [connection signal="pressed" from="HUD/Overlay/Margins/Layout/TopBar/PauseButton" to="." method="_on_pause_button_pressed"]
 [connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/PlayAgainButton" to="." method="_on_play_again_pressed"]
 [connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/UtilityActions/SeeScoreButton" to="." method="_on_see_score_pressed"]
-[connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/UtilityActions/ShareButton" to="." method="_on_share_pressed"]
 [connection signal="pressed" from="HUD/RoundOver/Center/RoundPanel/Layout/Actions/ExitToMainMenuButton" to="." method="_on_exit_to_main_menu_pressed"]
-[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/StatsPlayAgainButton" to="." method="_on_play_again_pressed"]
 [connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions/BackToResultsButton" to="." method="_on_back_to_results_pressed"]
-[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions/StatsShareButton" to="." method="_on_share_pressed"]
-[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/StatsExitToMainMenuButton" to="." method="_on_exit_to_main_menu_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions/SaveImageButton" to="." method="_on_share_pressed"]
+[connection signal="pressed" from="HUD/RoundOver/Center/ScorePanel/Layout/Actions/UtilityActions/OpenImageButton" to="." method="_on_open_image_pressed"]

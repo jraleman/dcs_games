@@ -30,8 +30,8 @@ extends Control
 	%ComboPanel,
 ]
 
-var _game_id := GameInfo.TARGET_RUSH_ID
-var _accent := GameInfo.SKY
+var _game_id := ""
+var _accent := StudioInfo.SKY
 var _secondary := Color("4da3ff")
 
 
@@ -41,16 +41,19 @@ func _ready() -> void:
 
 
 func configure(data: Dictionary) -> void:
-	_game_id = str(data.get("game_id", GameInfo.TARGET_RUSH_ID))
-	_accent = data.get("accent_color", GameInfo.SKY)
+	var fallback := GameCatalog.current()
+	_game_id = str(data.get("game_id", fallback.id if fallback else ""))
+	_accent = data.get("accent_color", StudioInfo.SKY)
 	_secondary = data.get("secondary_color", Color("4da3ff"))
 
+	var manifest := GameCatalog.get_manifest(_game_id)
+	var default_title := manifest.title if manifest else StudioInfo.TITLE
 	var game_title := str(
-		data.get("game_title", GameInfo.TARGET_RUSH_TITLE)
+		data.get("game_title", default_title)
 	).strip_edges()
 	var score := str(data.get("score", "0"))
 	_game_title.text = game_title.to_upper()
-	_studio.text = str(data.get("studio", GameInfo.STUDIO)).to_upper()
+	_studio.text = str(data.get("studio", StudioInfo.STUDIO)).to_upper()
 	_mode.text = str(data.get("mode", "GAME SESSION")).to_upper()
 	_result.text = str(data.get("result", "ROUND COMPLETE")).to_upper()
 	_challenge.text = str(
@@ -69,7 +72,7 @@ func configure(data: Dictionary) -> void:
 			"Open this run's stats, then jump in and set your own score."
 		)
 	)
-	_website.text = _website_label(str(data.get("website", GameInfo.WEBSITE)))
+	_website.text = _website_label(str(data.get("website", StudioInfo.WEBSITE)))
 	_cta.text = str(data.get("cta", "PLAY  •  SHARE  •  BEAT IT")).to_upper()
 
 	var qr_texture: Variant = data.get("qr_texture")
@@ -77,7 +80,7 @@ func configure(data: Dictionary) -> void:
 
 	_configure_achievements(data)
 	_apply_color_theme()
-	_action_art.configure(data)
+	_action_art.configure(_with_art_style(data, manifest))
 
 	_game_title.add_theme_font_size_override(
 		"font_size",
@@ -92,6 +95,16 @@ func configure(data: Dictionary) -> void:
 		82 if score.length() <= 8 else 66
 	)
 	queue_redraw()
+
+
+## The payload's `game_id` decides the artwork, so a caller reusing a payload
+## for another game cannot leave a stale `share_art_style` behind.
+func _with_art_style(data: Dictionary, manifest: GameManifest) -> Dictionary:
+	if manifest == null:
+		return data
+	var art_data := data.duplicate()
+	art_data["share_art_style"] = manifest.share_art_style
+	return art_data
 
 
 func _configure_achievements(data: Dictionary) -> void:
@@ -130,7 +143,7 @@ func _apply_color_theme() -> void:
 		"font_color",
 		_secondary.lightened(0.24)
 	)
-	_cta.add_theme_color_override("font_color", GameInfo.INK)
+	_cta.add_theme_color_override("font_color", StudioInfo.INK)
 
 	for panel in _stat_panels:
 		_tint_panel(

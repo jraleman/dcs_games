@@ -8,8 +8,13 @@ const ELECTRIC_YELLOW := Color("ffd34e")
 const METAL := Color("b8c7cb")
 const DARK_METAL := Color("1b252b")
 
-var _game_id := GameInfo.TARGET_RUSH_ID
-var _accent := GameInfo.SKY
+## Built-in art styles. A game selects one through
+## [member GameManifest.share_art_style]; anything else draws the neutral mark.
+const STYLE_TARGET_RUSH := "target_rush"
+const STYLE_DESK_CAN_SAW := "desk_can_saw"
+
+var _art_style := ""
+var _accent := StudioInfo.SKY
 var _secondary := Color("4da3ff")
 
 
@@ -19,8 +24,8 @@ func _ready() -> void:
 
 
 func configure(data: Dictionary) -> void:
-	_game_id = str(data.get("game_id", GameInfo.TARGET_RUSH_ID))
-	_accent = data.get("accent_color", GameInfo.SKY)
+	_art_style = str(data.get("share_art_style", ""))
+	_accent = data.get("accent_color", StudioInfo.SKY)
 	_secondary = data.get("secondary_color", Color("4da3ff"))
 	queue_redraw()
 
@@ -38,10 +43,11 @@ func _draw() -> void:
 		minf(size.x, size.y) * 0.44,
 		_alpha(_accent, 0.08)
 	)
-	if _game_id == GameInfo.SLICE_AND_SLASH_ID:
-		_draw_desk_can_saw()
-	else:
-		_draw_target_rush()
+	match _art_style:
+		STYLE_DESK_CAN_SAW:
+			_draw_desk_can_saw()
+		_:
+			_draw_target_rush()
 
 
 func _draw_target_rush() -> void:

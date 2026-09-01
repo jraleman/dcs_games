@@ -127,7 +127,7 @@ func _on_open_original_pressed() -> void:
 		push_warning("%s Error %d." % [message, error])
 		return
 	_status.text = "Opened in your default image viewer."
-	_status.add_theme_color_override("font_color", GameInfo.SKY)
+	_status.add_theme_color_override("font_color", StudioInfo.SKY)
 
 
 func _on_close_pressed() -> void:

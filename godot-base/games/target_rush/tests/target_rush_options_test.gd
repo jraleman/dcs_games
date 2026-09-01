@@ -38,10 +38,10 @@ func _run() -> void:
 ## Neutral assists keep the expected values below tied to the game options.
 func _test_values() -> Dictionary:
 	return {
-		Settings.TRIANGLE_SIZE_KEY: 1.2,
-		Settings.TRIANGLE_SPEED_KEY: 1.5,
-		Settings.TRIANGLE_SPEED_RUSH_KEY: 0.5,
-		Settings.TRIANGLE_ROUND_LENGTH_KEY: 45.0,
+		TargetRushOptions.SIZE_KEY: 1.2,
+		TargetRushOptions.SPEED_KEY: 1.5,
+		TargetRushOptions.SPEED_RUSH_KEY: 0.5,
+		TargetRushOptions.ROUND_LENGTH_KEY: 45.0,
 		Settings.GAMEPLAY_SPEED_KEY: 1.0,
 		Settings.TARGET_SIZE_KEY: 1.0,
 		Settings.EXTRA_ROUND_TIME_KEY: 0.0,
@@ -50,22 +50,22 @@ func _test_values() -> Dictionary:
 
 func _test_defaults() -> void:
 	_expect_approx(
-		float(Settings.DEFAULTS[Settings.TRIANGLE_SIZE_KEY]),
-		1.0,
+		TargetRushOptions.DEFAULT_SIZE,
+		1.5,
 		"Triangles must default to their designed size."
 	)
 	_expect_approx(
-		float(Settings.DEFAULTS[Settings.TRIANGLE_SPEED_KEY]),
-		1.0,
+		TargetRushOptions.DEFAULT_SPEED,
+		0.5,
 		"Triangles must default to their designed speed."
 	)
 	_expect_approx(
-		float(Settings.DEFAULTS[Settings.TRIANGLE_SPEED_RUSH_KEY]),
+		TargetRushOptions.DEFAULT_SPEED_RUSH,
 		0.35,
 		"The final-stretch speed rush must default to the designed boost."
 	)
 	_expect_approx(
-		float(Settings.DEFAULTS[Settings.TRIANGLE_ROUND_LENGTH_KEY]),
+		TargetRushOptions.DEFAULT_ROUND_LENGTH,
 		30.0,
 		"Target Rush rounds must default to 30 seconds."
 	)
@@ -73,40 +73,40 @@ func _test_defaults() -> void:
 
 func _test_settings_helpers(settings: Node) -> void:
 	_expect_approx(
-		float(settings.call("triangle_size_scale")),
+		float(settings.call("tunable", TargetRushOptions.SIZE_KEY)),
 		1.2,
 		"The triangle-size option must be available through Settings."
 	)
 	_expect_approx(
-		float(settings.call("triangle_speed_scale")),
+		float(settings.call("tunable", TargetRushOptions.SPEED_KEY)),
 		1.5,
 		"The triangle-speed option must be available through Settings."
 	)
 	_expect_approx(
-		float(settings.call("triangle_speed_rush")),
+		float(settings.call("tunable", TargetRushOptions.SPEED_RUSH_KEY)),
 		0.5,
 		"The final-stretch speed rush must be available through Settings."
 	)
 	_expect_approx(
-		float(settings.call("triangle_round_length")),
+		float(settings.call("tunable", TargetRushOptions.ROUND_LENGTH_KEY)),
 		45.0,
 		"The round-length option must be available through Settings."
 	)
 
-	settings.call("set_value", Settings.TRIANGLE_SPEED_KEY, 9.0)
+	settings.call("set_value", TargetRushOptions.SPEED_KEY, 9.0)
 	_expect_approx(
-		float(settings.call("triangle_speed_scale")),
-		Settings.MAX_TRIANGLE_SPEED,
+		float(settings.call("tunable", TargetRushOptions.SPEED_KEY)),
+		TargetRushOptions.MAX_SPEED,
 		"Out-of-range triangle speeds must be clamped."
 	)
-	settings.call("set_value", Settings.TRIANGLE_SIZE_KEY, 0.0)
+	settings.call("set_value", TargetRushOptions.SIZE_KEY, 0.0)
 	_expect_approx(
-		float(settings.call("triangle_size_scale")),
-		Settings.MIN_TRIANGLE_SIZE,
+		float(settings.call("tunable", TargetRushOptions.SIZE_KEY)),
+		TargetRushOptions.MIN_SIZE,
 		"Out-of-range triangle sizes must be clamped."
 	)
-	settings.call("set_value", Settings.TRIANGLE_SPEED_KEY, 1.5)
-	settings.call("set_value", Settings.TRIANGLE_SIZE_KEY, 1.2)
+	settings.call("set_value", TargetRushOptions.SPEED_KEY, 1.5)
+	settings.call("set_value", TargetRushOptions.SIZE_KEY, 1.2)
 
 
 func _test_persistence(values: Dictionary) -> void:
@@ -126,22 +126,22 @@ func _test_persistence(values: Dictionary) -> void:
 
 func _test_target_size_range() -> void:
 	var target := _instantiate_scene(
-		"res://scenes/game/triangle_target.tscn"
+		"res://games/target_rush/triangle_target.tscn"
 	) as TriangleTarget
 	if target == null:
 		return
 	await process_frame
 
-	target.set_size_scale(Settings.MIN_TRIANGLE_SIZE)
+	target.set_size_scale(TargetRushOptions.MIN_SIZE)
 	_expect_approx(
 		target.size_scale(),
-		Settings.MIN_TRIANGLE_SIZE,
+		TargetRushOptions.MIN_SIZE,
 		"Targets must accept the smallest selectable triangle size."
 	)
-	target.set_size_scale(Settings.MAX_TRIANGLE_SIZE * Settings.MAX_TARGET_SIZE)
+	target.set_size_scale(TargetRushOptions.MAX_SIZE * Settings.MAX_TARGET_SIZE)
 	_expect_approx(
 		target.size_scale(),
-		Settings.MAX_TRIANGLE_SIZE * Settings.MAX_TARGET_SIZE,
+		TargetRushOptions.MAX_SIZE * Settings.MAX_TARGET_SIZE,
 		"Targets must accept the largest option and assist combination."
 	)
 	await _free_scene(target)
@@ -193,26 +193,26 @@ func _test_settings_menu(settings: Node) -> void:
 	_expect_slider(length_slider, 45.0, "the round length")
 	_expect_range(
 		size_slider,
-		Settings.MIN_TRIANGLE_SIZE,
-		Settings.MAX_TRIANGLE_SIZE,
+		TargetRushOptions.MIN_SIZE,
+		TargetRushOptions.MAX_SIZE,
 		"the triangle size"
 	)
 	_expect_range(
 		speed_slider,
-		Settings.MIN_TRIANGLE_SPEED,
-		Settings.MAX_TRIANGLE_SPEED,
+		TargetRushOptions.MIN_SPEED,
+		TargetRushOptions.MAX_SPEED,
 		"the triangle speed"
 	)
 	_expect_range(
 		rush_slider,
-		Settings.MIN_TRIANGLE_SPEED_RUSH,
-		Settings.MAX_TRIANGLE_SPEED_RUSH,
+		TargetRushOptions.MIN_SPEED_RUSH,
+		TargetRushOptions.MAX_SPEED_RUSH,
 		"the final-stretch speed rush"
 	)
 	_expect_range(
 		length_slider,
-		Settings.MIN_TRIANGLE_ROUND_LENGTH,
-		Settings.MAX_TRIANGLE_ROUND_LENGTH,
+		TargetRushOptions.MIN_ROUND_LENGTH,
+		TargetRushOptions.MAX_ROUND_LENGTH,
 		"the round length"
 	)
 
@@ -231,18 +231,18 @@ func _test_settings_menu(settings: Node) -> void:
 
 	size_slider.value = 0.8
 	_expect_approx(
-		float(settings.call("triangle_size_scale")),
+		float(settings.call("tunable", TargetRushOptions.SIZE_KEY)),
 		0.8,
 		"The triangle-size slider must write through to Settings."
 	)
 	length_slider.value = 60.0
 	_expect_approx(
-		float(settings.call("triangle_round_length")),
+		float(settings.call("tunable", TargetRushOptions.ROUND_LENGTH_KEY)),
 		60.0,
 		"The round-length slider must write through to Settings."
 	)
-	settings.call("set_value", Settings.TRIANGLE_SIZE_KEY, 1.2)
-	settings.call("set_value", Settings.TRIANGLE_ROUND_LENGTH_KEY, 45.0)
+	settings.call("set_value", TargetRushOptions.SIZE_KEY, 1.2)
+	settings.call("set_value", TargetRushOptions.ROUND_LENGTH_KEY, 45.0)
 	await process_frame
 	_expect_slider(size_slider, 1.2, "external triangle-size changes")
 	_expect_slider(length_slider, 45.0, "external round-length changes")
@@ -250,9 +250,9 @@ func _test_settings_menu(settings: Node) -> void:
 
 
 func _test_target_rush(session: Node, settings: Node) -> void:
-	session.call("select_target_rush")
+	GameCatalog.select("target_rush")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://scenes/game/gameplay.tscn")
+	var game := _instantiate_scene("res://games/target_rush/gameplay.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -315,8 +315,8 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 			"Every triangle must move at the selected speed plus the rush at most."
 		)
 
-	settings.call("set_value", Settings.TRIANGLE_SIZE_KEY, 0.6)
-	settings.call("set_value", Settings.TRIANGLE_ROUND_LENGTH_KEY, 15.0)
+	settings.call("set_value", TargetRushOptions.SIZE_KEY, 0.6)
+	settings.call("set_value", TargetRushOptions.ROUND_LENGTH_KEY, 15.0)
 	_expect_approx(
 		float(game.get("_round_triangle_size")),
 		1.2,

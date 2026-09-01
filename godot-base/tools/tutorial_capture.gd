@@ -131,7 +131,7 @@ func _ready() -> void:
 	_apply_setting_overrides()
 	_configure_session()
 	_build_overlay()
-	_scene = load(GameSession.gameplay_scene_path()).instantiate()
+	_scene = load(GameCatalog.current_gameplay_scene_path()).instantiate()
 	add_child(_scene)
 	move_child(_scene, 0)
 	_hide_duplicate_hint.call_deferred()
@@ -185,10 +185,7 @@ func _apply_setting_overrides() -> void:
 
 
 func _configure_session() -> void:
-	if _game == SLICE_AND_SLASH:
-		GameSession.select_slice_and_slash()
-	else:
-		GameSession.select_target_rush()
+	GameCatalog.select(_game)
 	GameSession.configure_single_player()
 
 
@@ -223,7 +220,7 @@ func _build_overlay() -> void:
 	_step_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_step_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_step_badge.add_theme_font_size_override("font_size", 62)
-	_step_badge.add_theme_color_override("font_color", GameInfo.SKY)
+	_step_badge.add_theme_color_override("font_color", StudioInfo.SKY)
 	row.add_child(_step_badge)
 
 	var text_column := VBoxContainer.new()
@@ -235,18 +232,18 @@ func _build_overlay() -> void:
 	var eyebrow := Label.new()
 	eyebrow.text = "HOW TO PLAY · %s" % GameSession.game_title().to_upper()
 	eyebrow.add_theme_font_size_override("font_size", 21)
-	eyebrow.add_theme_color_override("font_color", Color(GameInfo.SKY, 0.85))
+	eyebrow.add_theme_color_override("font_color", Color(StudioInfo.SKY, 0.85))
 	text_column.add_child(eyebrow)
 
 	_step_title = Label.new()
 	_step_title.add_theme_font_size_override("font_size", 46)
-	_step_title.add_theme_color_override("font_color", GameInfo.CREAM)
+	_step_title.add_theme_color_override("font_color", StudioInfo.CREAM)
 	text_column.add_child(_step_title)
 
 	_step_body = Label.new()
 	_step_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_step_body.add_theme_font_size_override("font_size", 27)
-	_step_body.add_theme_color_override("font_color", GameInfo.MUTED)
+	_step_body.add_theme_color_override("font_color", StudioInfo.MUTED)
 	text_column.add_child(_step_body)
 
 	_keycap_column = VBoxContainer.new()
@@ -259,7 +256,7 @@ func _build_overlay() -> void:
 	keycap_caption.text = "PRESSED"
 	keycap_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	keycap_caption.add_theme_font_size_override("font_size", 17)
-	keycap_caption.add_theme_color_override("font_color", GameInfo.MUTED)
+	keycap_caption.add_theme_color_override("font_color", StudioInfo.MUTED)
 	_keycap_column.add_child(keycap_caption)
 
 	_keycap = PanelContainer.new()
@@ -274,7 +271,7 @@ func _build_overlay() -> void:
 	_keycap_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_keycap_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_keycap_label.add_theme_font_size_override("font_size", 46)
-	_keycap_label.add_theme_color_override("font_color", GameInfo.CREAM)
+	_keycap_label.add_theme_color_override("font_color", StudioInfo.CREAM)
 	_keycap.add_child(_keycap_label)
 
 	_fade = ColorRect.new()
@@ -295,7 +292,7 @@ func _hide_duplicate_hint() -> void:
 func _caption_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.035, 0.078, 0.106, 0.93)
-	style.border_color = Color(GameInfo.SKY, 0.55)
+	style.border_color = Color(StudioInfo.SKY, 0.55)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(20)
 	style.set_content_margin_all(26)
@@ -428,7 +425,7 @@ func _drive_slice_and_slash(delta: float) -> void:
 	if not bool(_scene.get("_round_active")):
 		return
 
-	var bounds: Rect2 = _scene.call("_play_bounds")
+	var bounds: Rect2 = _scene.call("_playfield_bounds")
 	if _saw_position.is_zero_approx():
 		_saw_position = bounds.get_center()
 

@@ -306,6 +306,32 @@ func _test_persistence() -> void:
 		)
 
 
+## Headless runs expose no joypads, so every controller row must stay hidden and
+## the explanatory note must stand in for the section.
+func _assert_gamepad_rows_hidden(menu: Node) -> void:
+	for control_path: String in [
+		"%ControllerMovementScheme",
+		"%ControllerSpeedSlider",
+		"%ControllerDeadzoneSlider",
+		"%ControllerTargetOne",
+		"%ControllerTargetTwo",
+		"%ControllerTargetThree",
+		"%ControllerPause",
+	]:
+		var control := menu.get_node_or_null(control_path) as Control
+		_expect(
+			control != null and not control.get_parent().visible,
+			"%s must stay hidden until a controller is connected." % control_path
+		)
+	var controller_hint := menu.get_node_or_null("%ControllerHint") as Label
+	_expect(
+		controller_hint != null
+		and controller_hint.visible
+		and not controller_hint.text.is_empty(),
+		"Settings must explain the missing controller section instead of hiding it."
+	)
+
+
 func _test_settings_menu(settings: Node) -> void:
 	var menu := _instantiate_scene("res://scenes/menus/settings_menu.tscn")
 	if menu == null:
@@ -381,6 +407,7 @@ func _test_settings_menu(settings: Node) -> void:
 		and reduced_motion.get_theme_stylebox("pressed") is StyleBoxEmpty,
 		"Active toggles must not inherit the filled Button pressed style."
 	)
+	_assert_gamepad_rows_hidden(menu)
 	var toggle_focus := (
 		reduced_motion.get_theme_stylebox("focus") as StyleBoxFlat
 		if reduced_motion != null
@@ -626,7 +653,7 @@ func _test_background_motion(settings: Node) -> void:
 
 func _test_player_cues(settings: Node, audio_manager: Node) -> void:
 	var target := _instantiate_scene(
-		"res://scenes/game/triangle_target.tscn"
+		"res://games/target_rush/triangle_target.tscn"
 	) as TriangleTarget
 	if target == null:
 		return
@@ -736,7 +763,7 @@ func _test_player_cues(settings: Node, audio_manager: Node) -> void:
 
 
 func _test_reduced_motion_menus(session: Node) -> void:
-	session.call("select_target_rush")
+	GameCatalog.select("target_rush")
 	session.call("configure_single_player")
 	var instructions := _instantiate_scene(
 		"res://scenes/menus/instructions.tscn"
@@ -748,7 +775,6 @@ func _test_reduced_motion_menus(session: Node) -> void:
 			(instructions.get_node("%Card") as Control).scale.is_equal_approx(
 				Vector2.ONE
 			)
-			and instructions.get("_demo_cycle_tween") == null
 			and instructions.get("_rule_tween") == null,
 			"Reduced motion must make instructions static."
 		)
@@ -771,13 +797,72 @@ func _test_reduced_motion_menus(session: Node) -> void:
 		and mode_select.get("_page_tween") == null,
 		"Reduced motion must switch mode-selection steps without spatial animation."
 	)
+	await _test_opponent_selector(mode_select)
 	await _free_scene(mode_select)
 
 
+## The Player 2 selector must never rest on colour or on a switch position: the
+## armed option carries a tick in its own label and a sentence spells the choice
+## out, so the answer survives a greyscale screen and a screen reader.
+func _test_opponent_selector(mode_select: Node) -> void:
+	mode_select.call("_on_multiplayer_pressed")
+	await process_frame
+	var human := mode_select.get_node("%HumanOptionButton") as Button
+	var cpu := mode_select.get_node("%CpuOptionButton") as Button
+	var hint := mode_select.get_node("%OpponentChoiceHint") as Label
+	var difficulty := mode_select.get_node("%CpuDifficultyPanel") as Control
+
+	_expect(
+		human.button_group != null and human.button_group == cpu.button_group,
+		"Both Player 2 options must share a button group so one is always armed."
+	)
+	for state in [true, false]:
+		if state:
+			cpu.button_pressed = true
+		else:
+			human.button_pressed = true
+		mode_select.call("_on_opponent_option_pressed")
+		await process_frame
+		var armed: Button = cpu if state else human
+		var idle: Button = human if state else cpu
+		_expect(
+			armed.button_pressed and not idle.button_pressed,
+			"Exactly one Player 2 option may be armed at a time."
+		)
+		_expect(
+			armed.text.begins_with("✔") and not idle.text.begins_with("✔"),
+			"The armed Player 2 option must be marked without relying on colour."
+		)
+		_expect(
+			not hint.text.is_empty()
+			and hint.text.containsn("cpu") == state,
+			"The Player 2 hint must describe the current choice in words."
+		)
+		_expect(
+			not armed.accessibility_description.is_empty()
+			and not idle.accessibility_description.is_empty(),
+			"Both Player 2 options must expose an accessibility description."
+		)
+		_expect(
+			difficulty.visible == state,
+			"CPU difficulty must appear only while the CPU is the opponent."
+		)
+		var opponent_avatar := mode_select.get_node("%OpponentAvatar")
+		_expect(
+			str(mode_select.get_node("%PlayerOneAvatar").get("tag")) == "P1"
+			and str(opponent_avatar.get("tag")) == ("CPU" if state else "P2"),
+			"Mode-select portraits must re-tag with the seat they represent."
+		)
+		_expect(
+			not str(opponent_avatar.get("accessibility_description")).is_empty(),
+			"Mode-select portraits must describe the seat they represent."
+		)
+
+
 func _test_target_rush(session: Node, settings: Node) -> void:
-	session.call("select_target_rush")
+	GameCatalog.select("target_rush")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://scenes/game/gameplay.tscn")
+	var game := _instantiate_scene("res://games/target_rush/gameplay.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -963,7 +1048,7 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 		and str(caption.call("caption_text")) == "3 seconds remaining",
 		"Target Rush must caption its final countdown."
 	)
-	game.call("_celebrate_level_unlock")
+	game.call("_celebrate_level_unlock", "Desk-Can-Saw")
 	_expect(
 		caption != null
 		and str(caption.call("caption_text")).contains("unlocked"),
@@ -1041,9 +1126,9 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 
 
 func _test_slice_and_slash(session: Node, settings: Node) -> void:
-	session.call("select_slice_and_slash")
+	GameCatalog.select("slice_and_slash")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://scenes/game/slice_and_slash.tscn")
+	var game := _instantiate_scene("res://games/slice_and_slash/slice_and_slash.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -1059,8 +1144,9 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 		"Desk-Can-Saw must caption its startup power cue."
 	)
 	_expect(
-		(game.get_node("%Hint") as Label).text.contains("Right stick only"),
-		"Desk-Can-Saw must show the configured controller movement scheme."
+		(game.get_node("%Hint") as Label).text
+		== "Mouse or arrow keys   |   Drive the moving chain through each can",
+		"Desk-Can-Saw must drop pad copy until a controller is connected."
 	)
 	_expect(
 		(game.get_node("%Callout") as Label).text
@@ -1069,7 +1155,7 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 	)
 	_expect(
 		(game.get_node("%ModeTitle") as Label).text
-		== GameInfo.DESK_CAN_SAW_TITLE.to_upper(),
+		== GameCatalog.get_manifest("slice_and_slash").title.to_upper(),
 		"Desk-Can-Saw must replace the inherited Target Rush title."
 	)
 	_expect_approx(
@@ -1178,10 +1264,10 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 
 	var motion_can := SliceCan.new()
 	motion_can.configure(30.0, Vector2(100.0, 0.0), 0.0, Color.WHITE, 0.0)
-	var bounds: Rect2 = game.call("_play_bounds")
+	var bounds: Rect2 = game.call("_playfield_bounds")
 	motion_can.position = bounds.position + Vector2(220.0, 100.0)
 	var start_position := motion_can.position
-	game.get_node("%Targets").add_child(motion_can)
+	game.get_node("%Playfield").add_child(motion_can)
 	cans = game.get("_cans")
 	cans.append(motion_can)
 	game.call("_update_cans", 0.5)
@@ -1255,7 +1341,7 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 	var live_can := SliceCan.new()
 	live_can.configure(30.0, Vector2.ZERO, 0.0, Color.WHITE, 2.0)
 	live_can.set_reduced_motion(true)
-	game.get_node("%Targets").add_child(live_can)
+	game.get_node("%Playfield").add_child(live_can)
 	cans = game.get("_cans")
 	cans.append(live_can)
 	settings.call("set_value", Settings.REDUCED_MOTION_KEY, false)
@@ -1299,7 +1385,7 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 	var scored_can := SliceCan.new()
 	scored_can.configure(30.0, Vector2.ZERO, 0.0, Color.WHITE, 0.0)
 	scored_can.position = chainsaw.position
-	game.get_node("%Targets").add_child(scored_can)
+	game.get_node("%Playfield").add_child(scored_can)
 	cans = game.get("_cans")
 	cans.append(scored_can)
 	game.call("_score_slice", 0, scored_can)
@@ -1317,7 +1403,7 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 		bounds.get_center().x,
 		bounds.end.y + missed_can.radius + 1.0
 	)
-	game.get_node("%Targets").add_child(missed_can)
+	game.get_node("%Playfield").add_child(missed_can)
 	cans = game.get("_cans")
 	cans.append(missed_can)
 	game.call("_update_cans", 0.0)

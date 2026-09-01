@@ -3,24 +3,7 @@
 [ext_resource type="Script" path="res://scenes/menus/instructions.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
 [ext_resource type="Script" path="res://ui/components/splash_motion.gd" id="3_motion"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_key"]
-content_margin_left = 20.0
-content_margin_top = 10.0
-content_margin_right = 20.0
-content_margin_bottom = 10.0
-bg_color = Color(0.0352941, 0.109804, 0.176471, 0.92)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.301961, 0.639216, 1, 0.7)
-corner_radius_top_left = 14
-corner_radius_top_right = 14
-corner_radius_bottom_right = 14
-corner_radius_bottom_left = 14
-shadow_color = Color(0.0196078, 0.211765, 0.419608, 0.34)
-shadow_size = 8
+[ext_resource type="Script" path="res://ui/components/player_avatar.gd" id="4_avatar"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_video_backdrop"]
 bg_color = Color(0.0117647, 0.0235294, 0.0313726, 1)
@@ -60,6 +43,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 back_scene = "res://scenes/menus/mode_select.tscn"
+margin_ratio = Vector2(0.035, 0.03)
 
 [node name="Background" parent="." instance=ExtResource("2_background")]
 
@@ -93,7 +77,7 @@ theme_override_constants/margin_bottom = 54
 
 [node name="Layout" type="VBoxContainer" parent="Margins"]
 layout_mode = 2
-theme_override_constants/separation = 22
+theme_override_constants/separation = 16
 
 [node name="Header" type="HBoxContainer" parent="Margins/Layout"]
 layout_mode = 2
@@ -132,7 +116,7 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 18
+theme_override_constants/separation = 14
 
 [node name="Headline" type="Label" parent="Margins/Layout/Card/Scroll/Layout"]
 unique_name_in_owner = true
@@ -179,7 +163,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 22
 text = "WATCH A ROUND"
 
 [node name="TimeBadge" type="PanelContainer" parent="Margins/Layout/Card/Scroll/Layout/Body/VideoCard/Layout/Header"]
@@ -196,6 +180,8 @@ theme_override_font_sizes/font_size = 16
 text = "0:00 / 0:24"
 
 [node name="VideoFrame" type="AspectRatioContainer" parent="Margins/Layout/Card/Scroll/Layout/Body/VideoCard/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(420, 300)
 layout_mode = 2
 size_flags_vertical = 3
 ratio = 1.7777778
@@ -295,67 +281,14 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 18
 
-[node name="TargetDemo" type="HBoxContainer" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn"]
-layout_mode = 2
-theme_override_constants/separation = 18
-alignment = 1
-
-[node name="DemoPrompt" type="Label" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/TargetDemo"]
+[node name="DemoPrompt" type="Label" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 1
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.82)
 theme_override_font_sizes/font_size = 18
 text = "WATCH PLAYER 1'S HIGHLIGHTED TARGET"
-vertical_alignment = 1
+horizontal_alignment = 1
 autowrap_mode = 2
-
-[node name="DemoTargets" type="HBoxContainer" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/TargetDemo"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="DemoOne" type="PanelContainer" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/TargetDemo/DemoTargets"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(76, 62)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_key")
-
-[node name="DemoOneLabel" type="Label" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/TargetDemo/DemoTargets/DemoOne"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "1"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="DemoTwo" type="PanelContainer" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/TargetDemo/DemoTargets"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(76, 62)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_key")
-
-[node name="DemoTwoLabel" type="Label" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/TargetDemo/DemoTargets/DemoTwo"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "2"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="DemoThree" type="PanelContainer" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/TargetDemo/DemoTargets"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(76, 62)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_key")
-
-[node name="DemoThreeLabel" type="Label" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/TargetDemo/DemoTargets/DemoThree"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "3"
-horizontal_alignment = 1
-vertical_alignment = 1
 
 [node name="Rule" type="ColorRect" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn"]
 unique_name_in_owner = true
@@ -380,8 +313,22 @@ size_flags_vertical = 3
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/ControlGrid/PlayerOneCard/Layout"]
+[node name="Header" type="HBoxContainer" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/ControlGrid/PlayerOneCard/Layout"]
 layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="PlayerOneAvatar" type="Control" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/ControlGrid/PlayerOneCard/Layout/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(76, 76)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("4_avatar")
+
+[node name="Title" type="Label" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/ControlGrid/PlayerOneCard/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 24
 text = "PLAYER 1"
@@ -403,9 +350,23 @@ size_flags_vertical = 3
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="OpponentTitle" type="Label" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/ControlGrid/OpponentCard/Layout"]
+[node name="Header" type="HBoxContainer" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/ControlGrid/OpponentCard/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="OpponentAvatar" type="Control" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/ControlGrid/OpponentCard/Layout/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(76, 76)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("4_avatar")
+
+[node name="OpponentTitle" type="Label" parent="Margins/Layout/Card/Scroll/Layout/Body/InfoColumn/ControlGrid/OpponentCard/Layout/Header"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
 theme_override_font_sizes/font_size = 24
 text = "PLAYER 2"

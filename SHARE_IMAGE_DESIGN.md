@@ -98,7 +98,8 @@ https://deskcansaw.com/stats/<short-id>
 
 Requirements:
 
-- Render at approximately 176-192 px in the 1200 x 630 source image.
+- Render at approximately 222 px in the 1200 x 630 source image
+  (`ShareQrCode.DEFAULT_IMAGE_SIZE`).
 - Use dark modules on a solid light background.
 - Preserve a four-module quiet zone on every side.
 - Use medium error correction and nearest-neighbor texture filtering. The
@@ -141,7 +142,7 @@ Example request:
 ```json
 {
   "schema_version": 1,
-  "game_id": "desk_can_saw",
+  "game_id": "slice_and_slash",
   "game_title": "Desk-Can-Saw",
   "mode": "Solo",
   "result": "Round Complete",
@@ -176,8 +177,10 @@ records as explicit not-found pages.
 4. The texture and display payload are passed to the appropriate share-card
    scene.
 5. `ShareManager` renders the card through its existing `SubViewport`.
-6. The existing desktop save or web download behavior exports the PNG.
-7. The existing preview displays the completed picture.
+6. The scorecard panel shows that rendered card inline, so the picture *is* the
+   score summary the player reads.
+7. **Save Image** re-renders and exports it through the existing desktop save or
+   web download behavior.
 
 When score publishing is connected, its only required handoff to this flow is
 the immutable per-run `stats_url`. Invalid URLs and QR failures return explicit
@@ -237,8 +240,9 @@ A short server-backed result ID is therefore the preferred architecture.
 - The QR code scans from the original PNG and a 600 x 315 resized copy.
 - Solo, multiplayer, long result text, and achievement combinations do not
   overflow or obscure the QR code.
-- Desktop exports still save and preview the PNG.
-- Web exports still download and preview the PNG.
+- Desktop exports still save the PNG and can reopen the original.
+- Web exports still download the PNG.
+- The scorecard panel renders the card without writing a file.
 - Network, API, QR, rendering, and save failures produce clear user-facing
   errors.
 - No public stats record contains device or personal information.

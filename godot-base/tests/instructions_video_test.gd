@@ -28,28 +28,25 @@ func _run() -> void:
 	await _test_clip_per_game(session)
 	await _test_playback_controls(session)
 	await _test_responsive_body(session)
+	await _test_player_avatars(session)
 	await _test_reduced_motion_starts_paused(session, settings)
+	await _test_clip_loops(session, settings)
 
 	settings.set("_values", _with_reduced_motion(settings, original_reduced_motion))
 	await _finish()
 
 
-## Each game must present its own clip, headline and rules summary.
+## Every registered game must present its own clip, headline and rules summary.
 func _test_clip_per_game(session: Node) -> void:
-	var expected := {
-		"select_target_rush": [
-			"res://assets/video/tutorial_target_rush.ogv",
-			"TARGET RUSH",
-		],
-		"select_slice_and_slash": [
-			"res://assets/video/tutorial_slice_and_slash.ogv",
-			"DESK-CAN-SAW",
-		],
-	}
+	var manifests := GameCatalog.all()
+	_expect(
+		manifests.size() >= 2,
+		"The catalog needs at least two games to prove the screen is per-game."
+	)
 	var headlines := PackedStringArray()
 	var rules := PackedStringArray()
-	for selector: String in expected:
-		session.call(selector)
+	for manifest: GameManifest in manifests:
+		GameCatalog.select(manifest.id)
 		session.call("configure_single_player")
 		var screen := await _open_screen()
 		if screen == null:
@@ -57,35 +54,44 @@ func _test_clip_per_game(session: Node) -> void:
 		var video := screen.get_node("%Video") as VideoStreamPlayer
 		_expect(
 			video.stream != null
-			and video.stream.resource_path == expected[selector][0],
-			"%s must load its own tutorial clip." % selector
+			and video.stream.resource_path == manifest.tutorial_video_path,
+			"%s must load its own tutorial clip." % manifest.id
 		)
 		_expect(
 			(screen.get_node("%PosterImage") as TextureRect).texture != null,
-			"%s must load a poster frame for the idle state." % selector
+			"%s must load a poster frame for the idle state." % manifest.id
 		)
 		_expect(
 			(screen.get_node("%VideoTitle") as Label).text.contains(
-				expected[selector][1]
+				manifest.title.to_upper()
 			),
-			"%s must name its game above the clip." % selector
+			"%s must name its game above the clip." % manifest.id
 		)
 		headlines.append((screen.get_node("%Headline") as Label).text)
 		rules.append((screen.get_node("%Rules") as Label).text)
 		await _close_screen(screen)
 
 	_expect(
-		headlines.size() == 2 and headlines[0] != headlines[1],
-		"Each game needs its own headline, not Target Rush copy for both."
+		_all_unique(headlines),
+		"Each game needs its own headline, not another game's copy."
 	)
 	_expect(
-		rules.size() == 2 and rules[0] != rules[1],
+		_all_unique(rules),
 		"Each game needs its own rules summary."
 	)
 
 
+func _all_unique(values: PackedStringArray) -> bool:
+	var seen := {}
+	for value: String in values:
+		if seen.has(value):
+			return false
+		seen[value] = true
+	return not seen.is_empty()
+
+
 func _test_playback_controls(session: Node) -> void:
-	session.call("select_target_rush")
+	GameCatalog.select("target_rush")
 	session.call("configure_single_player")
 	var screen := await _open_screen()
 	if screen == null:
@@ -125,7 +131,7 @@ func _test_playback_controls(session: Node) -> void:
 
 
 func _test_responsive_body(session: Node) -> void:
-	session.call("select_target_rush")
+	GameCatalog.select("target_rush")
 	session.call("configure_multiplayer", 0)
 	var screen := await _open_screen()
 	if screen == null:
@@ -143,9 +149,48 @@ func _test_responsive_body(session: Node) -> void:
 	await _close_screen(screen)
 
 
+## Each control card carries a portrait placeholder whose tag names the player
+## holding that slot, so the roster reads without relying on colour.
+func _test_player_avatars(session: Node) -> void:
+	GameCatalog.select("target_rush")
+	for setup: Array in [
+		["configure_multiplayer", 0, "P2", true],
+		["configure_multiplayer", 1, "CPU", true],
+		["configure_single_player", -1, "", false],
+	]:
+		if int(setup[1]) < 0:
+			session.call(setup[0])
+		else:
+			session.call(setup[0], int(setup[1]))
+		var screen := await _open_screen()
+		if screen == null:
+			return
+		var player_one := screen.get_node_or_null("%PlayerOneAvatar") as Control
+		var opponent := screen.get_node_or_null("%OpponentAvatar") as Control
+		_expect(
+			player_one != null
+			and player_one.is_visible_in_tree()
+			and str(player_one.get("tag")) == "P1"
+			and not player_one.accessibility_description.is_empty(),
+			"Player 1's card must show a described portrait placeholder."
+		)
+		_expect(
+			opponent != null
+			and opponent.get_parent().get_parent().get_parent().visible
+			== bool(setup[3]),
+			"The opponent portrait must follow its card's visibility."
+		)
+		if bool(setup[3]):
+			_expect(
+				str(opponent.get("tag")) == str(setup[2]),
+				"The opponent portrait must be tagged %s." % setup[2]
+			)
+		await _close_screen(screen)
+
+
 func _test_reduced_motion_starts_paused(session: Node, settings: Node) -> void:
 	settings.set("_values", _with_reduced_motion(settings, true))
-	session.call("select_slice_and_slash")
+	GameCatalog.select("slice_and_slash")
 	session.call("configure_single_player")
 	var screen := await _open_screen()
 	if screen == null:
@@ -160,8 +205,37 @@ func _test_reduced_motion_starts_paused(session: Node, settings: Node) -> void:
 		(screen.get_node("%Poster") as CenterContainer).visible,
 		"Reduced motion must show the poster prompt."
 	)
+	_expect(
+		not video.loop,
+		"Reduced motion must not loop the clip: an endlessly restarting video is "
+		+ "exactly the unrequested repeated motion that setting suppresses."
+	)
 	await _close_screen(screen)
 	settings.set("_values", _with_reduced_motion(settings, false))
+
+
+## The walkthrough repeats so a viewer can keep watching without hunting for the
+## replay button, which is only reachable once the clip has stopped.
+func _test_clip_loops(session: Node, settings: Node) -> void:
+	settings.set("_values", _with_reduced_motion(settings, false))
+	for manifest in GameCatalog.all():
+		GameCatalog.select(manifest.id)
+		session.call("configure_single_player")
+		var screen := await _open_screen()
+		if screen == null:
+			return
+		var video := screen.get_node("%Video") as VideoStreamPlayer
+		_expect(
+			video.loop,
+			"%s must loop its walkthrough clip when reduced motion is off."
+			% manifest.id
+		)
+		_expect(
+			video.is_playing(),
+			"%s must autoplay its walkthrough clip when reduced motion is off."
+			% manifest.id
+		)
+		await _close_screen(screen)
 
 
 ## Writes straight into the settings dictionary so the test never persists a

@@ -19,17 +19,17 @@ func _run() -> void:
 
 func _test_configured_urls() -> void:
 	_expect(
-		GameInfo.stats_url_for(GameInfo.TARGET_RUSH_ID)
+		GameCatalog.get_manifest("target_rush").resolved_stats_url()
 		== "https://deskcansaw.com/stats/tr",
 		"Target Rush must expose its configured stats route."
 	)
 	_expect(
-		GameInfo.stats_url_for(GameInfo.SLICE_AND_SLASH_ID)
+		GameCatalog.get_manifest("slice_and_slash").resolved_stats_url()
 		== "https://deskcansaw.com/stats/dcs",
 		"Desk-Can-Saw must expose its configured stats route."
 	)
 	_expect(
-		GameInfo.website_label() == "deskcansaw.com",
+		StudioInfo.website_label() == "deskcansaw.com",
 		"The share card must have a readable website label."
 	)
 
@@ -106,7 +106,7 @@ func _test_qr_image() -> void:
 
 
 func _test_slice_counts() -> void:
-	var game_script := load("res://scenes/game/slice_and_slash.gd") as Script
+	var game_script := load("res://games/slice_and_slash/slice_and_slash.gd") as Script
 	var game: Node = game_script.new()
 	game.set("points_per_can", 5)
 	game.set("_scores", [10, 5])
@@ -142,9 +142,7 @@ func _test_prepared_share_data() -> void:
 			"Prepared card data must include a QR texture."
 		)
 		_expect(
-			str(data.get("stats_url")) == GameInfo.stats_url_for(
-				GameInfo.TARGET_RUSH_ID
-			),
+			str(data.get("stats_url")) == GameCatalog.get_manifest("target_rush").resolved_stats_url(),
 			"Prepared card data must retain the QR destination."
 		)
 
@@ -216,8 +214,8 @@ func _test_share_card() -> void:
 		"A negative solo score must not be mistaken for a versus score."
 	)
 
-	desk_data["game_id"] = GameInfo.SLICE_AND_SLASH_ID
-	desk_data["game_title"] = GameInfo.DESK_CAN_SAW_TITLE
+	desk_data["game_id"] = "slice_and_slash"
+	desk_data["game_title"] = GameCatalog.get_manifest("slice_and_slash").title
 	desk_data["score"] = "28 - 24"
 	desk_data["score_values"] = [28, 24]
 	desk_data["result"] = "PLAYER 1 WINS"
@@ -235,7 +233,7 @@ func _test_share_card() -> void:
 	)
 	var action_art := card.get_node("%ActionArt") as ShareCardArt
 	_expect(
-		str(action_art.get("_game_id")) == GameInfo.SLICE_AND_SLASH_ID,
+		str(action_art.get("_art_style")) == ShareCardArt.STYLE_DESK_CAN_SAW,
 		"The art panel must switch to the Desk-Can-Saw visual variant."
 	)
 	_expect_card_fits(card)
@@ -260,11 +258,11 @@ func _expect_card_fits(card: Control) -> void:
 
 func _base_payload() -> Dictionary:
 	return {
-		"game_id": GameInfo.TARGET_RUSH_ID,
-		"game_title": GameInfo.TARGET_RUSH_TITLE,
-		"studio": GameInfo.STUDIO,
-		"website": GameInfo.WEBSITE,
-		"stats_url": GameInfo.stats_url_for(GameInfo.TARGET_RUSH_ID),
+		"game_id": "target_rush",
+		"game_title": GameCatalog.get_manifest("target_rush").title,
+		"studio": StudioInfo.STUDIO,
+		"website": StudioInfo.WEBSITE,
+		"stats_url": GameCatalog.get_manifest("target_rush").resolved_stats_url(),
 		"mode": "Solo",
 		"result": "Round Complete",
 		"score_caption": "Solo Score",

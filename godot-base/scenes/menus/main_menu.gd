@@ -1,6 +1,6 @@
 extends MenuScreen
 
-## Title screen. Everything it displays comes from GameInfo, so renaming the
+## Title screen. Everything it displays comes from StudioInfo, so renaming the
 ## game is a one-file change.
 
 @export_file("*.tscn") var play_scene := "res://scenes/menus/mode_select.tscn"
@@ -25,8 +25,8 @@ const BUTTON_PRESS_SCALE := Vector2(0.985, 0.985)
 @onready var _button_row: HBoxContainer = %ButtonRow
 @onready var _buttons: VBoxContainer = %Buttons
 @onready var _play_button: Button = %PlayButton
-@onready var _slice_and_slash_button: Button = %SliceAndSlashButton
-@onready var _slice_and_slash_requirement: Label = %SliceAndSlashRequirement
+@onready var _secondary_game_button: Button = %SecondaryGameButton
+@onready var _secondary_game_requirement: Label = %SecondaryGameRequirement
 @onready var _quit_button: Button = %QuitButton
 @onready var _footer_left: Label = %FooterLeft
 @onready var _footer_right: Label = %FooterRight
@@ -48,11 +48,11 @@ var _reduced_motion := false
 
 func _ready() -> void:
 	_reduced_motion = Settings.reduced_motion_enabled()
-	_title.text = GameInfo.TITLE
-	_tagline.text = GameInfo.TAGLINE
-	_footer_left.text = "%s  ·  %s" % [GameInfo.STUDIO, GameInfo.copyright_line()]
-	_footer_right.text = "v%s" % GameInfo.version()
-	_update_slice_and_slash_entry()
+	_title.text = StudioInfo.TITLE
+	_tagline.text = StudioInfo.TAGLINE
+	_footer_left.text = "%s  ·  %s" % [StudioInfo.STUDIO, StudioInfo.copyright_line()]
+	_footer_right.text = "v%s" % StudioInfo.version()
+	_update_secondary_game_entry()
 	AchievementManager.progression_changed.connect(_on_progression_changed)
 	# Quitting is meaningless in a browser tab and unusual on mobile.
 	_quit_button.visible = not (OS.has_feature("web") or OS.has_feature("mobile"))
@@ -288,25 +288,35 @@ func _play_logo_intro() -> void:
 
 
 func _on_play_pressed() -> void:
-	_launch_game(false)
+	_launch_game(_primary_game())
 
 
-func _on_slice_and_slash_pressed() -> void:
-	if not AchievementManager.is_level_unlocked(GameInfo.SLICE_AND_SLASH_ID):
+func _on_secondary_game_pressed() -> void:
+	var manifest := _secondary_game()
+	if manifest == null:
 		return
-	_launch_game(true)
+	_launch_game(manifest)
 
 
-func _launch_game(slice_and_slash: bool) -> void:
-	if _launching_game:
+## First game in menu order — the one the Play button always starts.
+func _primary_game() -> GameManifest:
+	var games := GameCatalog.available()
+	return games[0] if not games.is_empty() else null
+
+
+## The next available game, surfaced by the secondary button once unlocked.
+func _secondary_game() -> GameManifest:
+	var games := GameCatalog.available()
+	return games[1] if games.size() > 1 else null
+
+
+func _launch_game(manifest: GameManifest) -> void:
+	if _launching_game or manifest == null:
 		return
 	_launching_game = true
 	for button in _menu_buttons:
 		button.disabled = true
-	if slice_and_slash:
-		GameSession.select_slice_and_slash()
-	else:
-		GameSession.select_target_rush()
+	GameCatalog.select(manifest.id)
 	Router.goto(play_scene)
 
 
@@ -322,34 +332,30 @@ func _on_quit_pressed() -> void:
 	Router.quit_game()
 
 
-func _update_slice_and_slash_entry() -> void:
-	var unlocked := AchievementManager.is_level_unlocked(GameInfo.SLICE_AND_SLASH_ID)
-	var single_player_unlocked := (
-		AchievementManager.is_slice_and_slash_single_player_unlocked()
-	)
-	var multiplayer_unlocked := (
-		AchievementManager.is_slice_and_slash_multiplayer_unlocked()
-	)
-	_slice_and_slash_button.visible = unlocked
-	_slice_and_slash_button.disabled = not unlocked
-	_slice_and_slash_requirement.visible = unlocked
+## Shows the secondary game entry once the catalog reports it as available.
+func _update_secondary_game_entry() -> void:
+	var manifest := _secondary_game()
+	var unlocked := manifest != null
+	_secondary_game_button.visible = unlocked
+	_secondary_game_button.disabled = not unlocked
+	_secondary_game_requirement.visible = unlocked
 	if not unlocked:
 		return
 
-	_slice_and_slash_button.text = GameInfo.DESK_CAN_SAW_TITLE
-	var available_modes := PackedStringArray()
-	if single_player_unlocked:
-		available_modes.append("Single Player")
-	if multiplayer_unlocked:
-		available_modes.append("Local Multiplayer")
-	var mode_summary := " + ".join(available_modes)
-	_slice_and_slash_button.tooltip_text = "Available: %s." % mode_summary
-	_slice_and_slash_requirement.text = "UNLOCKED  |  %s" % mode_summary
-	_slice_and_slash_requirement.add_theme_color_override(
+	_secondary_game_button.text = manifest.title
+	var modes := AchievementManager.game_unlocked_modes(manifest.id)
+	if modes.is_empty():
+		_secondary_game_button.tooltip_text = manifest.tagline
+		_secondary_game_requirement.text = "UNLOCKED"
+	else:
+		var mode_summary := " + ".join(modes)
+		_secondary_game_button.tooltip_text = "Available: %s." % mode_summary
+		_secondary_game_requirement.text = "UNLOCKED  |  %s" % mode_summary
+	_secondary_game_requirement.add_theme_color_override(
 		"font_color",
-		GameInfo.SKY
+		StudioInfo.SKY
 	)
 
 
 func _on_progression_changed(_key: String, _value: bool) -> void:
-	_update_slice_and_slash_entry()
+	_update_secondary_game_entry()

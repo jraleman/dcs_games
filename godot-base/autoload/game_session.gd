@@ -1,14 +1,18 @@
 extends Node
 
-## Runtime game configuration shared by mode selection, instructions and play.
+## Runtime session configuration shared by mode selection, instructions and
+## play: how many players, who drives Player 2, and which pad belongs to whom.
+##
+## Which game is being played lives in [GameCatalog]; this node stays
+## game-agnostic so every game reuses the same setup flow.
+
+## Emitted when the first pad is plugged in or the last one is unplugged, so
+## screens can add or drop their controller copy without polling.
+signal gamepad_availability_changed(available: bool)
 
 enum GameMode { SINGLE_PLAYER, MULTIPLAYER }
 enum PlayerTwoController { HUMAN, CPU }
 enum CpuDifficulty { EASY, MEDIUM, HARD }
-enum GameKind { TARGET_RUSH, SLICE_AND_SLASH }
-
-const TARGET_RUSH_GAMEPLAY_SCENE := "res://scenes/game/gameplay.tscn"
-const SLICE_AND_SLASH_GAMEPLAY_SCENE := "res://scenes/game/slice_and_slash.tscn"
 
 const CPU_DIFFICULTIES := [
 	CpuDifficulty.EASY,
@@ -45,37 +49,38 @@ const CPU_PROFILES := {
 var game_mode := GameMode.SINGLE_PLAYER
 var player_two_controller := PlayerTwoController.HUMAN
 var cpu_difficulty := CpuDifficulty.MEDIUM
-var game_kind := GameKind.TARGET_RUSH
 var _controller_devices: Array[int] = [-1, -1]
 var _controllers_assigned := false
+var _gamepad_available := false
 
 
-func select_target_rush() -> void:
-	game_kind = GameKind.TARGET_RUSH
+func _ready() -> void:
+	_gamepad_available = gamepad_connected()
+	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
 
-func select_slice_and_slash() -> void:
-	game_kind = GameKind.SLICE_AND_SLASH
+## True while at least one gamepad is connected. Screens that describe pad
+## buttons hide that copy when this is false, so a player is never told about
+## a controller they do not have.
+func gamepad_connected() -> bool:
+	return not Input.get_connected_joypads().is_empty()
 
 
-func is_slice_and_slash() -> bool:
-	return game_kind == GameKind.SLICE_AND_SLASH
+## Plugging a pad in mid-session also re-seats the per-player assignments, so
+## Controller 1 / Controller 2 stay correct without restarting the round.
+func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
+	assign_connected_controllers()
+	var available := gamepad_connected()
+	if available == _gamepad_available:
+		return
+	_gamepad_available = available
+	gamepad_availability_changed.emit(available)
 
 
-func game_title() -> String:
-	return (
-		GameInfo.DESK_CAN_SAW_TITLE
-		if is_slice_and_slash()
-		else GameInfo.TARGET_RUSH_TITLE
-	)
-
-
-func gameplay_scene_path() -> String:
-	return (
-		SLICE_AND_SLASH_GAMEPLAY_SCENE
-		if is_slice_and_slash()
-		else TARGET_RUSH_GAMEPLAY_SCENE
-	)
+## True when the selected game offers a CPU opponent at all.
+func cpu_opponent_available() -> bool:
+	var manifest := GameCatalog.current()
+	return manifest != null and manifest.supports_cpu_opponent
 
 
 func configure_single_player() -> void:
@@ -130,7 +135,9 @@ func player_two_name() -> String:
 	return "CPU" if player_two_is_cpu() else "Player 2"
 
 
-func slice_unlock_multiplayer_eligible() -> bool:
+## True when the current multiplayer setup produces a result that unlock rules
+## are allowed to count (a CPU opponent must be on the default difficulty).
+func multiplayer_result_is_eligible() -> bool:
 	return (
 		player_two_enabled()
 		and multiplayer_result_is_unlock_eligible(

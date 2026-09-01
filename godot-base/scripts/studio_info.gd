@@ -1,22 +1,20 @@
-class_name GameInfo
+class_name StudioInfo
 extends RefCounted
 
-## Single place for the studio / game identity used across every screen.
-## Rename the game here and the logo, intro, menu and credits follow.
+## Studio and application identity shared by every screen and every game.
+##
+## This is deliberately game-agnostic: per-game names, achievements, stats URLs
+## and media live in that game's [GameManifest] under `res://games/<id>/`.
+## Rebrand the project here and the logo, intro, menus and credits follow.
 
 const STUDIO := "DeskCanSaw Games"
 const STUDIO_SHORT := "DeskCanSaw"
 const WEBSITE := "https://deskcansaw.com"
 
+## Application title, shown before a game is selected. Individual games carry
+## their own [member GameManifest.title].
 const TITLE := "DCS Base Game"
 const TAGLINE := "A DeskCanSaw Games production"
-const TARGET_RUSH_ID := "target_rush"
-const TARGET_RUSH_TITLE := "Target Rush"
-const SLICE_AND_SLASH_ID := "slice_and_slash"
-const DESK_CAN_SAW_TITLE := "Desk-Can-Saw"
-const RACE_CONDITION_ACHIEVEMENT_ID := "race_condition"
-const TARGET_RUSH_STATS_URL := WEBSITE + "/stats/tr"
-const DESK_CAN_SAW_STATS_URL := WEBSITE + "/stats/dcs"
 
 ## Text cards shown by the placeholder intro, in order.
 const INTRO_CARDS: Array[String] = [
@@ -24,27 +22,6 @@ const INTRO_CARDS: Array[String] = [
 	"…there was a placeholder.",
 	"Replace this scene with your own intro.",
 ]
-
-## Achievement definitions consumed by AchievementManager. Keep game-specific
-## unlock conditions in gameplay code and presentation/persistence in the
-## reusable manager.
-const ACHIEVEMENTS := {
-	"first_single_player_game": {
-		"title": "Solo Starter",
-		"description": "Finish your first single-player round.",
-		"badge": "1P",
-	},
-	"first_win": {
-		"title": "First Win",
-		"description": "Win your first multiplayer round as Player 1.",
-		"badge": "WIN",
-	},
-	RACE_CONDITION_ACHIEVEMENT_ID: {
-		"title": "Race condition",
-		"description": "Lose to Player 2 after they score at least 25 points.",
-		"badge": "RACE",
-	},
-}
 
 ## Credits sections rendered by the credits screen.
 ## Each entry is { "heading": String, "lines": Array }.
@@ -66,6 +43,10 @@ const CREDITS: Array[Dictionary] = [
 		"lines": ["Godot Engine 4", "godotengine.org"],
 	},
 	{
+		"heading": "Open Source",
+		"lines": ["QR encoder by Greaby (MIT)"],
+	},
+	{
 		"heading": "Thanks",
 		"lines": ["Everyone who played the prototype"],
 	},
@@ -84,23 +65,9 @@ static func version() -> String:
 	return str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
 
 
-static func stats_url_for(game_id: String) -> String:
-	var fallback := (
-		DESK_CAN_SAW_STATS_URL
-		if game_id == SLICE_AND_SLASH_ID
-		else TARGET_RUSH_STATS_URL
-	)
-	return str(
-		ProjectSettings.get_setting(
-			"share/stats_urls/%s" % game_id,
-			fallback
-		)
-	).strip_edges()
-
-
 static func website_label() -> String:
 	return WEBSITE.trim_prefix("https://").trim_prefix("http://").trim_suffix("/")
 
 
 static func copyright_line() -> String:
-	return "© %d %s" % [Time.get_date_dict_from_system().year, STUDIO]
+	return "© %d %s" % [Time.get_date_dict_from_system().year, StudioInfo.STUDIO]

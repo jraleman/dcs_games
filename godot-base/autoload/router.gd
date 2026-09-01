@@ -53,7 +53,7 @@ func _build_overlay() -> void:
 	_fps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_fps.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fps.add_theme_font_size_override("font_size", 22)
-	_fps.add_theme_color_override("font_color", GameInfo.SKY)
+	_fps.add_theme_color_override("font_color", StudioInfo.SKY)
 	_fps.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	_fps.add_theme_constant_override("outline_size", 6)
 	_fps.visible = false

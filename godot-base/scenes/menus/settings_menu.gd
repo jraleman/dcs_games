@@ -59,6 +59,7 @@ const FPS_OPTIONS := [0, 30, 60, 90, 120, 144]
 @onready var _controller_target_three: OptionButton = %ControllerTargetThree
 @onready var _controller_pause: OptionButton = %ControllerPause
 @onready var _controller_movement_scheme: OptionButton = %ControllerMovementScheme
+@onready var _controller_hint: Label = %ControllerHint
 @onready var _binding_status: Label = %BindingStatus
 @onready var _reset_controls_button: Button = %ResetControlsButton
 @onready var _reset_all_button: Button = %ResetButton
@@ -97,7 +98,9 @@ func _ready() -> void:
 	_connect_ui()
 	_configure_setting_help()
 	_sync_from_settings()
+	_configure_gamepad_rows()
 	Settings.changed.connect(_on_setting_changed)
+	GameSession.gamepad_availability_changed.connect(_on_gamepad_availability_changed)
 	super()
 
 
@@ -164,16 +167,16 @@ func _connect_ui() -> void:
 		_on_setting_slider_changed.bind(Settings.EXTRA_ROUND_TIME_KEY)
 	)
 	_triangle_size.value_changed.connect(
-		_on_setting_slider_changed.bind(Settings.TRIANGLE_SIZE_KEY)
+		_on_setting_slider_changed.bind(TargetRushOptions.SIZE_KEY)
 	)
 	_triangle_speed.value_changed.connect(
-		_on_setting_slider_changed.bind(Settings.TRIANGLE_SPEED_KEY)
+		_on_setting_slider_changed.bind(TargetRushOptions.SPEED_KEY)
 	)
 	_triangle_speed_rush.value_changed.connect(
-		_on_setting_slider_changed.bind(Settings.TRIANGLE_SPEED_RUSH_KEY)
+		_on_setting_slider_changed.bind(TargetRushOptions.SPEED_RUSH_KEY)
 	)
 	_triangle_round_length.value_changed.connect(
-		_on_setting_slider_changed.bind(Settings.TRIANGLE_ROUND_LENGTH_KEY)
+		_on_setting_slider_changed.bind(TargetRushOptions.ROUND_LENGTH_KEY)
 	)
 	_controller_speed.value_changed.connect(
 		_on_setting_slider_changed.bind(Settings.CONTROLLER_SPEED_KEY)
@@ -213,7 +216,10 @@ func _configure_setting_help() -> void:
 		_max_fps: "Caps rendering at the selected frame rate.",
 		_show_fps: "Shows the current frame rate in menus and gameplay.",
 		_ui_scale: "Changes the size of menus and the gameplay HUD.",
-		_visual_effects: "Turn off to remove full-screen flashes and screen shake.",
+		_visual_effects: (
+			"Turn off to remove full-screen flashes and screen shake. "
+			+ "Other animation stays under Reduced motion."
+		),
 		_reduced_motion: "Stops decorative motion, trails and animated backgrounds.",
 		_player_labels: "Shows P1/P2 markers so color is not the only player cue.",
 		_audio_captions: "Shows text for scoring, misses, saws and countdown cues.",
@@ -280,9 +286,76 @@ func _restore_default_hint() -> void:
 	_hint.text = _default_hint
 
 
+## Ranges and visibility for the Game tab come from the tunables the active
+## games declare, so this screen never hardcodes a game's numbers.
+##
+## Must run while [member _syncing] is set: changing a slider's bounds re-emits
+## `value_changed`, which would otherwise write the pre-sync value back to disk.
+func _configure_game_tunables() -> void:
+	var rows := {
+		TargetRushOptions.SIZE_KEY: _triangle_size,
+		TargetRushOptions.SPEED_KEY: _triangle_speed,
+		TargetRushOptions.SPEED_RUSH_KEY: _triangle_speed_rush,
+		TargetRushOptions.ROUND_LENGTH_KEY: _triangle_round_length,
+	}
+	var registered := Settings.tunables()
+	var any_visible := false
+	for key: String in rows:
+		var slider: HSlider = rows[key]
+		var row := slider.get_parent() as Control
+		var is_registered: bool = registered.has(key)
+		if row != null:
+			row.visible = is_registered
+		if not is_registered:
+			continue
+		any_visible = true
+		slider.min_value = Settings.tunable_min(key)
+		slider.max_value = Settings.tunable_max(key)
+	var heading := _tunable_heading()
+	if heading != null:
+		heading.visible = any_visible
+
+
+func _tunable_heading() -> Control:
+	return get_node_or_null(
+		"Margins/Layout/Tabs/Game/Pad/List/TriangleHeading"
+	) as Control
+
+
+## Controller bindings and pad-only assists are meaningless without a pad, so
+## the whole section collapses to a single note until one is connected. This
+## re-runs on hot-plug, so a controller can be attached without leaving the
+## screen.
+func _configure_gamepad_rows() -> void:
+	var connected := GameSession.gamepad_connected()
+	var pad_controls: Array[Control] = [
+		_controller_movement_scheme,
+		_controller_speed,
+		_controller_deadzone,
+	]
+	for setting_key: String in _controller_buttons:
+		pad_controls.append(_controller_buttons[setting_key] as Control)
+	for control in pad_controls:
+		var row := control.get_parent() as Control
+		if row != null:
+			row.visible = connected
+
+	_controller_hint.visible = not connected
+	_binding_status.text = (
+		"Controller 1 controls Player 1 and Controller 2 controls Player 2."
+		if connected
+		else "Rebind a key by selecting it and pressing the new key."
+	)
+
+
+func _on_gamepad_availability_changed(_available: bool) -> void:
+	_configure_gamepad_rows()
+
+
 ## Pushes the stored values into the widgets without echoing them back.
 func _sync_from_settings() -> void:
 	_syncing = true
+	_configure_game_tunables()
 	_master.value = float(Settings.get_value("audio/master"))
 	_music.value = float(Settings.get_value("audio/music"))
 	_sfx.value = float(Settings.get_value("audio/sfx"))
@@ -297,10 +370,12 @@ func _sync_from_settings() -> void:
 	_gameplay_speed.value = Settings.gameplay_speed_scale()
 	_target_size.value = Settings.target_size_scale()
 	_extra_round_time.value = Settings.extra_round_time()
-	_triangle_size.value = Settings.triangle_size_scale()
-	_triangle_speed.value = Settings.triangle_speed_scale()
-	_triangle_speed_rush.value = Settings.triangle_speed_rush()
-	_triangle_round_length.value = Settings.triangle_round_length()
+	_triangle_size.value = Settings.tunable(TargetRushOptions.SIZE_KEY)
+	_triangle_speed.value = Settings.tunable(TargetRushOptions.SPEED_KEY)
+	_triangle_speed_rush.value = Settings.tunable(TargetRushOptions.SPEED_RUSH_KEY)
+	_triangle_round_length.value = Settings.tunable(
+		TargetRushOptions.ROUND_LENGTH_KEY
+	)
 	_controller_speed.value = Settings.controller_movement_scale()
 	_controller_deadzone.value = Settings.controller_deadzone()
 	_show_instructions.button_pressed = bool(Settings.get_value("game/show_instructions"))

@@ -359,7 +359,6 @@ button_pressed = true
 [node name="ReducedMotionRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
 layout_mode = 2
 theme_override_constants/separation = 24
-
 [node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ReducedMotionRow"]
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
@@ -754,6 +753,15 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 1)
 theme_override_font_sizes/font_size = 22
 text = "CONTROLLER LAYOUT"
+
+[node name="ControllerHint" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 19
+text = "Connect a controller to configure its buttons."
+autowrap_mode = 2
 
 [node name="ControllerTargetOneRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Controls/Pad/List"]
 layout_mode = 2

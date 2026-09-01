@@ -1,10 +1,11 @@
-extends Node2D
+extends GameShell
 
 ## Electric chainsaw score chase staged over a procedural workshop desk.
+##
+## The HUD, countdown, pause overlay, results panels and share card all come
+## from `GameShell`; this script only owns the workshop art, the chainsaws,
+## the cans and the slicing rules.
 
-@export_file("*.tscn") var pause_scene := "res://scenes/menus/pause_menu.tscn"
-@export_file("*.tscn") var main_menu_scene := "res://scenes/menus/main_menu.tscn"
-@export_range(5.0, 180.0, 1.0) var round_duration := 30.0
 @export_range(1, 100, 1) var points_per_can := 1
 @export_range(0.1, 2.0, 0.05) var minimum_spawn_interval := 0.28
 @export_range(0.1, 2.0, 0.05) var maximum_spawn_interval := 0.48
@@ -12,18 +13,9 @@ extends Node2D
 @export_range(100.0, 1600.0, 10.0) var chainsaw_speed := 920.0
 @export_range(10.0, 100.0, 1.0) var can_radius := 34.0
 @export_range(0.1, 5.0, 0.1) var combo_window := 1.25
-@export var player_one_color := Color("4da3ff")
-@export var player_two_color := Color("ff5c6c")
-@export var music: AudioStream
 
-const PLAYER_ONE := 0
-const PLAYER_TWO := 1
-const SIDE_CLEARANCE := 38.0
-const TOP_CLEARANCE := 190.0
-const BOTTOM_CLEARANCE := 105.0
-const DANGER_SECONDS := 8.0
-const DANGER_COLOR := Color("ff4964")
-const SHAKE_DECAY := 34.0
+## Matches the folder name and `games/slice_and_slash/game.gd`.
+const GAME_ID := "slice_and_slash"
 const WORKSHOP_WALL := Color("182328")
 const WORKSHOP_WALL_DARK := Color("0c1317")
 const WOOD_BASE := Color("6d3f22")
@@ -38,147 +30,31 @@ const CAN_COLORS := [
 	Color("8bd3c7"),
 ]
 
-@onready var _playfield: Node2D = %Targets
-@onready var _world_fx: Node2D = %WorldFX
-@onready var _hud: CanvasLayer = %HUD
-@onready var _screen_flash: ColorRect = %ScreenFlash
-@onready var _danger_overlay: ColorRect = %DangerOverlay
-@onready var _player_one_card: PanelContainer = %PlayerOneCard
-@onready var _player_one_caption: Label = (
-	$HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout/Caption
-)
-@onready var _player_one_score: Label = %PlayerOneScore
-@onready var _player_two_score: Label = %PlayerTwoScore
-@onready var _player_one_streak: Label = %PlayerOneStreak
-@onready var _player_two_streak: Label = %PlayerTwoStreak
-@onready var _player_two_card: PanelContainer = %PlayerTwoCard
-@onready var _player_two_caption: Label = (
-	$HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout/Caption
-)
-@onready var _time_label: Label = %TimeLabel
-@onready var _mode_title: Label = %ModeTitle
-@onready var _time_progress: ProgressBar = %TimeProgress
-@onready var _callout: Label = %Callout
-@onready var _hint: Label = %Hint
-@onready var _announcement: Label = %Announcement
-@onready var _round_timer: Timer = %RoundTimer
-@onready var _round_over: Control = %RoundOver
-@onready var _round_panel: PanelContainer = %RoundPanel
-@onready var _score_panel: PanelContainer = %ScorePanel
-@onready var _result_label: Label = %ResultLabel
-@onready var _round_subtitle: Label = %RoundSubtitle
-@onready var _round_player_one_score: Label = %RoundPlayerOneScore
-@onready var _round_player_two_score: Label = %RoundPlayerTwoScore
-@onready var _round_versus: Label = (
-	$HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown/Versus
-)
-@onready var _round_player_two_card: PanelContainer = %PlayerTwoScoreCard
-@onready var _round_player_two_caption: Label = (
-	$HUD/RoundOver/Center/RoundPanel/Layout/ScoreShowdown/PlayerTwoScoreCard/Layout/Caption
-)
-@onready var _round_highlight: Label = %RoundHighlight
-@onready var _round_instructions: Label = %RoundInstructions
-@onready var _see_score_button: Button = %SeeScoreButton
-@onready var _share_button: Button = %ShareButton
-@onready var _play_again_button: Button = %PlayAgainButton
-@onready var _score_screen_title: Label = %ScoreScreenTitle
-@onready var _score_screen_subtitle: Label = %ScoreScreenSubtitle
-@onready var _game_duration_stat: Label = %GameDurationStat
-@onready var _game_hits_stat: Label = %GameHitsStat
-@onready var _game_accuracy_stat: Label = %GameAccuracyStat
-@onready var _player_one_stats_score: Label = %PlayerOneStatsScore
-@onready var _player_one_stats_hits: Label = %PlayerOneStatsHits
-@onready var _player_one_stats_misses: Label = %PlayerOneStatsMisses
-@onready var _player_one_stats_accuracy: Label = %PlayerOneStatsAccuracy
-@onready var _player_one_stats_streak: Label = %PlayerOneStatsStreak
-@onready var _player_two_stats_score: Label = %PlayerTwoStatsScore
-@onready var _player_two_stats_hits: Label = %PlayerTwoStatsHits
-@onready var _player_two_stats_misses: Label = %PlayerTwoStatsMisses
-@onready var _player_two_stats_accuracy: Label = %PlayerTwoStatsAccuracy
-@onready var _player_two_stats_streak: Label = %PlayerTwoStatsStreak
-@onready var _stats_versus: Label = (
-	$HUD/RoundOver/Center/ScorePanel/Layout/Players/Versus
-)
-@onready var _player_two_stats_card: PanelContainer = (
-	$HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo
-)
-@onready var _player_two_stats_title: Label = (
-	$HUD/RoundOver/Center/ScorePanel/Layout/Players/PlayerTwo/Layout/Title
-)
-@onready var _back_to_results_button: Button = %BackToResultsButton
-@onready var _stats_share_button: Button = %StatsShareButton
-@onready var _share_status: Label = %ShareStatus
-
 var _cans: Array[SliceCan] = []
 var _chainsaws := [null, null]
-var _scores := [0, 0]
-var _streaks := [0, 0]
-var _best_streaks := [0, 0]
 var _last_slice_times := [-1000.0, -1000.0]
 var _spawned_cans := 0
 var _escaped_cans := 0
 var _spawn_time := 0.0
-var _displayed_seconds := -1
-var _round_active := false
-var _ambient_time := 0.0
-var _pause_menu: MenuScreen
-var _rng := RandomNumberGenerator.new()
-var _announcement_tween: Tween
-var _flash_tween: Tween
-var _round_panel_tween: Tween
-var _share_status_tween: Tween
-var _sharing := false
-var _round_id := 0
-var _shake_strength := 0.0
-var _intense_effects_enabled := true
-var _reduced_motion_enabled := false
-var _active_round_duration := 30.0
-var _round_gameplay_speed := 1.0
-var _round_target_size := 1.0
 
 
-func _ready() -> void:
-	_rng.randomize()
-	_intense_effects_enabled = Settings.visual_effects_enabled()
-	_reduced_motion_enabled = Settings.reduced_motion_enabled()
-	_load_round_assists()
-	Settings.changed.connect(_on_setting_changed)
+func game_id() -> String:
+	return GAME_ID
+
+
+## Desk-Can-Saw is a two-human game; a CPU opponent never drives a chainsaw.
+func _prepare_session() -> void:
 	if GameSession.player_two_is_cpu():
 		GameSession.configure_multiplayer(GameSession.PlayerTwoController.HUMAN)
-	else:
-		GameSession.ensure_controller_assignments()
-
-	_configure_mode_ui()
-	_player_one_score.add_theme_color_override("font_color", player_one_color)
-	_player_two_score.add_theme_color_override("font_color", player_two_color)
-	_player_one_streak.add_theme_color_override("font_color", player_one_color)
-	_player_two_streak.add_theme_color_override("font_color", player_two_color)
-	_time_progress.max_value = _active_round_duration
-	_time_progress.value = _active_round_duration
-	AudioManager.attach_ui_sounds(_hud)
-
-	if music:
-		AudioManager.play_music(music)
-
-	_create_chainsaws()
-	_start_round_after_transition()
-
-
-func _start_round_after_transition() -> void:
-	if Router.is_transitioning():
-		await Router.transition_finished
-	if is_inside_tree():
-		_start_round()
-
-
-func _process(delta: float) -> void:
-	if not _reduced_motion_enabled:
-		_ambient_time += delta
-	queue_redraw()
-	_update_screen_shake(delta)
-	if not _round_active:
 		return
+	super()
 
+
+func _build_playfield() -> void:
+	_create_chainsaws()
+
+
+func _update_round(delta: float, _time_left: float) -> void:
 	_update_chainsaws(delta)
 	_update_cans(delta)
 	_spawn_time -= delta
@@ -190,12 +66,16 @@ func _process(delta: float) -> void:
 			maxf(minimum_spawn_interval, maximum_spawn_interval)
 		)
 
-	var time_left := _round_timer.time_left
-	_time_progress.value = time_left
-	_update_urgency(time_left)
-	var seconds_left := int(ceil(time_left))
-	if seconds_left != _displayed_seconds:
-		_update_time(seconds_left)
+
+func _handle_gameplay_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		_move_player_one_to((event as InputEventMouseMotion).position)
+	elif event is InputEventMouseButton:
+		_move_player_one_to((event as InputEventMouseButton).position)
+	elif event is InputEventScreenTouch:
+		_move_player_one_to((event as InputEventScreenTouch).position)
+	elif event is InputEventScreenDrag:
+		_move_player_one_to((event as InputEventScreenDrag).position)
 
 
 func _draw() -> void:
@@ -473,28 +353,6 @@ func _draw_sawdust_motes(viewport_size: Vector2, desk_top: float) -> void:
 		)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause"):
-		get_viewport().set_input_as_handled()
-		if _round_over.visible and _score_panel.visible:
-			_show_round_results()
-			return
-		open_pause_menu()
-		return
-
-	if not _round_active:
-		return
-
-	if event is InputEventMouseMotion:
-		_move_player_one_to((event as InputEventMouseMotion).position)
-	elif event is InputEventMouseButton:
-		_move_player_one_to((event as InputEventMouseButton).position)
-	elif event is InputEventScreenTouch:
-		_move_player_one_to((event as InputEventScreenTouch).position)
-	elif event is InputEventScreenDrag:
-		_move_player_one_to((event as InputEventScreenDrag).position)
-
-
 func _create_chainsaws() -> void:
 	for player_index in _active_player_indices():
 		var chainsaw := ChainsawCursor.new()
@@ -509,7 +367,7 @@ func _create_chainsaws() -> void:
 
 
 func _reset_chainsaws() -> void:
-	var bounds := _play_bounds()
+	var bounds := _playfield_bounds()
 	var center := bounds.get_center()
 	var player_one := _chainsaws[PLAYER_ONE] as ChainsawCursor
 	player_one.position = (
@@ -529,7 +387,7 @@ func _reset_chainsaws() -> void:
 
 
 func _update_chainsaws(delta: float) -> void:
-	var bounds := _play_bounds()
+	var bounds := _playfield_bounds()
 	for player_index in _active_player_indices():
 		var chainsaw := _chainsaws[player_index] as ChainsawCursor
 		var movement_velocity := combine_movement_velocity(
@@ -632,11 +490,11 @@ func _move_player_one_to(viewport_position: Vector2) -> void:
 	if chainsaw == null:
 		return
 	chainsaw.position = viewport_position
-	chainsaw.clamp_to(_play_bounds())
+	chainsaw.clamp_to(_playfield_bounds())
 
 
 func _spawn_can() -> void:
-	var bounds := _play_bounds()
+	var bounds := _playfield_bounds()
 	var can := SliceCan.new()
 	var color: Color = CAN_COLORS[_rng.randi_range(0, CAN_COLORS.size() - 1)]
 	var effective_radius := _effective_can_radius()
@@ -664,7 +522,7 @@ func _spawn_can() -> void:
 
 
 func _update_cans(delta: float) -> void:
-	var bounds := _play_bounds()
+	var bounds := _playfield_bounds()
 	for entry in _cans.duplicate():
 		var can := entry as SliceCan
 		if not is_instance_valid(can):
@@ -733,159 +591,63 @@ func _score_slice(player_index: int, can: SliceCan) -> void:
 	_update_streaks()
 
 
-func _play_bounds() -> Rect2:
-	var viewport_size := get_viewport_rect().size
-	var minimum := Vector2(SIDE_CLEARANCE, TOP_CLEARANCE)
-	var maximum := Vector2(
-		viewport_size.x - SIDE_CLEARANCE,
-		viewport_size.y - BOTTOM_CLEARANCE
-	)
-	if maximum.x < minimum.x:
-		minimum.x = viewport_size.x * 0.5
-		maximum.x = minimum.x
-	if maximum.y < minimum.y:
-		minimum.y = viewport_size.y * 0.5
-		maximum.y = minimum.y
-	return Rect2(minimum, maximum - minimum)
-
-
 func _configure_mode_ui() -> void:
+	super()
 	var multiplayer := GameSession.player_two_enabled()
 	var controller_movement := Settings.controller_movement_scheme_label()
-	_mode_title.text = GameInfo.DESK_CAN_SAW_TITLE.to_upper()
+	var gamepad := GameSession.gamepad_connected()
 	_callout.text = "DRIVE THE CHAIN THROUGH EACH CAN"
-	_player_one_caption.text = (
-		"PLAYER 1 · MOUSE / PAD 1"
-		if multiplayer
-		else "PLAYER 1 · SOLO · MOUSE / ARROWS / PAD 1"
-	)
-	_player_one_card.size_flags_horizontal = (
-		Control.SIZE_SHRINK_BEGIN if multiplayer else Control.SIZE_EXPAND_FILL
-	)
-	_player_two_card.visible = multiplayer
-	_player_two_caption.text = "PLAYER 2 · ARROWS / PAD 2"
-	_round_versus.visible = multiplayer
-	_round_player_two_card.visible = multiplayer
-	_round_player_two_caption.text = "PLAYER 2"
-	_stats_versus.visible = multiplayer
-	_player_two_stats_card.visible = multiplayer
-	_player_two_stats_title.text = "PLAYER 2"
-	_hint.text = (
-		(
-			"P1: mouse or Pad 1   |   P2: arrows or Pad 2   |   "
-			+ "Pads: %s" % controller_movement
+	if gamepad:
+		_player_one_caption.text = (
+			"PLAYER 1 · MOUSE / PAD 1"
+			if multiplayer
+			else "PLAYER 1 · SOLO · MOUSE / ARROWS / PAD 1"
 		)
-		if multiplayer
-		else (
-			"Mouse, arrow keys or Pad 1 (%s)   |   " % controller_movement
-			+ "Drive the moving chain through each can"
+		_player_two_caption.text = "PLAYER 2 · ARROWS / PAD 2"
+		_hint.text = (
+			(
+				"P1: mouse or Pad 1   |   P2: arrows or Pad 2   |   "
+				+ "Pads: %s" % controller_movement
+			)
+			if multiplayer
+			else (
+				"Mouse, arrow keys or Pad 1 (%s)   |   " % controller_movement
+				+ "Drive the moving chain through each can"
+			)
 		)
-	)
+	else:
+		_player_one_caption.text = (
+			"PLAYER 1 · MOUSE"
+			if multiplayer
+			else "PLAYER 1 · SOLO · MOUSE / ARROWS"
+		)
+		_player_two_caption.text = "PLAYER 2 · ARROWS"
+		_hint.text = (
+			"P1: mouse   |   P2: arrow keys"
+			if multiplayer
+			else (
+				"Mouse or arrow keys   |   "
+				+ "Drive the moving chain through each can"
+			)
+		)
 	_round_instructions.text = (
 		"Each can awards +%d once. Keep every powered saw on the wood workbench."
 		% points_per_can
 	)
 
 
-func _active_player_indices() -> Array[int]:
-	var players: Array[int] = [PLAYER_ONE]
-	if GameSession.player_two_enabled():
-		players.append(PLAYER_TWO)
-	return players
-
-
-func _player_color(player_index: int) -> Color:
-	return player_one_color if player_index == PLAYER_ONE else player_two_color
-
-
-func _update_scores() -> void:
-	_player_one_score.text = "%d" % _scores[PLAYER_ONE]
-	_player_two_score.text = "%d" % _scores[PLAYER_TWO]
-
-
-func _update_streaks() -> void:
-	for player_index in _active_player_indices():
-		var label := (
-			_player_one_streak if player_index == PLAYER_ONE else _player_two_streak
-		)
-		var streak: int = _streaks[player_index]
-		label.text = "COMBO x%d" % streak if streak >= 2 else " "
-	if GameSession.is_single_player():
-		_player_two_streak.text = " "
-
-
-func _update_time(seconds_left: int) -> void:
-	_displayed_seconds = maxi(seconds_left, 0)
-	_time_label.text = "%02d" % _displayed_seconds
-	if _round_active and _displayed_seconds > 0 and _displayed_seconds <= 3:
-		_show_announcement(str(_displayed_seconds), DANGER_COLOR)
-		AudioManager.request_caption(
-			"%d %s remaining" % [
-				_displayed_seconds,
-				"second" if _displayed_seconds == 1 else "seconds",
-			]
-		)
-
-
-func _update_urgency(time_left: float) -> void:
-	_time_label.pivot_offset = _time_label.size * 0.5
-	if time_left > DANGER_SECONDS:
-		_time_label.scale = Vector2.ONE
-		_time_label.add_theme_color_override("font_color", GameInfo.CREAM)
-		_danger_overlay.color = _with_alpha(DANGER_COLOR, 0.0)
-		return
-
-	var urgency := 1.0 - clampf(time_left / DANGER_SECONDS, 0.0, 1.0)
-	if _reduced_motion_enabled:
-		_time_label.scale = Vector2.ONE
-		_time_label.add_theme_color_override(
-			"font_color",
-			GameInfo.CREAM.lerp(DANGER_COLOR, urgency)
-		)
-		_danger_overlay.color = _with_alpha(DANGER_COLOR, 0.0)
-		return
-	var pulse := (sin(_ambient_time * lerpf(6.0, 11.0, urgency)) + 1.0) * 0.5
-	_time_label.scale = Vector2.ONE * (1.0 + pulse * lerpf(0.03, 0.09, urgency))
-	_time_label.add_theme_color_override(
-		"font_color",
-		DANGER_COLOR.lerp(Color.WHITE, pulse * 0.22)
-	)
-	_danger_overlay.color = _with_alpha(DANGER_COLOR, pulse * urgency * 0.045)
-
-
-func _start_round() -> void:
-	_round_id += 1
-	_round_timer.stop()
-	_load_round_assists()
+func _reset_round_state() -> void:
 	_clear_cans()
 	_clear_world_fx()
-	_scores = [0, 0]
-	_streaks = [0, 0]
-	_best_streaks = [0, 0]
 	_last_slice_times = [-1000.0, -1000.0]
 	_spawned_cans = 0
 	_escaped_cans = 0
 	_spawn_time = 0.0
-	_round_active = true
-	_round_over.hide()
-	_score_panel.hide()
-	_round_panel.show()
-	_round_panel.modulate = Color.WHITE
-	_round_panel.scale = Vector2.ONE
-	_share_status.hide()
-	_screen_flash.color = _with_alpha(Color.WHITE, 0.0)
-	_danger_overlay.color = _with_alpha(DANGER_COLOR, 0.0)
-	_shake_strength = 0.0
-	_playfield.position = Vector2.ZERO
-	_world_fx.position = Vector2.ZERO
 	_reset_chainsaws()
 	_set_chainsaws_powered(true)
-	_update_scores()
-	_update_streaks()
-	_time_progress.max_value = _active_round_duration
-	_time_progress.value = _active_round_duration
-	_round_timer.start(_active_round_duration)
-	_update_time(int(ceil(_active_round_duration)))
+
+
+func _activate_round() -> void:
 	AudioManager.play_chainsaw_start()
 	AudioManager.request_caption(
 		"Chainsaw powered" if GameSession.is_single_player() else "Chainsaws powered"
@@ -900,113 +662,66 @@ func _clear_cans() -> void:
 	_cans.clear()
 
 
-func _clear_world_fx() -> void:
-	for child in _world_fx.get_children():
-		child.queue_free()
-
-
-func _on_round_timer_timeout() -> void:
-	_round_active = false
+func _finish_round() -> void:
 	_set_chainsaws_powered(false)
-	_update_time(0)
-	_time_progress.value = 0.0
-	_update_urgency(_active_round_duration)
 	_clear_cans()
 
-	var player_one_total: int = _scores[PLAYER_ONE]
-	var player_two_total: int = _scores[PLAYER_TWO]
-	_round_player_one_score.text = "%d" % player_one_total
-	_round_player_two_score.text = "%d" % player_two_total
 
-	var result_text := "DRAW!"
-	var celebration_color := GameInfo.CREAM
+func _describe_round_outcome(
+	player_one_total: int,
+	player_two_total: int
+) -> Dictionary:
 	if GameSession.is_single_player():
-		result_text = "ROUND COMPLETE"
-		_round_subtitle.text = "Player 1 shredded %d cans across the workbench in %d seconds." % [
-			player_one_total,
-			roundi(_active_round_duration),
-		]
-		celebration_color = player_one_color
-	elif player_one_total > player_two_total:
-		result_text = "PLAYER 1 WINS!"
-		_round_subtitle.text = "Player 1's electric chainsaw wins by %d cans." % (
-			player_one_total - player_two_total
-		)
-		celebration_color = player_one_color
-	elif player_two_total > player_one_total:
-		result_text = "PLAYER 2 WINS!"
-		_round_subtitle.text = "Player 2's electric chainsaw wins by %d cans." % (
-			player_two_total - player_one_total
-		)
-		celebration_color = player_two_color
-	else:
-		_round_subtitle.text = "Both saws left the desk even after %d seconds." % (
+		return {
+			"result": "ROUND COMPLETE",
+			"subtitle": (
+				"Player 1 shredded %d cans across the workbench in %d seconds."
+				% [player_one_total, roundi(_active_round_duration)]
+			),
+			"color": _player_color(PLAYER_ONE),
+		}
+	if player_one_total > player_two_total:
+		return {
+			"result": "PLAYER 1 WINS!",
+			"subtitle": "Player 1's electric chainsaw wins by %d cans." % (
+				player_one_total - player_two_total
+			),
+			"color": _player_color(PLAYER_ONE),
+		}
+	if player_two_total > player_one_total:
+		return {
+			"result": "PLAYER 2 WINS!",
+			"subtitle": "Player 2's electric chainsaw wins by %d cans." % (
+				player_two_total - player_one_total
+			),
+			"color": _player_color(PLAYER_TWO),
+		}
+	return {
+		"result": "DRAW!",
+		"subtitle": "Both saws left the desk even after %d seconds." % (
 			roundi(_active_round_duration)
-		)
-
-	_result_label.text = result_text
-	_result_label.add_theme_color_override("font_color", celebration_color)
-	_round_highlight.text = "%s  |  %d cans escaped" % [
-		_best_combo_summary(),
-		_escaped_cans,
-	]
-	_populate_score_screen(result_text, celebration_color)
-	_spawn_round_confetti(celebration_color)
-	_round_over.show()
-	_score_panel.hide()
-	_round_panel.show()
-	_animate_modal_panel(_round_panel)
-	_play_again_button.grab_focus.call_deferred()
+		),
+		"color": StudioInfo.CREAM,
+	}
 
 
-func _best_combo_summary() -> String:
-	var player_one_best: int = _best_streaks[PLAYER_ONE]
-	if GameSession.is_single_player():
-		return "Best combo: x%d" % player_one_best
-	var player_two_best: int = _best_streaks[PLAYER_TWO]
-	if player_one_best == player_two_best:
-		return "Shared best combo: x%d" % player_one_best
-	if player_one_best > player_two_best:
-		return "Best combo: Player 1 x%d" % player_one_best
-	return "Best combo: Player 2 x%d" % player_two_best
+func _round_highlight_summary() -> String:
+	return "%s  |  %d cans escaped" % [super(), _escaped_cans]
 
 
-func _populate_score_screen(result_text: String, result_color: Color) -> void:
-	var total_slices := _total_slice_count()
-	_score_screen_title.text = result_text
-	_score_screen_title.add_theme_color_override("font_color", result_color)
-	_score_screen_subtitle.text = _round_subtitle.text
-	_game_duration_stat.text = "%d SEC" % roundi(_active_round_duration)
-	_game_hits_stat.text = "%d" % total_slices
-	_game_accuracy_stat.text = "%d%%" % _accuracy_percent(total_slices, _spawned_cans)
-
-	_populate_player_stats(PLAYER_ONE)
-	_populate_player_stats(PLAYER_TWO)
+func _round_totals() -> Dictionary:
+	return {"hits": _total_slice_count(), "attempts": _spawned_cans}
 
 
-func _populate_player_stats(player_index: int) -> void:
-	var score: int = _scores[player_index]
+func _player_stats(player_index: int) -> Dictionary:
 	var slices := _player_slice_count(player_index)
-	var misses := maxi(_spawned_cans - slices, 0)
-	var accuracy := _accuracy_percent(slices, _spawned_cans)
-	if player_index == PLAYER_ONE:
-		_player_one_stats_score.text = "%d" % score
-		_player_one_stats_hits.text = "%d" % slices
-		_player_one_stats_misses.text = "%d" % misses
-		_player_one_stats_accuracy.text = "%d%%" % accuracy
-		_player_one_stats_streak.text = "x%d" % _best_streaks[player_index]
-	else:
-		_player_two_stats_score.text = "%d" % score
-		_player_two_stats_hits.text = "%d" % slices
-		_player_two_stats_misses.text = "%d" % misses
-		_player_two_stats_accuracy.text = "%d%%" % accuracy
-		_player_two_stats_streak.text = "x%d" % _best_streaks[player_index]
-
-
-func _accuracy_percent(hits: int, opportunities: int) -> int:
-	if opportunities <= 0:
-		return 0
-	return roundi(float(hits) / float(opportunities) * 100.0)
+	return {
+		"score": _scores[player_index],
+		"hits": slices,
+		"misses": maxi(_spawned_cans - slices, 0),
+		"accuracy": _accuracy_percent(slices, _spawned_cans),
+		"streak": _best_streaks[player_index],
+	}
 
 
 func _player_slice_count(player_index: int) -> int:
@@ -1292,43 +1007,6 @@ func _spawn_clatter_effect(world_position: Vector2, can_color: Color) -> void:
 		chip_tween.finished.connect(chip.queue_free)
 
 
-func _spawn_round_confetti(color: Color) -> void:
-	if _reduced_motion_enabled:
-		return
-	var bounds := _play_bounds()
-	for index in range(24):
-		var piece := Polygon2D.new()
-		piece.polygon = PackedVector2Array([
-			Vector2(-7.0, -3.0),
-			Vector2(9.0, -5.0),
-			Vector2(6.0, 4.0),
-			Vector2(-8.0, 5.0),
-		])
-		piece.color = (
-			color.lightened(_rng.randf_range(0.0, 0.3))
-			if index % 3 == 0
-			else Color("d9e2e3")
-			if index % 3 == 1
-			else Color("ffd34e")
-		)
-		piece.position = Vector2(
-			_rng.randf_range(bounds.position.x, bounds.end.x),
-			_rng.randf_range(bounds.position.y, bounds.end.y)
-		)
-		piece.rotation = _rng.randf_range(0.0, TAU)
-		_world_fx.add_child(piece)
-		var tween := piece.create_tween().set_parallel(true)
-		tween.tween_property(
-			piece,
-			"position:y",
-			piece.position.y + _rng.randf_range(90.0, 210.0),
-			0.75
-		)
-		tween.tween_property(piece, "rotation", piece.rotation + TAU, 0.75)
-		tween.tween_property(piece, "modulate:a", 0.0, 0.75).set_delay(0.2)
-		tween.finished.connect(piece.queue_free)
-
-
 func _set_chainsaws_powered(powered: bool) -> void:
 	for player_index in _active_player_indices():
 		var chainsaw := _chainsaws[player_index] as ChainsawCursor
@@ -1336,268 +1014,7 @@ func _set_chainsaws_powered(powered: bool) -> void:
 			chainsaw.set_powered(powered)
 
 
-func _add_screen_shake(amount: float) -> void:
-	if not _intense_effects_enabled or _reduced_motion_enabled:
-		return
-	_shake_strength = maxf(_shake_strength, amount)
-
-
-func _update_screen_shake(delta: float) -> void:
-	if (
-		not _intense_effects_enabled
-		or _reduced_motion_enabled
-		or _shake_strength <= 0.05
-	):
-		_shake_strength = 0.0
-		_playfield.position = Vector2.ZERO
-		_world_fx.position = Vector2.ZERO
-		return
-
-	var offset := Vector2(
-		_rng.randf_range(-_shake_strength, _shake_strength),
-		_rng.randf_range(-_shake_strength, _shake_strength)
-	)
-	_playfield.position = offset
-	_world_fx.position = offset
-	_shake_strength = move_toward(
-		_shake_strength,
-		0.0,
-		delta * SHAKE_DECAY
-	)
-
-
-func _flash_screen(color: Color, alpha: float) -> void:
-	if _flash_tween and _flash_tween.is_valid():
-		_flash_tween.kill()
-	if not _intense_effects_enabled:
-		_flash_tween = null
-		_screen_flash.color = _with_alpha(color, 0.0)
-		return
-	_screen_flash.color = _with_alpha(color, alpha)
-	_flash_tween = create_tween()
-	_flash_tween.tween_property(_screen_flash, "color:a", 0.0, 0.28)
-
-
-func _show_announcement(text: String, color: Color) -> void:
-	if _announcement_tween and _announcement_tween.is_valid():
-		_announcement_tween.kill()
-	_announcement.show()
-	_announcement.text = text
-	_announcement.add_theme_color_override("font_color", color)
-	_announcement.pivot_offset = _announcement.size * 0.5
-	if _reduced_motion_enabled:
-		_announcement.scale = Vector2.ONE
-		_announcement.modulate = Color.WHITE
-		_announcement_tween = create_tween()
-		_announcement_tween.tween_interval(0.28)
-		_announcement_tween.tween_property(
-			_announcement,
-			"modulate:a",
-			0.0,
-			0.16
-		)
-		_announcement_tween.finished.connect(_announcement.hide)
-		return
-	_announcement.scale = Vector2.ONE * 0.72
-	_announcement.modulate.a = 0.0
-	_announcement_tween = create_tween()
-	_announcement_tween.tween_property(_announcement, "modulate:a", 1.0, 0.1)
-	_announcement_tween.parallel().tween_property(
-		_announcement,
-		"scale",
-		Vector2.ONE,
-		0.2
-	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_announcement_tween.tween_interval(0.28)
-	_announcement_tween.tween_property(_announcement, "modulate:a", 0.0, 0.18)
-	_announcement_tween.finished.connect(_announcement.hide)
-
-
-func _animate_modal_panel(panel: Control) -> void:
-	if _round_panel_tween and _round_panel_tween.is_valid():
-		_round_panel_tween.kill()
-	panel.pivot_offset = panel.size * 0.5
-	if _reduced_motion_enabled:
-		panel.scale = Vector2.ONE
-		panel.modulate = Color.WHITE
-		return
-	panel.scale = Vector2.ONE * 0.82
-	panel.modulate.a = 0.0
-	_round_panel_tween = create_tween().set_parallel(true)
-	_round_panel_tween.tween_property(panel, "scale", Vector2.ONE, 0.3).set_trans(
-		Tween.TRANS_BACK
-	).set_ease(Tween.EASE_OUT)
-	_round_panel_tween.tween_property(panel, "modulate:a", 1.0, 0.16)
-
-
-func _on_play_again_pressed() -> void:
-	_start_round()
-
-
-func _on_exit_to_main_menu_pressed() -> void:
-	_round_timer.stop()
-	_set_chainsaws_powered(false)
-	Router.goto(main_menu_scene)
-
-
-func _on_see_score_pressed() -> void:
-	_round_panel.hide()
-	_score_panel.show()
-	_animate_modal_panel(_score_panel)
-	_back_to_results_button.grab_focus.call_deferred()
-
-
-func _on_back_to_results_pressed() -> void:
-	_show_round_results()
-
-
-func _show_round_results() -> void:
-	_score_panel.hide()
-	_round_panel.show()
-	_animate_modal_panel(_round_panel)
-	_see_score_button.grab_focus.call_deferred()
-
-
-func open_pause_menu() -> void:
-	if is_instance_valid(_pause_menu):
-		return
-	var packed: PackedScene = load(pause_scene)
-	if packed == null:
-		push_error("Could not load pause menu scene '%s'." % pause_scene)
-		return
-	_pause_menu = packed.instantiate()
-	_pause_menu.closed.connect(_on_pause_closed)
-	_hud.add_child(_pause_menu)
-
-
-func _on_pause_closed() -> void:
-	_pause_menu = null
-
-
-func _on_pause_button_pressed() -> void:
-	open_pause_menu()
-
-
-func _on_share_pressed() -> void:
-	if _sharing:
-		return
-	_sharing = true
-	var shared_round_id := _round_id
-	_set_share_buttons_disabled(true)
-	_show_share_status("Building your share image...", GameInfo.MUTED, false)
-
-	var result: Dictionary = await ShareManager.generate_score_image(_share_payload())
-	if not is_inside_tree():
-		return
-
-	_sharing = false
-	_set_share_buttons_disabled(false)
-	if shared_round_id != _round_id:
-		return
-	if bool(result.get("ok", false)):
-		AudioManager.play_share()
-		ShareManager.show_preview(result)
-		_show_share_status(str(result.get("message", "Share image ready.")), GameInfo.SKY)
-	else:
-		AudioManager.play_game_miss()
-		var message := str(result.get("message", "The share image could not be created."))
-		push_warning(message)
-		_show_share_status(message, DANGER_COLOR)
-
-
-func _share_payload() -> Dictionary:
-	var total_slices := _total_slice_count()
-	var best_combo := maxi(_best_streaks[PLAYER_ONE], _best_streaks[PLAYER_TWO])
-	var accuracy := _accuracy_percent(total_slices, _spawned_cans)
-	var score_values: Array[int] = [_scores[PLAYER_ONE]]
-	if GameSession.player_two_enabled():
-		score_values.append(_scores[PLAYER_TWO])
-	return {
-		"game_id": GameInfo.SLICE_AND_SLASH_ID,
-		"game_title": GameInfo.DESK_CAN_SAW_TITLE,
-		"studio": GameInfo.STUDIO,
-		"website": GameInfo.WEBSITE,
-		"stats_url": GameInfo.stats_url_for(GameInfo.SLICE_AND_SLASH_ID),
-		"mode": GameSession.mode_title(),
-		"result": _result_label.text,
-		"subtitle": _round_subtitle.text,
-		"score_caption": "SOLO SCORE" if GameSession.is_single_player() else "FINAL SCORE",
-		"score": (
-			str(_scores[PLAYER_ONE])
-			if GameSession.is_single_player()
-			else "%d - %d" % [_scores[PLAYER_ONE], _scores[PLAYER_TWO]]
-		),
-		"accuracy": "%d%%" % accuracy,
-		"hits": str(total_slices),
-		"combo": "x%d" % best_combo,
-		"score_values": score_values,
-		"accuracy_value": accuracy,
-		"hits_value": total_slices,
-		"misses_value": maxi(_spawned_cans - total_slices, 0),
-		"combo_value": best_combo,
-		"achievements": _share_achievement_titles(),
-		"achievements_are_new": false,
-		"achievement_count": AchievementManager.unlocked_count(),
-		"achievement_badge": "ACH",
-		"accent_color": (
-			player_one_color
-			if GameSession.is_single_player() or _scores[PLAYER_ONE] >= _scores[PLAYER_TWO]
-			else player_two_color
-		),
-		"secondary_color": player_two_color if GameSession.player_two_enabled() else player_one_color,
-		"footer": "%s  |  %s" % [GameInfo.TAGLINE, GameInfo.website_label()],
-	}
-
-
-func _share_achievement_titles() -> PackedStringArray:
-	var titles := PackedStringArray()
-	for achievement in AchievementManager.get_unlocked_achievements():
-		titles.append(str(achievement.get("title", "Achievement")))
-	return titles
-
-
-func _set_share_buttons_disabled(disabled: bool) -> void:
-	_share_button.disabled = disabled
-	_stats_share_button.disabled = disabled
-
-
-func _show_share_status(message: String, color: Color, auto_hide := true) -> void:
-	if _share_status_tween and _share_status_tween.is_valid():
-		_share_status_tween.kill()
-	_share_status.text = message
-	_share_status.add_theme_color_override("font_color", color)
-	_share_status.modulate.a = 1.0
-	_share_status.show()
-	if not auto_hide:
-		return
-	_share_status_tween = create_tween()
-	_share_status_tween.tween_interval(2.8)
-	_share_status_tween.tween_property(_share_status, "modulate:a", 0.0, 0.3)
-	_share_status_tween.tween_callback(_share_status.hide)
-
-
-func _on_setting_changed(key: String, value: Variant) -> void:
-	if key == Settings.VISUAL_EFFECTS_KEY:
-		_set_intense_effects_enabled(bool(value))
-		return
-	if key == Settings.REDUCED_MOTION_KEY:
-		_set_reduced_motion_enabled(bool(value))
-		return
-	if key == Settings.PLAYER_LABELS_KEY:
-		_apply_chainsaw_labels()
-		return
-	if key.begins_with("controls/"):
-		_configure_mode_ui()
-
-
-func _set_intense_effects_enabled(value: bool) -> void:
-	_intense_effects_enabled = value
-	if not value:
-		_reset_intense_effects()
-
-
 func _set_reduced_motion_enabled(value: bool) -> void:
-	_reduced_motion_enabled = value
 	for entry in _chainsaws:
 		var chainsaw := entry as ChainsawCursor
 		if chainsaw != null:
@@ -1606,57 +1023,15 @@ func _set_reduced_motion_enabled(value: bool) -> void:
 		var can := entry as SliceCan
 		if can != null:
 			can.set_reduced_motion(value)
-	if value:
-		_ambient_time = 0.0
-		_reset_reduced_motion_state()
-	queue_redraw()
+	super(value)
 
 
-func _load_round_assists() -> void:
-	_active_round_duration = round_duration + Settings.extra_round_time()
-	_round_gameplay_speed = Settings.gameplay_speed_scale()
-	_round_target_size = Settings.target_size_scale()
-
-
-func _effective_can_radius() -> float:
-	return can_radius * _round_target_size
-
-
-func _apply_chainsaw_labels() -> void:
+func _on_player_labels_changed() -> void:
 	for entry in _chainsaws:
 		var chainsaw := entry as ChainsawCursor
 		if chainsaw != null:
 			chainsaw.set_player_label_visible(Settings.player_labels_enabled())
 
 
-func _reset_intense_effects() -> void:
-	if _flash_tween and _flash_tween.is_valid():
-		_flash_tween.kill()
-	_flash_tween = null
-	_shake_strength = 0.0
-	_playfield.position = Vector2.ZERO
-	_world_fx.position = Vector2.ZERO
-	_screen_flash.color = _with_alpha(Color.WHITE, 0.0)
-
-
-func _reset_reduced_motion_state() -> void:
-	_shake_strength = 0.0
-	_playfield.position = Vector2.ZERO
-	_world_fx.position = Vector2.ZERO
-	_danger_overlay.color = _with_alpha(DANGER_COLOR, 0.0)
-	_time_label.scale = Vector2.ONE
-	_clear_world_fx()
-	if _announcement_tween and _announcement_tween.is_valid():
-		_announcement_tween.kill()
-	_announcement.hide()
-	if _round_panel_tween and _round_panel_tween.is_valid():
-		_round_panel_tween.kill()
-	for panel in [_round_panel, _score_panel]:
-		panel.scale = Vector2.ONE
-		panel.modulate = Color.WHITE
-
-
-func _with_alpha(color: Color, alpha: float) -> Color:
-	var result := color
-	result.a = alpha
-	return result
+func _effective_can_radius() -> float:
+	return can_radius * _round_target_size

@@ -33,15 +33,6 @@ const TARGET_SIZE_KEY := "accessibility/target_size"
 const EXTRA_ROUND_TIME_KEY := "accessibility/extra_round_time"
 const CONTROLLER_SPEED_KEY := "accessibility/controller_speed"
 const CONTROLLER_DEADZONE_KEY := "accessibility/controller_deadzone"
-
-## Base-game (Target Rush) tuning. These are player-facing game options rather
-## than assists, so they scale in both directions and are read when a round
-## starts, exactly like the assists above.
-const TRIANGLE_SIZE_KEY := "game/triangle_size"
-const TRIANGLE_SPEED_KEY := "game/triangle_speed"
-const TRIANGLE_SPEED_RUSH_KEY := "game/triangle_speed_rush"
-const TRIANGLE_ROUND_LENGTH_KEY := "game/triangle_round_length"
-
 const MIN_GAMEPLAY_SPEED := 0.6
 const MAX_GAMEPLAY_SPEED := 1.0
 const MIN_TARGET_SIZE := 1.0
@@ -52,14 +43,6 @@ const MIN_CONTROLLER_SPEED := 0.5
 const MAX_CONTROLLER_SPEED := 1.5
 const MIN_CONTROLLER_DEADZONE := 0.05
 const MAX_CONTROLLER_DEADZONE := 0.5
-const MIN_TRIANGLE_SIZE := 0.6
-const MAX_TRIANGLE_SIZE := 1.6
-const MIN_TRIANGLE_SPEED := 0.5
-const MAX_TRIANGLE_SPEED := 2.0
-const MIN_TRIANGLE_SPEED_RUSH := 0.0
-const MAX_TRIANGLE_SPEED_RUSH := 1.0
-const MIN_TRIANGLE_ROUND_LENGTH := 15.0
-const MAX_TRIANGLE_ROUND_LENGTH := 90.0
 
 enum WindowMode { WINDOWED, FULLSCREEN, BORDERLESS }
 
@@ -154,10 +137,6 @@ const DEFAULTS := {
 	"accessibility/controller_speed": 1.0,
 	"accessibility/controller_deadzone": 0.22,
 	"game/show_instructions": true,
-	"game/triangle_size": 1.0,
-	"game/triangle_speed": 1.0,
-	"game/triangle_speed_rush": 0.35,
-	"game/triangle_round_length": 30.0,
 	"controls/player_one_target_1": KEY_1,
 	"controls/player_one_target_2": KEY_2,
 	"controls/player_one_target_3": KEY_3,
@@ -172,6 +151,7 @@ const DEFAULTS := {
 }
 
 var _values: Dictionary = {}
+var _tunables: Dictionary = {}
 var _save_timer: Timer
 
 
@@ -186,6 +166,7 @@ func _ready() -> void:
 	add_child(_save_timer)
 
 	_values = DEFAULTS.duplicate(true)
+	_register_tunables()
 	load_settings()
 	var repaired_controls := _repair_control_values()
 	apply_controls()
@@ -251,36 +232,53 @@ func extra_round_time() -> float:
 	)
 
 
-func triangle_size_scale() -> float:
+## --- Game tunables ---------------------------------------------------------
+##
+## Games declare their own player-facing options through
+## [member GameManifest.tunables]; the framework only stores and clamps them.
+
+
+## Registered tunable definitions across every game, keyed by setting key.
+func tunables() -> Dictionary:
+	if _tunables.is_empty():
+		_register_tunables()
+	return _tunables
+
+
+## Clamped value for a game-declared numeric option.
+func tunable(key: String) -> float:
+	var definition: Dictionary = tunables().get(key, {})
+	var fallback := float(definition.get("default", 0.0))
 	return clampf(
-		float(get_value(TRIANGLE_SIZE_KEY, 1.0)),
-		MIN_TRIANGLE_SIZE,
-		MAX_TRIANGLE_SIZE
+		float(get_value(key, fallback)),
+		float(definition.get("min", fallback)),
+		float(definition.get("max", fallback))
 	)
 
 
-func triangle_speed_scale() -> float:
-	return clampf(
-		float(get_value(TRIANGLE_SPEED_KEY, 1.0)),
-		MIN_TRIANGLE_SPEED,
-		MAX_TRIANGLE_SPEED
-	)
+## `Vector2` would truncate to 32-bit, so the bounds are exposed separately.
+func tunable_min(key: String) -> float:
+	var definition: Dictionary = tunables().get(key, {})
+	return float(definition.get("min", definition.get("default", 0.0)))
 
 
-func triangle_speed_rush() -> float:
-	return clampf(
-		float(get_value(TRIANGLE_SPEED_RUSH_KEY, 0.35)),
-		MIN_TRIANGLE_SPEED_RUSH,
-		MAX_TRIANGLE_SPEED_RUSH
-	)
+func tunable_max(key: String) -> float:
+	var definition: Dictionary = tunables().get(key, {})
+	return float(definition.get("max", definition.get("default", 0.0)))
 
 
-func triangle_round_length() -> float:
-	return clampf(
-		float(get_value(TRIANGLE_ROUND_LENGTH_KEY, 30.0)),
-		MIN_TRIANGLE_ROUND_LENGTH,
-		MAX_TRIANGLE_ROUND_LENGTH
-	)
+func _register_tunables() -> void:
+	for manifest in GameCatalog.all():
+		for definition in manifest.tunables:
+			var key := str(definition.get("key", ""))
+			if key.is_empty():
+				continue
+			if _tunables.has(key):
+				push_warning("Settings: duplicate tunable key '%s'." % key)
+				continue
+			_tunables[key] = definition
+			if not _values.has(key):
+				_values[key] = definition.get("default", 0.0)
 
 
 func controller_movement_scale() -> float:

@@ -77,19 +77,16 @@ func _test_settings_menu(settings: Node) -> void:
 	var label := menu.get_node_or_null(
 		"Margins/Layout/Tabs/Accessibility/Pad/List/VisualEffectsRow/Label"
 	) as Label
-	var description := menu.get_node_or_null(
-		"Margins/Layout/Tabs/Accessibility/Pad/List/VisualEffectsHelp"
-	) as Label
 	_expect(toggle != null, "Settings must expose an Intense visual effects toggle.")
 	_expect(
 		label != null and label.text == "Intense visual effects",
 		"The accessibility toggle must identify the setting as intense effects."
 	)
+	var description := toggle.tooltip_text if toggle != null else ""
 	_expect(
-		description != null
-		and description.text.contains("full-screen flashes")
-		and description.text.contains("screen shake")
-		and description.text.contains("Other animation"),
+		description.contains("full-screen flashes")
+		and description.contains("screen shake")
+		and description.contains("Other animation"),
 		"The accessibility copy must explain the setting's focused scope."
 	)
 	if toggle != null:
@@ -112,7 +109,7 @@ func _test_settings_menu(settings: Node) -> void:
 
 func _test_target_feedback() -> void:
 	var target := _instantiate_scene(
-		"res://scenes/game/triangle_target.tscn"
+		"res://games/target_rush/triangle_target.tscn"
 	) as TriangleTarget
 	if target == null:
 		return
@@ -173,9 +170,9 @@ func _test_chainsaw_feedback() -> void:
 
 
 func _test_target_rush(session: Node, settings: Node) -> void:
-	session.call("select_target_rush")
+	GameCatalog.select("target_rush")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://scenes/game/gameplay.tscn")
+	var game := _instantiate_scene("res://games/target_rush/gameplay.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -204,7 +201,7 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	_expect_hard_effects_cleared(
 		game,
 		"Target Rush",
-		game.get_node("%Targets") as Node2D
+		game.get_node("%Playfield") as Node2D
 	)
 	var world_fx := game.get_node("%WorldFX") as Node2D
 	_expect(
@@ -233,7 +230,7 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	_expect_hard_effects_cleared(
 		game,
 		"Target Rush",
-		game.get_node("%Targets") as Node2D
+		game.get_node("%Playfield") as Node2D
 	)
 	_expect(
 		world_fx.get_child_count() == soft_effect_count,
@@ -243,9 +240,9 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 
 
 func _test_slice_and_slash(session: Node, settings: Node) -> void:
-	session.call("select_slice_and_slash")
+	GameCatalog.select("slice_and_slash")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://scenes/game/slice_and_slash.tscn")
+	var game := _instantiate_scene("res://games/slice_and_slash/slice_and_slash.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -266,7 +263,7 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 	var can := SliceCan.new()
 	can.configure(30.0, Vector2.ZERO, 0.0, Color.WHITE, 2.0)
 	can.position = chainsaw.position
-	game.get_node("%Targets").add_child(can)
+	game.get_node("%Playfield").add_child(can)
 	var cans: Array = game.get("_cans")
 	cans.append(can)
 
@@ -282,7 +279,7 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 	_expect_hard_effects_cleared(
 		game,
 		"Desk-Can-Saw",
-		game.get_node("%Targets") as Node2D
+		game.get_node("%Playfield") as Node2D
 	)
 	var world_fx := game.get_node("%WorldFX") as Node2D
 	_expect(
@@ -315,7 +312,7 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 	_expect_hard_effects_cleared(
 		game,
 		"Desk-Can-Saw",
-		game.get_node("%Targets") as Node2D
+		game.get_node("%Playfield") as Node2D
 	)
 	_expect(
 		world_fx.get_child_count() == soft_effect_count,

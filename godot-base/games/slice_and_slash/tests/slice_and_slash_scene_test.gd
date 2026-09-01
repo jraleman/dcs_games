@@ -20,7 +20,7 @@ func _run() -> void:
 		return
 
 	var original_progress: Dictionary = achievement_manager.call(
-		"slice_and_slash_progress"
+		"game_progress", "slice_and_slash"
 	)
 	await _test_slice_mode_access(session, achievement_manager)
 	achievement_manager.set("_progression", _slice_progress(true, true))
@@ -35,7 +35,7 @@ func _test_slice_mode_access(
 	session: Node,
 	achievement_manager: Node
 ) -> void:
-	session.call("select_slice_and_slash")
+	GameCatalog.select("slice_and_slash")
 	await _assert_slice_mode_access(
 		achievement_manager,
 		true,
@@ -123,7 +123,7 @@ func _assert_slice_mode_access(
 
 
 func _test_slice_mode_flow(session: Node) -> void:
-	session.call("select_slice_and_slash")
+	GameCatalog.select("slice_and_slash")
 	session.call("configure_single_player")
 
 	var menu := _instantiate_scene("res://scenes/menus/mode_select.tscn")
@@ -132,7 +132,7 @@ func _test_slice_mode_flow(session: Node) -> void:
 	await process_frame
 	var title := menu.get_node("Margins/Layout/Header/Title") as Label
 	_expect(
-		title.text == GameInfo.DESK_CAN_SAW_TITLE,
+		title.text == GameCatalog.get_manifest("slice_and_slash").title,
 		"The unlocked menu flow must identify Desk-Can-Saw."
 	)
 	menu.call("_on_multiplayer_pressed")
@@ -182,9 +182,9 @@ func _slice_progress(
 
 
 func _test_single_player_scene(session: Node) -> void:
-	session.call("select_slice_and_slash")
+	GameCatalog.select("slice_and_slash")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://scenes/game/slice_and_slash.tscn")
+	var game := _instantiate_scene("res://games/slice_and_slash/slice_and_slash.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -250,7 +250,7 @@ func _test_single_player_scene(session: Node) -> void:
 		"Desk-Can-Saw must synthesize a looping electric chainsaw motor."
 	)
 	game.call("_move_player_one_to", Vector2(-500.0, -500.0))
-	var bounds: Rect2 = game.call("_play_bounds")
+	var bounds: Rect2 = game.call("_playfield_bounds")
 	_expect(
 		player_one.collision_rect().position.x >= bounds.position.x - 0.01,
 		"Player 1's chainsaw must stay inside the left playfield boundary."
@@ -263,7 +263,7 @@ func _test_single_player_scene(session: Node) -> void:
 	var can := SliceCan.new()
 	can.configure(30.0, Vector2.ZERO, 0.0, Color.WHITE, 0.0)
 	can.position = player_one.position
-	game.get_node("%Targets").add_child(can)
+	game.get_node("%Playfield").add_child(can)
 	var cans: Array = game.get("_cans")
 	cans.append(can)
 	game.set("_round_active", true)
@@ -281,13 +281,13 @@ func _test_single_player_scene(session: Node) -> void:
 
 
 func _test_multiplayer_isolation(session: Node) -> void:
-	session.call("select_slice_and_slash")
+	GameCatalog.select("slice_and_slash")
 	session.call(
 		"configure_multiplayer",
 		GAME_SESSION_SCRIPT.PlayerTwoController.HUMAN,
 		GAME_SESSION_SCRIPT.CpuDifficulty.MEDIUM
 	)
-	var game := _instantiate_scene("res://scenes/game/slice_and_slash.tscn")
+	var game := _instantiate_scene("res://games/slice_and_slash/slice_and_slash.tscn")
 	if game == null:
 		return
 	await process_frame

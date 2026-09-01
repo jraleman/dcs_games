@@ -11,7 +11,7 @@ var radius := 34.0
 var velocity := Vector2.ZERO
 var gravity := 220.0
 var sliced := false
-var can_color := GameInfo.SKY
+var can_color := StudioInfo.SKY
 var _spin_speed := 0.0
 var _reduced_motion := false
 

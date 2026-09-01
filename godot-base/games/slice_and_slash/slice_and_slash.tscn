@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/game/game_shell.tscn" id="1_shell"]
+[ext_resource type="Script" path="res://games/slice_and_slash/slice_and_slash.gd" id="2_script"]
+
+[node name="DeskCanSaw" instance=ExtResource("1_shell")]
+script = ExtResource("2_script")
+screen_shake_decay = 34.0

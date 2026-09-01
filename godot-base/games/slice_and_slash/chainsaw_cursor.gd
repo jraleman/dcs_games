@@ -10,7 +10,7 @@ const REDUCED_MOTION_SETTING := "accessibility/reduced_motion"
 
 var player_index := -1
 var body_size := Vector2(164.0, 54.0)
-var saw_color := GameInfo.SKY
+var saw_color := StudioInfo.SKY
 var _motor_stream: AudioStream
 var _motor_player: AudioStreamPlayer
 var _motor_level := 0.0

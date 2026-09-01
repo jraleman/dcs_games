@@ -1,19 +1,24 @@
 extends MenuScreen
 
-## Tutorial clips recorded by `tools/record_tutorials.ps1`. A missing file is
-## not an error: the screen simply falls back to the static explanation.
-const TUTORIAL_VIDEOS := {
-	GameInfo.TARGET_RUSH_ID: "res://assets/video/tutorial_target_rush.ogv",
-	GameInfo.SLICE_AND_SLASH_ID: "res://assets/video/tutorial_slice_and_slash.ogv",
-}
+## Walkthrough clips are declared per game in its [GameManifest] and recorded by
+## `tools/record_tutorials.ps1`. A missing file is not an error: the screen
+## simply falls back to the static explanation.
+##
+## The clip is the centrepiece here: it reserves a fixed slice of the screen
+## height so a viewer can actually read the round it is showing.
 
-## Still frame shown before playback starts, so the card never reads as a black
-## box (the clips fade in from black).
-const TUTORIAL_POSTERS := {
-	GameInfo.TARGET_RUSH_ID: "res://assets/video/tutorial_target_rush_poster.webp",
-	GameInfo.SLICE_AND_SLASH_ID:
-		"res://assets/video/tutorial_slice_and_slash_poster.webp",
-}
+## Smallest usable clip width; also stops the grid squeezing the video column.
+const VIDEO_MIN_WIDTH := 420.0
+## Share of the viewport height reserved for the clip. Tuned so a 16:9 screen
+## still fits the whole card without scrolling.
+const VIDEO_HEIGHT_RATIO := 0.369
+const VIDEO_MIN_HEIGHT := 240.0
+const VIDEO_MAX_HEIGHT := 560.0
+
+## Portrait tints, matching the P1/P2 colours the gameplay HUD already uses so a
+## player is recognisable from the instructions through to the round itself.
+const PLAYER_ONE_COLOR := Color("4da3ff")
+const PLAYER_TWO_COLOR := Color("ff5c6c")
 
 @onready var _margins: MarginContainer = %Margins
 @onready var _mode_label: Label = %ModeLabel
@@ -22,6 +27,7 @@ const TUTORIAL_POSTERS := {
 @onready var _summary: Label = %Summary
 @onready var _body: GridContainer = %Body
 @onready var _video_card: PanelContainer = %VideoCard
+@onready var _video_frame: AspectRatioContainer = %VideoFrame
 @onready var _video_title: Label = %VideoTitle
 @onready var _video: VideoStreamPlayer = %Video
 @onready var _poster_image: TextureRect = %PosterImage
@@ -32,16 +38,12 @@ const TUTORIAL_POSTERS := {
 @onready var _play_button: Button = %PlayButton
 @onready var _video_caption: Label = %VideoCaption
 @onready var _demo_prompt: Label = %DemoPrompt
-@onready var _demo_one: PanelContainer = %DemoOne
-@onready var _demo_two: PanelContainer = %DemoTwo
-@onready var _demo_three: PanelContainer = %DemoThree
-@onready var _demo_one_label: Label = %DemoOneLabel
-@onready var _demo_two_label: Label = %DemoTwoLabel
-@onready var _demo_three_label: Label = %DemoThreeLabel
 @onready var _rule: ColorRect = %Rule
 @onready var _control_grid: GridContainer = %ControlGrid
+@onready var _player_one_avatar: PlayerAvatar = %PlayerOneAvatar
 @onready var _player_one_controls: Label = %PlayerOneControls
 @onready var _opponent_card: PanelContainer = %OpponentCard
+@onready var _opponent_avatar: PlayerAvatar = %OpponentAvatar
 @onready var _opponent_title: Label = %OpponentTitle
 @onready var _opponent_controls: Label = %OpponentControls
 @onready var _rules: Label = %Rules
@@ -50,9 +52,7 @@ const TUTORIAL_POSTERS := {
 @onready var _start_button: Button = %StartButton
 
 var _multiplayer := false
-var _demo_targets: Array[PanelContainer] = []
 var _entrance_tween: Tween
-var _demo_cycle_tween: Tween
 var _rule_tween: Tween
 var _reduced_motion := false
 var _video_ready := false
@@ -63,16 +63,18 @@ func _ready() -> void:
 	first_focus = _start_button
 	margins = _margins
 	_multiplayer = GameSession.player_two_enabled()
-	_demo_targets = [_demo_one, _demo_two, _demo_three]
 	_populate_instructions()
 	_setup_video()
 	_show_again.button_pressed = bool(Settings.get_value("game/show_instructions", true))
 	_show_again.toggled.connect(_on_show_again_toggled)
-	for target in _demo_targets:
-		target.resized.connect(_center_pivot.bind(target))
+	GameSession.gamepad_availability_changed.connect(_on_gamepad_availability_changed)
 	_play_entrance.call_deferred()
-	_start_demo_loop.call_deferred()
 	super()
+
+
+## The control cards only list pad bindings while a pad is attached.
+func _on_gamepad_availability_changed(_available: bool) -> void:
+	_populate_instructions()
 
 
 func _process(_delta: float) -> void:
@@ -87,12 +89,21 @@ func _exit_tree() -> void:
 func _on_layout_changed(size: Vector2) -> void:
 	var portrait := Responsive.is_portrait(size)
 	_body.columns = 1 if portrait or not _video_ready else 2
+	# Long content stacks in portrait; landscape multiplayer has the width to
+	# show both players' cards side by side.
 	_control_grid.columns = 1 if not _multiplayer or portrait else 2
+	# The clip is the primary teaching aid, so claim a fixed slice of the screen
+	# height for it. Anything the card cannot fit scrolls, rather than shrinking
+	# the picture down to a thumbnail.
+	_video_frame.custom_minimum_size = Vector2(
+		VIDEO_MIN_WIDTH, clampf(size.y * VIDEO_HEIGHT_RATIO, VIDEO_MIN_HEIGHT, VIDEO_MAX_HEIGHT)
+	)
 
 
 func _populate_instructions() -> void:
-	if GameSession.is_slice_and_slash():
-		_populate_slice_and_slash_instructions()
+	_configure_avatars()
+	if _uses_direct_movement():
+		_populate_direct_movement_instructions()
 		return
 
 	_mode_label.text = GameSession.mode_title().to_upper()
@@ -100,10 +111,6 @@ func _populate_instructions() -> void:
 	_rules.text = (
 		"Bright target = correct  ·  Correct hit +1  ·  Wrong target -1  ·  Esc pauses"
 	)
-	var player_one_actions := Settings.control_actions_for_player(0)
-	var demo_labels := [_demo_one_label, _demo_two_label, _demo_three_label]
-	for index in range(mini(player_one_actions.size(), demo_labels.size())):
-		_set_demo_binding(demo_labels[index], player_one_actions[index])
 	_player_one_controls.text = _target_rush_controls(0, 1)
 	if GameSession.is_single_player():
 		_summary.text = (
@@ -142,44 +149,82 @@ func _populate_instructions() -> void:
 		_opponent_controls.text = _target_rush_controls(1, 2)
 
 
-func _populate_slice_and_slash_instructions() -> void:
+## Each control card carries a portrait placeholder so the roster is readable at
+## a glance. The tag tracks who actually holds the slot, so a CPU opponent is
+## never presented as a second human player.
+func _configure_avatars() -> void:
+	_player_one_avatar.configure(
+		"P1", PLAYER_ONE_COLOR, "Player 1 portrait placeholder."
+	)
+	if GameSession.is_single_player():
+		return
+	var cpu := GameSession.player_two_is_cpu()
+	_opponent_avatar.configure(
+		"CPU" if cpu else "P2",
+		PLAYER_TWO_COLOR,
+		(
+			"CPU opponent portrait placeholder."
+			if cpu
+			else "Player 2 portrait placeholder."
+		)
+	)
+
+
+## Copy for games whose players steer a cursor directly
+## ([constant GameManifest.CONTROL_STYLE_DIRECT_MOVEMENT]).
+func _populate_direct_movement_instructions() -> void:
 	_mode_label.text = "%s · %s" % [
-		GameInfo.DESK_CAN_SAW_TITLE.to_upper(),
+		_current_game_title().to_upper(),
 		GameSession.mode_title().to_upper(),
 	]
-	_set_demo_text(_demo_one_label, "MOVE")
-	_set_demo_text(_demo_two_label, "REV")
-	_set_demo_text(_demo_three_label, "+1")
-	_headline.text = "Slice every can before it lands"
-	_rules.text = (
-		"Touch a can to cut it  ·  Each can scores +1 once  ·  "
-		+ "Landed cans break your streak  ·  Esc pauses"
+	_headline.text = _game_text(
+		"instructions_headline", "Reach every target before it disappears"
 	)
-	_demo_prompt.text = "DRIVE THE ELECTRIC CHAIN THROUGH A CAN"
+	_rules.text = _game_text(
+		"instructions_rules",
+		"Touch a target to score  ·  Each target scores once  ·  Esc pauses"
+	)
+	_demo_prompt.text = _game_text(
+		"instructions_demo_prompt", "MOVE YOUR CURSOR ONTO A TARGET"
+	)
 	if GameSession.is_single_player():
-		_summary.text = (
-			"Move Player 1's electric chainsaw over the workshop desk. Each can "
-			+ "erupts in sparks and scores exactly once."
+		_summary.text = _game_text(
+			"instructions_solo_summary",
+			"Steer Player 1 around the board and clear every target you reach."
 		)
-		_player_one_controls.text = (
-			"Mouse or arrow keys\nController 1: %s"
-			% Settings.controller_movement_scheme_label()
+		_player_one_controls.text = _direct_movement_controls(
+			"Mouse or arrow keys", 1
 		)
 		_opponent_card.hide()
 	else:
-		_summary.text = (
-			"Both players work the same can-covered desk. The first electric "
-			+ "chainsaw to tear through a can earns its point."
+		_summary.text = _game_text(
+			"instructions_versus_summary",
+			"Both players share one board. The first player to reach a target "
+			+ "earns its point."
 		)
-		_player_one_controls.text = (
-			"Player 1: mouse\nController 1: %s"
-			% Settings.controller_movement_scheme_label()
-		)
+		_player_one_controls.text = _direct_movement_controls("Player 1: mouse", 1)
 		_opponent_title.text = "PLAYER 2"
-		_opponent_controls.text = (
-			"Player 2: arrow keys\nController 2: %s"
-			% Settings.controller_movement_scheme_label()
+		_opponent_controls.text = _direct_movement_controls(
+			"Player 2: arrow keys", 2
 		)
+
+
+## One control card for a direct-movement game: the keyboard/mouse line, plus
+## a pad line only while a pad is actually connected.
+func _direct_movement_controls(keyboard_line: String, controller_number: int) -> String:
+	if not GameSession.gamepad_connected():
+		return keyboard_line
+	return "%s\nController %d: %s" % [
+		keyboard_line,
+		controller_number,
+		Settings.controller_movement_scheme_label(),
+	]
+
+
+## Screen copy for the active game, falling back to neutral framework wording.
+func _game_text(key: String, fallback: String) -> String:
+	var manifest := GameCatalog.current()
+	return manifest.text(key, fallback) if manifest else fallback
 
 
 # --- Tutorial video ---------------------------------------------------------
@@ -188,7 +233,8 @@ func _populate_slice_and_slash_instructions() -> void:
 ## Loads the walkthrough clip for the active game. When the file is missing the
 ## card is removed and the screen keeps its original single-column layout.
 func _setup_video() -> void:
-	var path := String(TUTORIAL_VIDEOS.get(_current_game_id(), ""))
+	var manifest := GameCatalog.current()
+	var path := manifest.tutorial_video_path if manifest else ""
 	if path.is_empty() or not ResourceLoader.exists(path):
 		_video_card.hide()
 		set_process(false)
@@ -201,12 +247,16 @@ func _setup_video() -> void:
 
 	_video_ready = true
 	_video.stream = stream
-	_video.loop = false
+	# The walkthrough repeats so a player can keep watching without hunting for
+	# the replay button. Reduced motion opts out: an endlessly restarting clip is
+	# exactly the kind of unrequested repeated movement that setting exists for,
+	# so it keeps the explicit "Watch again" prompt instead.
+	_video.loop = not _reduced_motion
 	_video.volume_db = -80.0
 	_video_title.text = "WATCH A ROUND · %s" % _current_game_title().to_upper()
 	_video_caption.text = "No audio — captions explain each step."
 	_video.gui_input.connect(_on_video_gui_input)
-	var poster_path := String(TUTORIAL_POSTERS.get(_current_game_id(), ""))
+	var poster_path := manifest.tutorial_poster_path if manifest else ""
 	if not poster_path.is_empty() and ResourceLoader.exists(poster_path):
 		_poster_image.texture = load(poster_path)
 	_update_video_time()
@@ -217,18 +267,19 @@ func _setup_video() -> void:
 
 
 func _current_game_id() -> String:
-	return (
-		GameInfo.SLICE_AND_SLASH_ID
-		if GameSession.is_slice_and_slash()
-		else GameInfo.TARGET_RUSH_ID
-	)
+	return GameCatalog.current_id()
 
 
 func _current_game_title() -> String:
+	return GameCatalog.current_title()
+
+
+## True when the selected game is steered directly rather than by target keys.
+func _uses_direct_movement() -> bool:
+	var manifest := GameCatalog.current()
 	return (
-		GameInfo.DESK_CAN_SAW_TITLE
-		if GameSession.is_slice_and_slash()
-		else GameInfo.TARGET_RUSH_TITLE
+		manifest != null
+		and manifest.control_style == GameManifest.CONTROL_STYLE_DIRECT_MOVEMENT
 	)
 
 
@@ -307,6 +358,8 @@ func _on_restart_pressed() -> void:
 	_play_video()
 
 
+## Only reached when looping is off, which today means Reduced motion is on.
+## The clip parks on its poster so replaying stays an explicit choice.
 func _on_video_finished() -> void:
 	if not _video_ready:
 		return
@@ -319,35 +372,17 @@ func _on_video_finished() -> void:
 
 func _target_rush_controls(player_index: int, controller_number: int) -> String:
 	var keyboard_summary := Settings.control_summary(player_index)
-	var controller_summary := (
-		"any mapped button (%s)" % Settings.controller_target_summary(", ")
-		if Settings.one_button_target_rush_enabled()
-		else Settings.controller_target_summary(", ")
-	)
 	var triangle_summary := "P%d triangles" % (player_index + 1)
-	return "Keyboard: %s\nController %d: %s\nMouse/touch: select %s" % [
-		keyboard_summary,
-		controller_number,
-		controller_summary,
-		triangle_summary,
-	]
-
-
-func _set_demo_binding(label: Label, action: StringName) -> void:
-	label.text = Settings.control_key_label(action)
-	_size_demo_label(label)
-
-
-func _set_demo_text(label: Label, text: String) -> void:
-	label.text = text
-	_size_demo_label(label)
-
-
-func _size_demo_label(label: Label) -> void:
-	label.add_theme_font_size_override(
-		"font_size",
-		28 if label.text.length() <= 2 else 21 if label.text.length() <= 5 else 16
-	)
+	var lines := PackedStringArray(["Keyboard: %s" % keyboard_summary])
+	if GameSession.gamepad_connected():
+		var controller_summary := (
+			"any mapped button (%s)" % Settings.controller_target_summary(", ")
+			if Settings.one_button_target_rush_enabled()
+			else Settings.controller_target_summary(", ")
+		)
+		lines.append("Controller %d: %s" % [controller_number, controller_summary])
+	lines.append("Mouse/touch: select %s" % triangle_summary)
+	return "\n".join(lines)
 
 
 func _play_entrance() -> void:
@@ -376,38 +411,6 @@ func _play_entrance() -> void:
 	_rule_tween.tween_property(_rule, "modulate:a", 0.45, 0.9).set_trans(Tween.TRANS_SINE)
 
 
-func _start_demo_loop() -> void:
-	for target in _demo_targets:
-		_center_pivot(target)
-	_highlight_demo_target(0)
-	if _reduced_motion:
-		return
-	_demo_cycle_tween = create_tween().set_loops()
-	for index in range(_demo_targets.size()):
-		_demo_cycle_tween.tween_callback(_highlight_demo_target.bind(index))
-		_demo_cycle_tween.tween_interval(0.72)
-
-
-func _highlight_demo_target(active_index: int) -> void:
-	for index in range(_demo_targets.size()):
-		var target := _demo_targets[index]
-		var active := index == active_index
-		var target_scale := Vector2(1.14, 1.14) if active else Vector2.ONE
-		var target_tint := (
-			Color(1.12, 1.18, 1.22, 1.0)
-			if active
-			else Color(0.68, 0.74, 0.78, 1.0)
-		)
-		if _reduced_motion:
-			target.scale = Vector2.ONE
-			target.self_modulate = target_tint
-			continue
-		var tween := target.create_tween().set_parallel(true)
-		tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tween.tween_property(target, "scale", target_scale, 0.24)
-		tween.tween_property(target, "self_modulate", target_tint, 0.2)
-
-
 func _center_pivot(control: Control) -> void:
 	control.pivot_offset = control.size * 0.5
 
@@ -417,7 +420,7 @@ func _on_show_again_toggled(pressed: bool) -> void:
 
 
 func _on_start_pressed() -> void:
-	Router.goto(GameSession.gameplay_scene_path())
+	Router.goto(GameCatalog.current_gameplay_scene_path())
 
 
 func _on_back_pressed() -> void:
