@@ -64,6 +64,7 @@ const DANGER_COLOR := Color("ff4964")
 @onready var _player_one_streak: Label = %PlayerOneStreak
 @onready var _player_two_streak: Label = %PlayerTwoStreak
 @onready var _time_label: Label = %TimeLabel
+@onready var _time_caption: Label = %TimeCaption
 @onready var _mode_title: Label = %ModeTitle
 @onready var _pause_button: Button = %PauseButton
 @onready var _time_progress: ProgressBar = %TimeProgress
@@ -146,6 +147,14 @@ var _round_achievements: Array[Dictionary] = []
 var _round_progression_notes := PackedStringArray()
 var _round_result_color := StudioInfo.SKY
 var _active_round_duration := 30.0
+## Set from [method Settings.lives_mode_enabled] when a round starts, so a mode
+## change mid-round only takes effect on the next one.
+var _lives_mode := false
+var _starting_lives := Settings.DEFAULT_STARTING_LIVES
+var _lives := [0, 0]
+## Seconds the current round has been running. Lives mode has no fixed length,
+## so this is what the results and stats panels report instead.
+var _round_elapsed := 0.0
 var _round_gameplay_speed := 1.0
 var _round_target_size := 1.0
 
@@ -170,8 +179,7 @@ func _ready() -> void:
 	_player_two_score.add_theme_color_override("font_color", player_two_color)
 	_player_one_streak.add_theme_color_override("font_color", player_one_color)
 	_player_two_streak.add_theme_color_override("font_color", player_two_color)
-	_time_progress.max_value = _active_round_duration
-	_time_progress.value = _active_round_duration
+	_reset_round_gauge()
 	AudioManager.attach_ui_sounds(_hud)
 
 	if music:
@@ -190,7 +198,14 @@ func _process(delta: float) -> void:
 	if not _round_active:
 		return
 
+	if _lives_mode:
+		_round_elapsed += delta
+		_update_round(delta, _round_time_left())
+		_update_urgency(_lives_urgency_seconds())
+		return
+
 	var time_left := _round_timer.time_left
+	_round_elapsed += delta
 	_update_round(delta, time_left)
 	_time_progress.value = time_left
 	_update_urgency(time_left)
@@ -250,6 +265,7 @@ func _start_round() -> void:
 	_best_streaks = [0, 0]
 	_round_achievements.clear()
 	_round_progression_notes.clear()
+	_round_elapsed = 0.0
 	_round_active = true
 	_round_over.hide()
 	_score_panel.hide()
@@ -262,14 +278,16 @@ func _start_round() -> void:
 	_open_image_button.hide()
 	_set_share_placeholder("Open the scorecard to draw your share image.")
 	_reset_motion_fx()
+	_reset_round_gauge()
 	_reset_round_state()
 	_update_scores()
 	_update_streaks()
+	# The HUD copy describes the options this round is running with, so it is
+	# rebuilt after `_load_round_settings()` rather than only once at startup.
+	_configure_mode_ui()
 
-	_time_progress.max_value = _active_round_duration
-	_time_progress.value = _active_round_duration
-	_round_timer.start(_active_round_duration)
-	_update_time(int(ceil(_active_round_duration)))
+	if not _lives_mode:
+		_round_timer.start(_active_round_duration)
 	_activate_round()
 
 
@@ -283,11 +301,25 @@ func _start_round_after_transition() -> void:
 
 
 func _on_round_timer_timeout() -> void:
+	_end_round()
+
+
+## Settles the finished round: results copy, achievements, progression, the
+## share payload and the results panel.
+##
+## Reached from the countdown running out in timed mode and from the last
+## player losing their last life in lives mode, so both modes end a round
+## through exactly the same path.
+func _end_round() -> void:
 	_round_active = false
+	_round_timer.stop()
 	_finish_round()
-	_update_time(0)
-	_time_progress.value = 0.0
-	_update_urgency(_active_round_duration)
+	if _lives_mode:
+		_update_lives()
+	else:
+		_update_time(0)
+		_time_progress.value = 0.0
+	_reset_urgency()
 
 	var player_one_total: int = _scores[PLAYER_ONE]
 	var player_two_total: int = _scores[PLAYER_TWO]
@@ -446,6 +478,176 @@ func _update_time(seconds_left: int) -> void:
 		)
 
 
+# --------------------------------------------------------------------------
+# Lives mode
+# --------------------------------------------------------------------------
+#
+# The countdown and the lives pool are alternatives, so both drive the same
+# TimerCard readout and the same progress bar. Games never touch that wiring:
+# they report a mistake with `_lose_life()` and ask `_player_is_out()` before
+# accepting input, which both no-op in timed mode.
+
+
+## Repoints the TimerCard and the progress bar at whatever this round is
+## measuring, and rearms the lives pool.
+func _reset_round_gauge() -> void:
+	_time_caption.text = "LIVES LEFT" if _lives_mode else "SECONDS LEFT"
+	if _lives_mode:
+		_lives = [_starting_lives, _starting_lives]
+		_displayed_seconds = -1
+		_time_progress.max_value = _starting_lives
+		_update_lives()
+		return
+
+	_lives = [0, 0]
+	_time_progress.max_value = _active_round_duration
+	_time_progress.value = _active_round_duration
+	_update_time(int(ceil(_active_round_duration)))
+
+
+func _update_lives() -> void:
+	if not _lives_mode:
+		return
+	# Two numbers rather than colour-coded pips, so the readout survives the
+	# player-labels and colour-blindness cases the rest of the HUD honours.
+	_time_label.text = (
+		"%d" % int(_lives[PLAYER_ONE])
+		if GameSession.is_single_player()
+		else "%d-%d" % [int(_lives[PLAYER_ONE]), int(_lives[PLAYER_TWO])]
+	)
+	_time_progress.value = _remaining_lives()
+
+
+## Charges [param player_index] one life for a mistake.
+##
+## A no-op outside lives mode, so a game can report every mistake it detects
+## unconditionally and let the shared round mode decide what it costs.
+func _lose_life(player_index: int, amount := 1) -> void:
+	if not _lives_mode or not _round_active:
+		return
+	if not _active_player_indices().has(player_index):
+		return
+
+	var previous := int(_lives[player_index])
+	var remaining := maxi(previous - maxi(amount, 1), 0)
+	if remaining == previous:
+		return
+
+	_lives[player_index] = remaining
+	_update_lives()
+	_announce_lost_life(player_index, remaining)
+	_flash_screen(DANGER_COLOR, 0.16)
+	_add_screen_shake(9.0)
+	if _every_player_is_out():
+		_end_round()
+
+
+## True once lives mode has knocked this player out of the round. Games check
+## this before accepting input so an eliminated player stops scoring while the
+## others play on.
+func _player_is_out(player_index: int) -> bool:
+	if not _lives_mode:
+		return false
+	if player_index < PLAYER_ONE or player_index >= PLAYER_COUNT:
+		return false
+	return int(_lives[player_index]) <= 0
+
+
+func _every_player_is_out() -> bool:
+	if not _lives_mode:
+		return false
+	for player_index in _active_player_indices():
+		if not _player_is_out(player_index):
+			return false
+	return true
+
+
+## Lives still held by the player who has the most of them, which is what the
+## progress bar empties towards: the round ends when it reaches zero.
+func _remaining_lives() -> int:
+	var remaining := 0
+	for player_index in _active_player_indices():
+		remaining = maxi(remaining, int(_lives[player_index]))
+	return remaining
+
+
+## Maps the lives pool onto the countdown's danger scale so the last life
+## pulses and reddens exactly like the last seconds do.
+func _lives_urgency_seconds() -> float:
+	if _starting_lives <= 0:
+		return 0.0
+	return DANGER_SECONDS * float(_remaining_lives()) / float(_starting_lives)
+
+
+func _announce_lost_life(player_index: int, remaining: int) -> void:
+	var headline := (
+		"OUT!" if remaining == 0
+		else "LAST LIFE!" if remaining == 1
+		else "%d LIVES LEFT" % remaining
+	)
+	if not GameSession.is_single_player():
+		headline = "%s: %s" % [_player_name(player_index).to_upper(), headline]
+	_show_announcement(headline, DANGER_COLOR, 0.42)
+	AudioManager.request_caption(
+		"%s is out" % _player_name(player_index)
+		if remaining == 0
+		else "%s: %d %s left" % [
+			_player_name(player_index),
+			remaining,
+			"life" if remaining == 1 else "lives",
+		]
+	)
+
+
+## Seconds left on the clock.
+##
+## Lives mode has no clock, so a round always reports its full length there and
+## games that ramp difficulty with the countdown hold their opening pace.
+func _round_time_left() -> float:
+	return _active_round_duration if _lives_mode else _round_timer.time_left
+
+
+## How long the round lasted, for the stats panel. Lives mode has no fixed
+## length, so it reports the time actually survived.
+func _round_length_seconds() -> float:
+	return _round_elapsed if _lives_mode else _active_round_duration
+
+
+## How the round was measured, for results copy that used to say "in 30
+## seconds". Reads correctly in both modes, so games never branch on the mode.
+func _round_length_phrase() -> String:
+	if not _lives_mode:
+		return "%d seconds" % roundi(_active_round_duration)
+	return "%d seconds on %d %s" % [
+		roundi(_round_elapsed),
+		_starting_lives,
+		"life" if _starting_lives == 1 else "lives",
+	]
+
+
+## Mode line for the share card and the scorecard, including the lives pool
+## the round was played with.
+func _round_mode_summary() -> String:
+	if not _lives_mode:
+		return GameSession.mode_title()
+	return "%s - %d Lives" % [GameSession.mode_title(), _starting_lives]
+
+
+## One-line reminder of what a mistake costs, for a game's hint copy. Empty in
+## timed mode, where a mistake only costs points.
+func _lives_rule_note() -> String:
+	if not _lives_mode:
+		return ""
+	return "Each mistake costs 1 of %d lives" % _starting_lives
+
+
+## Parks the TimerCard back in its calm state once a round is settled, so the
+## readout never stays frozen mid-pulse. A short round could otherwise finish
+## inside the danger window and leave the label red.
+func _reset_urgency() -> void:
+	_update_urgency(DANGER_SECONDS * 2.0)
+
+
 func _update_urgency(time_left: float) -> void:
 	_time_label.pivot_offset = _time_label.size * 0.5
 	if time_left > DANGER_SECONDS:
@@ -504,7 +706,7 @@ func _populate_score_screen(result_text: String, result_color: Color) -> void:
 	_score_screen_title.text = result_text
 	_score_screen_title.add_theme_color_override("font_color", result_color)
 	_score_screen_subtitle.text = _round_subtitle.text
-	_game_duration_stat.text = "%d SEC" % roundi(_active_round_duration)
+	_game_duration_stat.text = "%d SEC" % roundi(_round_length_seconds())
 	_game_hits_stat.text = "%d" % hits
 	_game_accuracy_stat.text = "%d%%" % _accuracy_percent(hits, attempts)
 
@@ -708,7 +910,7 @@ func _share_payload() -> Dictionary:
 		"studio": StudioInfo.STUDIO,
 		"website": StudioInfo.WEBSITE,
 		"stats_url": _stats_url(),
-		"mode": GameSession.mode_title(),
+		"mode": _round_mode_summary(),
 		"result": _result_label.text,
 		"subtitle": _round_subtitle.text,
 		"score_caption": "SOLO SCORE" if GameSession.is_single_player() else "FINAL SCORE",
@@ -1007,12 +1209,15 @@ func _spawn_round_confetti(color: Color) -> void:
 # --------------------------------------------------------------------------
 
 
-## Reads the options that may only change between rounds. Override and call
-## `super()` to add game-declared `GameManifest.tunables`.
+## Reads the options that may only change between rounds, including the shared
+## round mode. Override and call `super()` to add game-declared
+## `GameManifest.tunables`.
 func _load_round_settings() -> void:
 	_active_round_duration = round_duration + Settings.extra_round_time()
 	_round_gameplay_speed = Settings.gameplay_speed_scale()
 	_round_target_size = Settings.target_size_scale()
+	_lives_mode = Settings.lives_mode_enabled()
+	_starting_lives = Settings.starting_lives()
 
 
 ## Settles who is playing before the HUD is configured.
@@ -1045,7 +1250,9 @@ func _finish_round() -> void:
 	pass
 
 
-## Per-frame gameplay while the round is live. `time_left` is the countdown.
+## Per-frame gameplay while the round is live. `time_left` is the countdown,
+## and holds steady at the full round length in lives mode, where nothing is
+## counting down.
 func _update_round(_delta: float, _time_left: float) -> void:
 	pass
 
@@ -1063,9 +1270,9 @@ func _describe_round_outcome(
 	if GameSession.is_single_player():
 		return {
 			"result": "ROUND COMPLETE",
-			"subtitle": "Player 1 scored %d points in %d seconds." % [
+			"subtitle": "Player 1 scored %d points in %s." % [
 				player_one_total,
-				roundi(_active_round_duration),
+				_round_length_phrase(),
 			],
 			"color": _player_color(PLAYER_ONE),
 		}
@@ -1088,9 +1295,7 @@ func _describe_round_outcome(
 		}
 	return {
 		"result": "DRAW!",
-		"subtitle": "Dead even after %d seconds. Run it back!" % roundi(
-			_active_round_duration
-		),
+		"subtitle": "Dead even after %s. Run it back!" % _round_length_phrase(),
 		"color": StudioInfo.CREAM,
 	}
 

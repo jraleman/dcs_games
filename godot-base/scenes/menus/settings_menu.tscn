@@ -895,6 +895,60 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 22
 
+[node name="RoundHeading" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "ROUND MODE · NEXT ROUND"
+
+[node name="RoundModeRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/RoundModeRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Round ends on"
+vertical_alignment = 1
+
+[node name="RoundModeOption" type="OptionButton" parent="Margins/Layout/Tabs/Game/Pad/List/RoundModeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StartingLivesRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Game/Pad/List"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/StartingLivesRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 1
+text = "Starting lives"
+vertical_alignment = 1
+
+[node name="StartingLivesSlider" type="HSlider" parent="Margins/Layout/Tabs/Game/Pad/List/StartingLivesRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 1.0
+max_value = 9.0
+step = 1.0
+value = 3.0
+
+[node name="StartingLivesValue" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List/StartingLivesRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+text = "3 lives"
+horizontal_alignment = 2
+vertical_alignment = 1
+
 [node name="TriangleHeading" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)

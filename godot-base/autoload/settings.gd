@@ -33,6 +33,8 @@ const TARGET_SIZE_KEY := "accessibility/target_size"
 const EXTRA_ROUND_TIME_KEY := "accessibility/extra_round_time"
 const CONTROLLER_SPEED_KEY := "accessibility/controller_speed"
 const CONTROLLER_DEADZONE_KEY := "accessibility/controller_deadzone"
+const ROUND_MODE_KEY := "game/round_mode"
+const STARTING_LIVES_KEY := "game/starting_lives"
 const MIN_GAMEPLAY_SPEED := 0.6
 const MAX_GAMEPLAY_SPEED := 1.0
 const MIN_TARGET_SIZE := 1.0
@@ -43,8 +45,20 @@ const MIN_CONTROLLER_SPEED := 0.5
 const MAX_CONTROLLER_SPEED := 1.5
 const MIN_CONTROLLER_DEADZONE := 0.05
 const MAX_CONTROLLER_DEADZONE := 0.5
+const MIN_STARTING_LIVES := 1
+const MAX_STARTING_LIVES := 9
+const DEFAULT_STARTING_LIVES := 3
 
 enum WindowMode { WINDOWED, FULLSCREEN, BORDERLESS }
+
+## What ends a round. The two modes are exclusive alternatives:
+##   [code]TIMER[/code] — the round runs until the countdown reaches zero.
+##   [code]LIVES[/code] — there is no countdown; each player spends a life per
+##                        mistake and the round ends once everyone is out.
+##
+## The shared [GameShell] reads this once per round, so switching modes never
+## reshapes a round that is already being played.
+enum RoundMode { TIMER, LIVES }
 
 const PLAYER_ONE_ACTIONS := [
 	&"player_one_target_1",
@@ -136,6 +150,8 @@ const DEFAULTS := {
 	"accessibility/extra_round_time": 0.0,
 	"accessibility/controller_speed": 1.0,
 	"accessibility/controller_deadzone": 0.22,
+	"game/round_mode": RoundMode.TIMER,
+	"game/starting_lives": DEFAULT_STARTING_LIVES,
 	"game/show_instructions": true,
 	"controls/player_one_target_1": KEY_1,
 	"controls/player_one_target_2": KEY_2,
@@ -230,6 +246,42 @@ func extra_round_time() -> float:
 		MIN_EXTRA_ROUND_TIME,
 		MAX_EXTRA_ROUND_TIME
 	)
+
+
+## --- Round mode ------------------------------------------------------------
+##
+## The countdown and the lives pool are two ways of ending the same round, so
+## they are one shared preference rather than a per-game option. [GameShell]
+## reads them when a round starts; games only report their own mistakes.
+
+
+## The stored [enum RoundMode], falling back to the countdown when a save file
+## carries a value this build no longer knows.
+func round_mode() -> int:
+	var mode := int(get_value(ROUND_MODE_KEY, RoundMode.TIMER))
+	if mode != RoundMode.TIMER and mode != RoundMode.LIVES:
+		return RoundMode.TIMER
+	return mode
+
+
+func lives_mode_enabled() -> bool:
+	return round_mode() == RoundMode.LIVES
+
+
+## Lives each player starts a round with when [method lives_mode_enabled].
+func starting_lives() -> int:
+	return clampi(
+		int(get_value(STARTING_LIVES_KEY, DEFAULT_STARTING_LIVES)),
+		MIN_STARTING_LIVES,
+		MAX_STARTING_LIVES
+	)
+
+
+## Player-facing name for a round mode, so menus and HUDs word it identically.
+## Omit [param mode] to describe the stored preference.
+func round_mode_label(mode := -1) -> String:
+	var resolved := round_mode() if mode < 0 else mode
+	return "Lives" if resolved == RoundMode.LIVES else "Timer"
 
 
 ## --- Game tunables ---------------------------------------------------------

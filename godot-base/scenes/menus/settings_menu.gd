@@ -35,6 +35,9 @@ const FPS_OPTIONS := [0, 30, 60, 90, 120, 144]
 @onready var _target_size_value: Label = %TargetSizeValue
 @onready var _extra_round_time: HSlider = %ExtraRoundTimeSlider
 @onready var _extra_round_time_value: Label = %ExtraRoundTimeValue
+@onready var _round_mode: OptionButton = %RoundModeOption
+@onready var _starting_lives: HSlider = %StartingLivesSlider
+@onready var _starting_lives_value: Label = %StartingLivesValue
 @onready var _triangle_size: HSlider = %TriangleSizeSlider
 @onready var _triangle_size_value: Label = %TriangleSizeValue
 @onready var _triangle_speed: HSlider = %TriangleSpeedSlider
@@ -116,6 +119,16 @@ func _populate_options() -> void:
 	for fps: int in FPS_OPTIONS:
 		_max_fps.add_item("Unlimited" if fps == 0 else str(fps), fps)
 
+	_round_mode.clear()
+	for mode in [Settings.RoundMode.TIMER, Settings.RoundMode.LIVES]:
+		_round_mode.add_item(Settings.round_mode_label(mode), mode)
+
+	# Bounds come from Settings so the slider can never offer a value the
+	# stored setting would clamp away. Safe here because `_connect_ui()` has
+	# not run yet, so the re-emitted `value_changed` reaches nothing.
+	_starting_lives.min_value = Settings.MIN_STARTING_LIVES
+	_starting_lives.max_value = Settings.MAX_STARTING_LIVES
+
 	for setting_key: String in _controller_buttons:
 		var option := _controller_buttons[setting_key] as OptionButton
 		option.clear()
@@ -166,6 +179,8 @@ func _connect_ui() -> void:
 	_extra_round_time.value_changed.connect(
 		_on_setting_slider_changed.bind(Settings.EXTRA_ROUND_TIME_KEY)
 	)
+	_round_mode.item_selected.connect(_on_round_mode_selected)
+	_starting_lives.value_changed.connect(_on_starting_lives_changed)
 	_triangle_size.value_changed.connect(
 		_on_setting_slider_changed.bind(TargetRushOptions.SIZE_KEY)
 	)
@@ -226,6 +241,11 @@ func _configure_setting_help() -> void:
 		_gameplay_speed: "Slows moving targets and falling cans next round.",
 		_target_size: "Makes targets and cans larger next round.",
 		_extra_round_time: "Adds time to each round starting next round.",
+		_round_mode: (
+			"Choose whether a round ends on the countdown or on running "
+			+ "out of lives."
+		),
+		_starting_lives: "Lives each player gets per round in Lives mode.",
 		_triangle_size: "Sets the base Triangle Rush target size next round.",
 		_triangle_speed: "Sets how fast Triangle Rush targets drift next round.",
 		_triangle_speed_rush: (
@@ -370,6 +390,8 @@ func _sync_from_settings() -> void:
 	_gameplay_speed.value = Settings.gameplay_speed_scale()
 	_target_size.value = Settings.target_size_scale()
 	_extra_round_time.value = Settings.extra_round_time()
+	_starting_lives.value = Settings.starting_lives()
+	_select_id(_round_mode, Settings.round_mode())
 	_triangle_size.value = Settings.tunable(TargetRushOptions.SIZE_KEY)
 	_triangle_speed.value = Settings.tunable(TargetRushOptions.SPEED_KEY)
 	_triangle_speed_rush.value = Settings.tunable(TargetRushOptions.SPEED_RUSH_KEY)
@@ -392,6 +414,13 @@ func _sync_from_settings() -> void:
 	_syncing = false
 	_refresh_value_labels()
 	_refresh_control_buttons()
+	_refresh_round_mode_controls()
+
+
+## The lives pool only means anything in lives mode, so the slider greys out
+## under the countdown instead of the row disappearing and shifting the tab.
+func _refresh_round_mode_controls() -> void:
+	_starting_lives.editable = Settings.lives_mode_enabled()
 
 
 func _select_id(option: OptionButton, id: int) -> void:
@@ -411,6 +440,8 @@ func _refresh_value_labels() -> void:
 		if is_zero_approx(_extra_round_time.value)
 		else "+%d sec" % roundi(_extra_round_time.value)
 	)
+	var lives := roundi(_starting_lives.value)
+	_starting_lives_value.text = "%d %s" % [lives, "life" if lives == 1 else "lives"]
 	_triangle_size_value.text = "%d%%" % roundi(_triangle_size.value * 100.0)
 	_triangle_speed_value.text = "%d%%" % roundi(_triangle_speed.value * 100.0)
 	_triangle_speed_rush_value.text = (
@@ -462,6 +493,22 @@ func _on_max_fps_selected(index: int) -> void:
 	if _syncing:
 		return
 	_set_setting("display/max_fps", _max_fps.get_item_id(index))
+
+
+func _on_round_mode_selected(index: int) -> void:
+	if _syncing:
+		return
+	_set_setting(Settings.ROUND_MODE_KEY, _round_mode.get_item_id(index))
+	_refresh_round_mode_controls()
+
+
+## Lives are stored as a whole count, so the slider's float is rounded before
+## it reaches [Settings] and the stored type stays stable across saves.
+func _on_starting_lives_changed(value: float) -> void:
+	_refresh_value_labels()
+	if _syncing:
+		return
+	_set_setting(Settings.STARTING_LIVES_KEY, roundi(value))
 
 
 func _on_ui_scale_changed(value: float) -> void:

@@ -132,6 +132,27 @@ listen to `Settings.changed`), then add a row to
 For a setting that only makes sense for one game, declare it in that game's
 manifest `tunables` instead — see *Adding your own game* below.
 
+**Change how a round ends** — *Settings → Game → Round mode* picks between the
+two shapes every game shares:
+
+- **Timer** (default) — the round runs for its configured duration and mistakes
+  only cost points.
+- **Lives** — the countdown is replaced by a pool of lives (3 by default,
+  1–9 via the *Starting lives* slider). Each mistake spends one; the round ends
+  when the pool is empty. In two-player and CPU rounds each side gets its own
+  pool, a side that runs out is eliminated, and the round ends once nobody is
+  left. The TimerCard becomes a `LIVES LEFT` readout and reddens on the last
+  life exactly as the clock reddens in its final seconds.
+
+`GameShell` owns all of it — `Settings.round_mode()`, `.lives_mode_enabled()`
+and `.starting_lives()` are read once per round in `_load_round_settings()`, so
+switching modes shapes the *next* round rather than the live one. A game only
+has to report its own mistakes with `_lose_life(player_index)` and skip
+eliminated players with `_player_is_out(player_index)`; both no-op under the
+countdown, so a game never branches on the mode itself. What counts as a
+mistake is the game's call — a wrong key in Target Rush, an escaped can in
+Desk-Can-Saw.
+
 **Add music** — drop an `.ogg` in `assets/audio/`, then set the `music` export
 on the main menu, intro or gameplay scene. Volume is already wired to the Music
 bus and its slider. Call `AudioManager.play_music(stream)` anywhere else.
@@ -216,6 +237,19 @@ that directory at startup, so **no framework file needs to change** to add one.
    | `_configure_mode_ui()` | Extra HUD wiring for 1P/2P/CPU. Call `super()`. |
    | `_on_player_labels_changed()` / `_on_controls_changed()` | React to accessibility settings. |
    | `_on_game_setting_changed(key)` | React to one of your tunables changing live. |
+
+   The shell also hands you three helpers for the lives round mode (see *Round
+   modes* below). All three are safe to call unconditionally — under the
+   countdown they no-op, return `false` and return an empty string:
+
+   | Helper | Call it to |
+   | --- | --- |
+   | `_lose_life(player_index)` | Report a player mistake. Ends the round when everyone runs out. |
+   | `_player_is_out(player_index)` | Stop scoring or accepting input from an eliminated player. |
+   | `_lives_rule_note()` | Append "Each mistake costs a life" to your own HUD copy. |
+
+   Use `_round_length_phrase()` instead of hardcoding "in 60 seconds" in
+   results copy; it words itself for whichever mode the round was played in.
 
 4. Optional extras, all declared on the manifest:
    - `achievements` — registered and persisted automatically.
@@ -378,6 +412,7 @@ godot --headless --path . --script res://games/target_rush/tests/target_rush_opt
 godot --headless --path . --script res://tests/share_card_test.gd
 godot --headless --path . --script res://tests/instructions_video_test.gd
 godot --headless --path . --script res://tests/game_shell_test.gd
+godot --headless --path . --script res://tests/lives_mode_test.gd
 ```
 
 The FPS counter is available under **Settings → Display** and is drawn by

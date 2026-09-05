@@ -104,6 +104,7 @@ func _populate_instructions() -> void:
 	_configure_avatars()
 	if _uses_direct_movement():
 		_populate_direct_movement_instructions()
+		_append_round_mode_note()
 		return
 
 	_mode_label.text = GameSession.mode_title().to_upper()
@@ -115,7 +116,7 @@ func _populate_instructions() -> void:
 	if GameSession.is_single_player():
 		_summary.text = (
 			"Only Player 1 is active. Score as many correct hits as possible "
-			+ "before the timer reaches zero."
+			+ "%s." % _round_goal_phrase()
 		)
 		_demo_prompt.text = "WATCH PLAYER 1'S HIGHLIGHTED TARGET"
 		_opponent_card.hide()
@@ -147,6 +148,32 @@ func _populate_instructions() -> void:
 		_demo_prompt.text = "EACH PLAYER FOLLOWS THEIR OWN HIGHLIGHT"
 		_opponent_title.text = "PLAYER 2"
 		_opponent_controls.text = _target_rush_controls(1, 2)
+	_append_round_mode_note()
+
+
+## How the round the player is about to start will end, so the briefing
+## promises the countdown or the lives pool that is actually configured.
+func _round_goal_phrase() -> String:
+	if not Settings.lives_mode_enabled():
+		return "before the timer reaches zero"
+	var lives := Settings.starting_lives()
+	return "without spending all %d %s" % [
+		lives,
+		"life" if lives == 1 else "lives",
+	]
+
+
+## Adds what a mistake costs to the rules line. The scoring rules themselves
+## belong to the game; only the round mode decides whether a mistake also ends
+## the round, so the note is appended rather than baked into a game's copy.
+func _append_round_mode_note() -> void:
+	if not Settings.lives_mode_enabled():
+		return
+	var lives := Settings.starting_lives()
+	_rules.text += "  ·  %d %s per round" % [
+		lives,
+		"life" if lives == 1 else "lives",
+	]
 
 
 ## Each control card carries a portrait placeholder so the roster is readable at

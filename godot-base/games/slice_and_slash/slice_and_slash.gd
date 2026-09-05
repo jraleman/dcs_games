@@ -544,13 +544,40 @@ func _update_cans(delta: float) -> void:
 			if _escaped_cans % 2 == 1:
 				AudioManager.play_can_clatter()
 			AudioManager.request_caption("Can missed")
+			# A can that reaches the bench is this game's mistake, so it is
+			# what the shared lives round mode charges for. No-op under the
+			# countdown.
+			_lose_life(_closest_player_to(impact_position))
 			continue
 
 		for player_index in _active_player_indices():
+			if _player_is_out(player_index):
+				continue
 			var chainsaw := _chainsaws[player_index] as ChainsawCursor
 			if can.try_slice(chainsaw.collision_rect()):
 				_score_slice(player_index, can)
 				break
+
+
+## The saw that had the best chance at a can, so an escape is charged to the
+## player who came closest to catching it. Both saws roam the whole bench, so
+## the side a can fell on says nothing about whose miss it was.
+##
+## Returns -1 when nobody is left to charge, which [method _lose_life] ignores.
+func _closest_player_to(target_position: Vector2) -> int:
+	var closest := -1
+	var best_distance := INF
+	for player_index in _active_player_indices():
+		if _player_is_out(player_index):
+			continue
+		var chainsaw := _chainsaws[player_index] as ChainsawCursor
+		if not is_instance_valid(chainsaw):
+			continue
+		var distance := chainsaw.position.distance_to(target_position)
+		if distance < best_distance:
+			best_distance = distance
+			closest = player_index
+	return closest
 
 
 func _score_slice(player_index: int, can: SliceCan) -> void:
@@ -634,6 +661,10 @@ func _configure_mode_ui() -> void:
 		"Each can awards +%d once. Keep every powered saw on the wood workbench."
 		% points_per_can
 	)
+	var lives_note := _lives_rule_note()
+	if not lives_note.is_empty():
+		_hint.text += "   |   %s" % lives_note
+		_round_instructions.text += " %s." % lives_note
 
 
 func _reset_round_state() -> void:
@@ -675,8 +706,8 @@ func _describe_round_outcome(
 		return {
 			"result": "ROUND COMPLETE",
 			"subtitle": (
-				"Player 1 shredded %d cans across the workbench in %d seconds."
-				% [player_one_total, roundi(_active_round_duration)]
+				"Player 1 shredded %d cans across the workbench in %s."
+				% [player_one_total, _round_length_phrase()]
 			),
 			"color": _player_color(PLAYER_ONE),
 		}
@@ -698,8 +729,8 @@ func _describe_round_outcome(
 		}
 	return {
 		"result": "DRAW!",
-		"subtitle": "Both saws left the desk even after %d seconds." % (
-			roundi(_active_round_duration)
+		"subtitle": "Both saws left the desk even after %s." % (
+			_round_length_phrase()
 		),
 		"color": StudioInfo.CREAM,
 	}

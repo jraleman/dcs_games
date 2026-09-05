@@ -54,7 +54,7 @@ godot --path .                       # run the game (or open project.godot)
 godot --headless --path . --import   # reimport assets and refresh the class cache
 ```
 
-Tests are standalone headless `SceneTree` scripts, run one at a time. All eight
+Tests are standalone headless `SceneTree` scripts, run one at a time. All nine
 must exit 0:
 
 ```bash
@@ -66,6 +66,7 @@ godot --headless --path . --script res://games/target_rush/tests/target_rush_opt
 godot --headless --path . --script res://tests/share_card_test.gd
 godot --headless --path . --script res://tests/instructions_video_test.gd
 godot --headless --path . --script res://tests/game_shell_test.gd
+godot --headless --path . --script res://tests/lives_mode_test.gd
 ```
 
 `tests/game_shell_test.gd` iterates `GameCatalog.all()`, so every game is
@@ -150,6 +151,13 @@ whichever hooks it needs — all others have working neutral defaults.
 
 Shell notes:
 
+- The round can run on a countdown or on a pool of lives
+  (*Settings → Game → Round mode*, stored as `game/round_mode` +
+  `game/starting_lives`). The shell owns the whole pool; a game only reports
+  its own mistakes with `_lose_life(player_index)` and skips eliminated players
+  with `_player_is_out(player_index)`. Both no-op in timer mode, so **a game
+  must never branch on the round mode**. Use `_lives_rule_note()` for HUD copy
+  and `_round_length_phrase()` instead of hardcoding "in 60 seconds".
 - The playfield node is `%Playfield` (it was `%Targets` before the extraction);
   tests reference it by that unique name.
 - `%ModeTitle` is always filled from `GameManifest.title` — never hardcode it.

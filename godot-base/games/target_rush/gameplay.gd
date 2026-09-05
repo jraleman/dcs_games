@@ -220,6 +220,7 @@ func _configure_mode_ui() -> void:
 		]
 	)
 	_update_callout()
+	_update_hint()
 
 
 func _on_player_labels_changed() -> void:
@@ -234,13 +235,11 @@ func _on_controls_changed() -> void:
 		if is_instance_valid(target):
 			target.set_display_letter(Settings.control_key_label(action).to_upper())
 	_configure_mode_ui()
-	_update_hint()
 
 
 func _on_game_setting_changed(key: String, _value: Variant) -> void:
 	if key == Settings.ONE_BUTTON_TARGET_RUSH_KEY:
 		_configure_mode_ui()
-		_update_hint()
 
 
 func _set_reduced_motion_enabled(value: bool) -> void:
@@ -273,6 +272,10 @@ func _target_size_scale() -> float:
 
 
 func _player_accepts_human_input(player_index: int) -> bool:
+	# A player who has spent their last life is out for the rest of the round,
+	# but the others keep playing until everybody is out.
+	if _player_is_out(player_index):
+		return false
 	if player_index == PLAYER_ONE:
 		return true
 	return player_index == PLAYER_TWO and (
@@ -289,6 +292,8 @@ func _configure_cpu_profile() -> void:
 
 func _update_cpu(delta: float) -> void:
 	if not _round_active or not GameSession.player_two_is_cpu():
+		return
+	if _player_is_out(PLAYER_TWO):
 		return
 
 	_cpu_action_time -= delta
@@ -416,6 +421,10 @@ func _update_hint() -> void:
 			"Correct match: +%d | Wrong key or triangle: -%d"
 			% [points_per_match, miss_penalty]
 		)
+	var lives_note := _lives_rule_note()
+	if not lives_note.is_empty():
+		_hint.text += "   |   %s" % lives_note
+		_round_instructions.text += " | %s" % lives_note
 
 
 func _update_callout() -> void:
@@ -576,6 +585,9 @@ func _attempt_target(target: TriangleTarget, automated := false) -> void:
 		_spawn_hit_effect(hit_position, MISS_COLOR, false, "-%d" % miss_penalty)
 		_flash_screen(DANGER_COLOR, 0.09)
 		_add_screen_shake(8.5)
+		# A wrong key or triangle is this game's mistake, so it is what the
+		# shared lives round mode charges for. No-op under the countdown.
+		_lose_life(player_index)
 
 	_update_scores()
 	_update_streaks()
