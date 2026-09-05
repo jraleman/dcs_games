@@ -1,0 +1,3 @@
+[submodule "godot-base/games/dead_metal_jam"]
+	path = godot-base/games/dead_metal_jam
+	url = git@github.com:jraleman/DeadMetalJam.git

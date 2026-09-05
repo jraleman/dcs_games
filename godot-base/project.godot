@@ -20,6 +20,15 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 boot_splash/bg_color=Color(0.686275, 0.866667, 0.917647, 1)
 boot_splash/show_image=false
 config/icon="res://icon.svg"
+config/name.dmj="Dead Metal Jam"
+config/custom_user_dir_name.dmj="DeskCanSaw Games/Dead Metal Jam"
+
+[audio]
+
+; Godot initialises the audio driver at startup, so microphone capture cannot
+; be switched on at runtime. Dead Metal Jam's input model is a microphone, and
+; a game must not have to edit the framework in order to be playable.
+driver/enable_input=true
 
 [autoload]
 

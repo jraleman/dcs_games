@@ -5,7 +5,13 @@
 # Godot-specific ignores
 .import/
 export.cfg
-export_presets.cfg
+
+# export_presets.cfg IS tracked on purpose: the standalone per-game builds are
+# defined by their exclude filters and custom feature tags, so an untracked
+# preset file means nobody else can reproduce a release. Keep signing secrets
+# out of it — when mobile exports land, the Android keystore path and password
+# belong in the editor's per-machine settings, not here.
+#export_presets.cfg
 
 # Imported translations (automatically generated from CSV files)
 *.translation

@@ -271,6 +271,42 @@ that directory at startup, so **no framework file needs to change** to add one.
    automatically and drives it through a full round, results, stats, share and
    replay cycle — no edit needed.
 
+The main menu needs no edit either. It builds one button per game from
+`GameCatalog.available()`, in `menu_order`, so a new game appears as soon as
+its manifest does — and disappears again behind an `unlock_rule` until earned.
+
+## Shipping one game on its own
+
+The same project produces the collection build *and* a standalone build of any
+single game, with no code that knows a game by name. The trick is that **a
+build whose catalog holds exactly one game already looks like a standalone
+game**: the Play button starts it, no secondary entry appears, and the title
+screen takes its name and tagline from that game's manifest rather than from
+`StudioInfo`.
+
+So a standalone release is export configuration only. In `export_presets.cfg`:
+
+```ini
+custom_features="dmj"
+exclude_filter="games/target_rush/*, games/slice_and_slash/*"
+```
+
+and in `project.godot`, override identity for that feature tag:
+
+```ini
+config/name.dmj="Dead Metal Jam"
+config/custom_user_dir_name.dmj="DeskCanSaw Games/Dead Metal Jam"
+```
+
+The user-dir override is **not optional**. Without it the standalone build
+shares `user://` with the collection, so saves, settings and achievements
+collide.
+
+`export_presets.cfg` is tracked deliberately — an untracked preset file means
+nobody else can reproduce a release. Keep credentials out of it; when mobile
+exports land, the Android keystore path and password belong in the editor's
+per-machine settings.
+
 ## Input actions
 
 | Action | Bound to |

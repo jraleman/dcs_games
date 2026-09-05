@@ -1,7 +1,8 @@
 extends MenuScreen
 
-## Title screen. Everything it displays comes from StudioInfo, so renaming the
-## game is a one-file change.
+## Title screen. Studio identity comes from StudioInfo and the game list comes
+## from GameCatalog, so neither rebranding the project nor adding a game
+## requires editing this screen.
 
 @export_file("*.tscn") var play_scene := "res://scenes/menus/mode_select.tscn"
 @export_file("*.tscn") var settings_scene := "res://scenes/menus/settings_menu.tscn"
@@ -35,6 +36,14 @@ const BUTTON_PRESS_SCALE := Vector2(0.985, 0.985)
 @onready var _focus_accent: ColorRect = %FocusAccent
 
 var _menu_buttons: Array[Button] = []
+
+## One slot per catalogued game, parallel arrays indexed together.
+## [member _game_requirements] holds null for the Play button, which has no
+## unlock caption in the scene.
+var _game_buttons: Array[Button] = []
+var _game_requirements: Array[Label] = []
+var _game_ids := PackedStringArray()
+
 var _focus_tween: Tween
 var _focused_button_index := -1
 var _logo_time := 0.0
@@ -48,11 +57,12 @@ var _reduced_motion := false
 
 func _ready() -> void:
 	_reduced_motion = Settings.reduced_motion_enabled()
-	_title.text = StudioInfo.TITLE
-	_tagline.text = StudioInfo.TAGLINE
+	_title.text = GameCatalog.product_title()
+	_tagline.text = GameCatalog.product_tagline()
 	_footer_left.text = "%s  ·  %s" % [StudioInfo.STUDIO, StudioInfo.copyright_line()]
 	_footer_right.text = "v%s" % StudioInfo.version()
-	_update_secondary_game_entry()
+	_build_game_entries()
+	_refresh_game_entries()
 	AchievementManager.progression_changed.connect(_on_progression_changed)
 	# Quitting is meaningless in a browser tab and unusual on mobile.
 	_quit_button.visible = not (OS.has_feature("web") or OS.has_feature("mobile"))
@@ -288,35 +298,26 @@ func _play_logo_intro() -> void:
 
 
 func _on_play_pressed() -> void:
-	_launch_game(_primary_game())
+	_launch_game_at(0)
 
 
 func _on_secondary_game_pressed() -> void:
-	var manifest := _secondary_game()
-	if manifest == null:
-		return
-	_launch_game(manifest)
+	_launch_game_at(1)
 
 
-## First game in menu order — the one the Play button always starts.
-func _primary_game() -> GameManifest:
-	var games := GameCatalog.available()
-	return games[0] if not games.is_empty() else null
+func _on_game_pressed(index: int) -> void:
+	_launch_game_at(index)
 
 
-## The next available game, surfaced by the secondary button once unlocked.
-func _secondary_game() -> GameManifest:
-	var games := GameCatalog.available()
-	return games[1] if games.size() > 1 else null
-
-
-func _launch_game(manifest: GameManifest) -> void:
-	if _launching_game or manifest == null:
+## Slots map one-to-one onto [method GameCatalog.available], so the menu starts
+## a game without ever naming one.
+func _launch_game_at(index: int) -> void:
+	if _launching_game or index < 0 or index >= _game_ids.size():
 		return
 	_launching_game = true
 	for button in _menu_buttons:
 		button.disabled = true
-	GameCatalog.select(manifest.id)
+	GameCatalog.select(_game_ids[index])
 	Router.goto(play_scene)
 
 
@@ -332,30 +333,83 @@ func _on_quit_pressed() -> void:
 	Router.quit_game()
 
 
-## Shows the secondary game entry once the catalog reports it as available.
-func _update_secondary_game_entry() -> void:
-	var manifest := _secondary_game()
-	var unlocked := manifest != null
-	_secondary_game_button.visible = unlocked
-	_secondary_game_button.disabled = not unlocked
-	_secondary_game_requirement.visible = unlocked
-	if not unlocked:
-		return
+## The scene ships two game slots: the Play button and one secondary entry.
+## Every further catalogued game gets a slot cloned from that secondary pair, so
+## a three-game collection and a one-game standalone build run identical code
+## and neither requires the framework to know a game by name.
+##
+## Slots are built once, from [method GameCatalog.all] rather than
+## [method GameCatalog.available], because unlocking a game later must only
+## reveal a node — never create one after button motion has been wired up.
+func _build_game_entries() -> void:
+	_game_buttons.clear()
+	_game_requirements.clear()
+	_game_buttons.append(_play_button)
+	_game_buttons.append(_secondary_game_button)
+	_game_requirements.append(null)
+	_game_requirements.append(_secondary_game_requirement)
 
-	_secondary_game_button.text = manifest.title
-	var modes := AchievementManager.game_unlocked_modes(manifest.id)
-	if modes.is_empty():
-		_secondary_game_button.tooltip_text = manifest.tagline
-		_secondary_game_requirement.text = "UNLOCKED"
-	else:
-		var mode_summary := " + ".join(modes)
-		_secondary_game_button.tooltip_text = "Available: %s." % mode_summary
-		_secondary_game_requirement.text = "UNLOCKED  |  %s" % mode_summary
-	_secondary_game_requirement.add_theme_color_override(
-		"font_color",
-		StudioInfo.SKY
-	)
+	var extra := GameCatalog.all().size() - _game_buttons.size()
+	var anchor := _secondary_game_requirement.get_index()
+	for _i in maxi(extra, 0):
+		# Signals are deliberately not duplicated: the scene wires the secondary
+		# button to its own handler, and a clone must not fire that handler.
+		var flags := Node.DUPLICATE_GROUPS | Node.DUPLICATE_SCRIPTS
+		var button := _secondary_game_button.duplicate(flags) as Button
+		var requirement := _secondary_game_requirement.duplicate(flags) as Label
+		# A cloned scene-unique node would collide on its unique name.
+		button.unique_name_in_owner = false
+		requirement.unique_name_in_owner = false
+
+		_buttons.add_child(button)
+		_buttons.add_child(requirement)
+		anchor += 1
+		_buttons.move_child(button, anchor)
+		anchor += 1
+		_buttons.move_child(requirement, anchor)
+
+		button.pressed.connect(_on_game_pressed.bind(_game_buttons.size()))
+		_game_buttons.append(button)
+		_game_requirements.append(requirement)
+
+
+## Maps the available games onto the slots. Re-run whenever progression changes,
+## so unlocking a game reveals its entry without a scene reload.
+func _refresh_game_entries() -> void:
+	var games := GameCatalog.available()
+	_game_ids = PackedStringArray()
+	for manifest in games:
+		_game_ids.append(manifest.id)
+
+	for index in _game_buttons.size():
+		var button := _game_buttons[index]
+		var requirement := _game_requirements[index]
+		var manifest: GameManifest = games[index] if index < games.size() else null
+
+		if index == 0:
+			# The Play button is the screen's focus anchor, so it stays visible
+			# even in the degenerate case of a build with no games at all.
+			button.disabled = manifest == null
+			continue
+
+		var shown := manifest != null
+		button.visible = shown
+		button.disabled = not shown
+		requirement.visible = shown
+		if not shown:
+			continue
+
+		button.text = manifest.title
+		var modes := AchievementManager.game_unlocked_modes(manifest.id)
+		if modes.is_empty():
+			button.tooltip_text = manifest.tagline
+			requirement.text = "UNLOCKED"
+		else:
+			var mode_summary := " + ".join(modes)
+			button.tooltip_text = "Available: %s." % mode_summary
+			requirement.text = "UNLOCKED  |  %s" % mode_summary
+		requirement.add_theme_color_override("font_color", StudioInfo.SKY)
 
 
 func _on_progression_changed(_key: String, _value: bool) -> void:
-	_update_secondary_game_entry()
+	_refresh_game_entries()

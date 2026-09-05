@@ -36,13 +36,17 @@ func _run() -> void:
 	await _finish()
 
 
-## Every registered game must present its own clip, headline and rules summary.
+## Every registered game must present its own headline and rules summary, plus a
+## walkthrough clip when it ships one. A game without footage is a supported
+## state — [method Instructions._setup_video] hides the card and falls back to
+## the single-column explanation — so the screen is held to that instead.
 func _test_clip_per_game(session: Node) -> void:
 	var manifests := GameCatalog.all()
 	_expect(
 		manifests.size() >= 2,
 		"The catalog needs at least two games to prove the screen is per-game."
 	)
+	var clips := 0
 	var headlines := PackedStringArray()
 	var rules := PackedStringArray()
 	for manifest: GameManifest in manifests:
@@ -52,25 +56,36 @@ func _test_clip_per_game(session: Node) -> void:
 		if screen == null:
 			return
 		var video := screen.get_node("%Video") as VideoStreamPlayer
-		_expect(
-			video.stream != null
-			and video.stream.resource_path == manifest.tutorial_video_path,
-			"%s must load its own tutorial clip." % manifest.id
-		)
-		_expect(
-			(screen.get_node("%PosterImage") as TextureRect).texture != null,
-			"%s must load a poster frame for the idle state." % manifest.id
-		)
-		_expect(
-			(screen.get_node("%VideoTitle") as Label).text.contains(
-				manifest.title.to_upper()
-			),
-			"%s must name its game above the clip." % manifest.id
-		)
+		if manifest.tutorial_video_path.is_empty():
+			_expect(
+				not (screen.get_node("%VideoCard") as Control).visible,
+				"%s ships no clip, so the card must give way to the text." % manifest.id
+			)
+		else:
+			clips += 1
+			_expect(
+				video.stream != null
+				and video.stream.resource_path == manifest.tutorial_video_path,
+				"%s must load its own tutorial clip." % manifest.id
+			)
+			_expect(
+				(screen.get_node("%PosterImage") as TextureRect).texture != null,
+				"%s must load a poster frame for the idle state." % manifest.id
+			)
+			_expect(
+				(screen.get_node("%VideoTitle") as Label).text.contains(
+					manifest.title.to_upper()
+				),
+				"%s must name its game above the clip." % manifest.id
+			)
 		headlines.append((screen.get_node("%Headline") as Label).text)
 		rules.append((screen.get_node("%Rules") as Label).text)
 		await _close_screen(screen)
 
+	_expect(
+		clips >= 2,
+		"At least two games must ship clips, or this screen proves nothing."
+	)
 	_expect(
 		_all_unique(headlines),
 		"Each game needs its own headline, not another game's copy."
@@ -219,6 +234,8 @@ func _test_reduced_motion_starts_paused(session: Node, settings: Node) -> void:
 func _test_clip_loops(session: Node, settings: Node) -> void:
 	settings.set("_values", _with_reduced_motion(settings, false))
 	for manifest in GameCatalog.all():
+		if manifest.tutorial_video_path.is_empty():
+			continue
 		GameCatalog.select(manifest.id)
 		session.call("configure_single_player")
 		var screen := await _open_screen()

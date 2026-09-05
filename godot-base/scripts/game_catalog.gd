@@ -107,6 +107,27 @@ static func current_title() -> String:
 	return manifest.title if manifest else StudioInfo.TITLE
 
 
+## True when this build ships exactly one game, which is what a per-game
+## standalone export produces (see `export_presets.cfg`). The shell then
+## presents that game as the product instead of as one entry in a collection.
+static func is_single_game_build() -> bool:
+	return all().size() == 1
+
+
+## Name for the product itself: the studio's project name in a collection
+## build, the game's own name when only one game shipped. Framework screens use
+## this instead of [constant StudioInfo.TITLE] so a standalone export is branded
+## correctly without anything naming a specific game.
+static func product_title() -> String:
+	var games := all()
+	return games[0].title if games.size() == 1 else StudioInfo.TITLE
+
+
+static func product_tagline() -> String:
+	var games := all()
+	return games[0].tagline if games.size() == 1 else StudioInfo.TAGLINE
+
+
 static func current_gameplay_scene_path() -> String:
 	var manifest := current()
 	return manifest.gameplay_scene_path if manifest else ""
