@@ -4,7 +4,7 @@ extends GameShell
 ##
 ## The HUD, countdown, pause overlay, results panels and share card all come
 ## from `GameShell`; this script only owns the triangles, the input matching
-## and the Target Rush scoring rules.
+## and the Triangle Rush scoring rules.
 
 @export var target_scene: PackedScene
 @export var player_one_inactive_color := Color("31556f")
@@ -16,9 +16,9 @@ extends GameShell
 @export_range(1, 100, 1) var points_per_match := 1
 @export_range(1, 100, 1) var miss_penalty := 1
 
-## Matches the folder name and `games/target_rush/game.gd`, so this scene can
+## Matches the folder name and `games/triangle_rush/game.gd`, so this scene can
 ## look up its own manifest without the framework naming it.
-const GAME_ID := "target_rush"
+const GAME_ID := "triangle_rush"
 const SPAWN_ATTEMPTS := 20
 const BACKGROUND_TRIANGLE_COUNT := 12
 const BURST_SHARDS := 9
@@ -163,7 +163,7 @@ func _target_for_keyboard_event(event: InputEventKey) -> TriangleTarget:
 	for action: StringName in _targets_by_action:
 		if event.is_action_pressed(action):
 			var target := _targets_by_action[action] as TriangleTarget
-			if Settings.one_button_target_rush_enabled() and target != null:
+			if Settings.one_button_triangle_rush_enabled() and target != null:
 				return _active_targets[target.player_index] as TriangleTarget
 			return target
 	return null
@@ -177,7 +177,7 @@ func _target_for_controller_event(event: InputEventJoypadButton) -> TriangleTarg
 	var player_index := _controller_player_index(event.device)
 	if not _player_accepts_human_input(player_index):
 		return null
-	if Settings.one_button_target_rush_enabled():
+	if Settings.one_button_triangle_rush_enabled():
 		return _active_targets[player_index] as TriangleTarget
 
 	var actions := Settings.control_actions_for_player(player_index)
@@ -199,7 +199,7 @@ func _configure_mode_ui() -> void:
 	var mapped_buttons := Settings.controller_target_summary(" / ")
 	var controller_keys := (
 		"ANY %s" % mapped_buttons
-		if Settings.one_button_target_rush_enabled()
+		if Settings.one_button_triangle_rush_enabled()
 		else mapped_buttons
 	)
 	var gamepad := GameSession.gamepad_connected()
@@ -238,7 +238,7 @@ func _on_controls_changed() -> void:
 
 
 func _on_game_setting_changed(key: String, _value: Variant) -> void:
-	if key == Settings.ONE_BUTTON_TARGET_RUSH_KEY:
+	if key == Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY:
 		_configure_mode_ui()
 
 
@@ -253,10 +253,10 @@ func _set_reduced_motion_enabled(value: bool) -> void:
 ## both only take effect when a round starts.
 func _load_round_settings() -> void:
 	super()
-	_round_length = Settings.tunable(TargetRushOptions.ROUND_LENGTH_KEY)
-	_round_triangle_speed = Settings.tunable(TargetRushOptions.SPEED_KEY)
-	_round_triangle_size = Settings.tunable(TargetRushOptions.SIZE_KEY)
-	_round_speed_rush = Settings.tunable(TargetRushOptions.SPEED_RUSH_KEY)
+	_round_length = Settings.tunable(TriangleRushOptions.ROUND_LENGTH_KEY)
+	_round_triangle_speed = Settings.tunable(TriangleRushOptions.SPEED_KEY)
+	_round_triangle_size = Settings.tunable(TriangleRushOptions.SIZE_KEY)
+	_round_speed_rush = Settings.tunable(TriangleRushOptions.SPEED_RUSH_KEY)
 	_active_round_duration = _round_length + Settings.extra_round_time()
 
 
@@ -340,7 +340,7 @@ func _update_hint() -> void:
 				points_per_match,
 				miss_penalty,
 			]
-	elif Settings.one_button_target_rush_enabled():
+	elif Settings.one_button_triangle_rush_enabled():
 		var mapped_buttons := Settings.controller_target_summary("/")
 		var gamepad := GameSession.gamepad_connected()
 		if GameSession.is_single_player():
@@ -408,7 +408,7 @@ func _update_hint() -> void:
 					_letters_hint(PLAYER_TWO),
 				]
 			)
-	if Settings.one_button_target_rush_enabled():
+	if Settings.one_button_triangle_rush_enabled():
 		_round_instructions.text = (
 			"Any assigned key/button hits your highlighted target: +%d | "
 			+ "Wrong triangle: -%d"
@@ -431,7 +431,7 @@ func _update_callout() -> void:
 	var cue := "HIGHLIGHT" if _reduced_motion_enabled else "PULSE"
 	var control := (
 		"ANY ASSIGNED CONTROL"
-		if Settings.one_button_target_rush_enabled()
+		if Settings.one_button_triangle_rush_enabled()
 		else "THE MATCHING CONTROL"
 	)
 	_callout.text = "FOLLOW THE %s - PRESS %s" % [cue, control]

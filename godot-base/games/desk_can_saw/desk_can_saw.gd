@@ -13,8 +13,8 @@ extends GameShell
 @export_range(10.0, 100.0, 1.0) var can_radius := 34.0
 @export_range(0.1, 5.0, 0.1) var combo_window := 1.25
 
-## Matches the folder name and `games/slice_and_slash/game.gd`.
-const GAME_ID := "slice_and_slash"
+## Matches the folder name and `games/desk_can_saw/game.gd`.
+const GAME_ID := "desk_can_saw"
 const WORKSHOP_WALL := Color("182328")
 const WORKSHOP_WALL_DARK := Color("0c1317")
 const WOOD_BASE := Color("6d3f22")
@@ -35,10 +35,10 @@ var _last_slice_times := [-1000.0, -1000.0]
 var _spawned_cans := 0
 var _escaped_cans := 0
 var _spawn_time := 0.0
-var _round_can_speed := SliceOptions.DEFAULT_CAN_SPEED
-var _round_spawn_rate := SliceOptions.DEFAULT_SPAWN_RATE
-var _round_max_cans := SliceOptions.DEFAULT_MAX_CANS
-var _round_chainsaw_speed := SliceOptions.DEFAULT_CHAINSAW_SPEED
+var _round_can_speed := DeskCanSawOptions.DEFAULT_CAN_SPEED
+var _round_spawn_rate := DeskCanSawOptions.DEFAULT_SPAWN_RATE
+var _round_max_cans := DeskCanSawOptions.DEFAULT_MAX_CANS
+var _round_chainsaw_speed := DeskCanSawOptions.DEFAULT_CHAINSAW_SPEED
 
 
 func game_id() -> String:
@@ -48,12 +48,12 @@ func game_id() -> String:
 ## Options are read once per round so a slider moved mid-round never reshapes
 ## the round being played.
 func _load_round_settings() -> void:
-	round_duration = Settings.tunable(SliceOptions.ROUND_LENGTH_KEY)
+	round_duration = Settings.tunable(DeskCanSawOptions.ROUND_LENGTH_KEY)
 	super()
-	_round_can_speed = Settings.tunable(SliceOptions.CAN_SPEED_KEY)
-	_round_spawn_rate = Settings.tunable(SliceOptions.SPAWN_RATE_KEY)
-	_round_max_cans = roundi(Settings.tunable(SliceOptions.MAX_CANS_KEY))
-	_round_chainsaw_speed = Settings.tunable(SliceOptions.CHAINSAW_SPEED_KEY)
+	_round_can_speed = Settings.tunable(DeskCanSawOptions.CAN_SPEED_KEY)
+	_round_spawn_rate = Settings.tunable(DeskCanSawOptions.SPAWN_RATE_KEY)
+	_round_max_cans = roundi(Settings.tunable(DeskCanSawOptions.MAX_CANS_KEY))
+	_round_chainsaw_speed = Settings.tunable(DeskCanSawOptions.CHAINSAW_SPEED_KEY)
 
 
 ## Desk-Can-Saw is a two-human game; a CPU opponent never drives a chainsaw.
@@ -426,10 +426,10 @@ func _keyboard_direction(player_index: int) -> Vector2:
 		return Vector2.ZERO
 
 	return Vector2(
-		float(Input.is_action_pressed(SliceOptions.MOVE_RIGHT_ACTION))
-			- float(Input.is_action_pressed(SliceOptions.MOVE_LEFT_ACTION)),
-		float(Input.is_action_pressed(SliceOptions.MOVE_DOWN_ACTION))
-			- float(Input.is_action_pressed(SliceOptions.MOVE_UP_ACTION))
+		float(Input.is_action_pressed(DeskCanSawOptions.MOVE_RIGHT_ACTION))
+			- float(Input.is_action_pressed(DeskCanSawOptions.MOVE_LEFT_ACTION)),
+		float(Input.is_action_pressed(DeskCanSawOptions.MOVE_DOWN_ACTION))
+			- float(Input.is_action_pressed(DeskCanSawOptions.MOVE_UP_ACTION))
 	)
 
 

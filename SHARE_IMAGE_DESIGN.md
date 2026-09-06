@@ -78,7 +78,7 @@ The composition should contain:
   accent already present in the game.
 - Place the score near the impact point so the action leads the eye toward it.
 
-**Target Rush**
+**Triangle Rush**
 
 - Feature glowing targets moving through trails toward a highlighted active
   target.
@@ -142,7 +142,7 @@ Example request:
 ```json
 {
   "schema_version": 1,
-  "game_id": "slice_and_slash",
+  "game_id": "desk_can_saw",
   "game_title": "Desk-Can-Saw",
   "mode": "Solo",
   "result": "Round Complete",
@@ -197,7 +197,7 @@ homepage link.
 | `godot-base/autoload/share_manager.gd` | Validates the stats URL and supplies cards with the URL, website and QR texture. |
 | Shared card scene | Added promotional score hierarchy, challenge copy, website and dedicated QR information panel. |
 | Desk-Can-Saw card art | Added procedural chainsaw, can, spark and impact artwork. |
-| Target Rush card art | Added procedural targets, trails, glows and urgency artwork. |
+| Triangle Rush card art | Added procedural targets, trails, glows and urgency artwork. |
 | Game payloads | Added stable IDs, short stats routes and raw numeric score fields for future publishing. |
 | Tests | Added QR, URL, information-panel, card-fit and game-variant regression coverage. |
 

@@ -106,7 +106,7 @@ func _all_unique(values: PackedStringArray) -> bool:
 
 
 func _test_playback_controls(session: Node) -> void:
-	GameCatalog.select("target_rush")
+	GameCatalog.select("triangle_rush")
 	session.call("configure_single_player")
 	var screen := await _open_screen()
 	if screen == null:
@@ -146,7 +146,7 @@ func _test_playback_controls(session: Node) -> void:
 
 
 func _test_responsive_body(session: Node) -> void:
-	GameCatalog.select("target_rush")
+	GameCatalog.select("triangle_rush")
 	session.call("configure_multiplayer", 0)
 	var screen := await _open_screen()
 	if screen == null:
@@ -167,7 +167,7 @@ func _test_responsive_body(session: Node) -> void:
 ## Each control card carries a portrait placeholder whose tag names the player
 ## holding that slot, so the roster reads without relying on colour.
 func _test_player_avatars(session: Node) -> void:
-	GameCatalog.select("target_rush")
+	GameCatalog.select("triangle_rush")
 	for setup: Array in [
 		["configure_multiplayer", 0, "P2", true],
 		["configure_multiplayer", 1, "CPU", true],
@@ -205,7 +205,7 @@ func _test_player_avatars(session: Node) -> void:
 
 func _test_reduced_motion_starts_paused(session: Node, settings: Node) -> void:
 	settings.set("_values", _with_reduced_motion(settings, true))
-	GameCatalog.select("slice_and_slash")
+	GameCatalog.select("desk_can_saw")
 	session.call("configure_single_player")
 	var screen := await _open_screen()
 	if screen == null:

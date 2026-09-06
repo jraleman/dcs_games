@@ -3,8 +3,8 @@
     Records the "How to play" clips used by the instructions screen.
 
 .DESCRIPTION
-    Runs res://tools/tutorial_capture.tscn through Godot's Movie Maker for both
-    games, then encodes the intermediate AVIs to the Ogg Theora files Godot's
+    Runs res://tools/tutorial_capture.tscn through Godot's Movie Maker for each
+    game, then encodes the intermediate AVIs to the Ogg Theora files Godot's
     VideoStreamPlayer can play and extracts a still poster frame for each clip.
     Re-run this after changing gameplay visuals or the tutorial captions.
 
@@ -19,15 +19,16 @@ param(
     [string] $CaptureResolution = '1280x720',
     [string] $OutputScale = '960:540',
     [int]    $Quality = 7,
-    [string[]] $Games = @('target_rush', 'slice_and_slash')
+    [string[]] $Games = @('triangle_rush', 'desk_can_saw', 'dead_metal_jam')
 )
 
 $ErrorActionPreference = 'Stop'
 
 # Seconds into each clip that best represent the game on the idle poster.
 $PosterTimes = @{
-    target_rush     = '6.2'
-    slice_and_slash = '10.8'
+    triangle_rush  = '6.2'
+    desk_can_saw   = '10.8'
+    dead_metal_jam = '13.4'
 }
 
 $projectDir = Split-Path -Parent $PSScriptRoot

@@ -23,7 +23,7 @@ extends Control
 @onready var _info_copy: Label = %InfoCopy
 @onready var _website: Label = %Website
 @onready var _cta: Label = %Cta
-@onready var _action_art: ShareCardArt = %ActionArt
+@onready var _action_art: Control = %ActionArt
 @onready var _stat_panels: Array[PanelContainer] = [
 	%AccuracyPanel,
 	%HitsPanel,
@@ -31,6 +31,9 @@ extends Control
 ]
 
 var _game_id := ""
+## Which game's art scene is currently standing in the card's art frame. Empty
+## means the built-in [ShareCardArt].
+var _installed_art_path := ""
 var _accent := StudioInfo.SKY
 var _secondary := Color("4da3ff")
 
@@ -80,7 +83,8 @@ func configure(data: Dictionary) -> void:
 
 	_configure_achievements(data)
 	_apply_color_theme()
-	_action_art.configure(_with_art_style(data, manifest))
+	_install_game_art(manifest)
+	_action_art.call("configure", _with_art_style(data, manifest))
 
 	_game_title.add_theme_font_size_override(
 		"font_size",
@@ -95,6 +99,65 @@ func configure(data: Dictionary) -> void:
 		82 if score.length() <= 8 else 66
 	)
 	queue_redraw()
+
+
+## Swaps the artwork to whatever the game being rendered declares.
+##
+## [member GameManifest.share_art_scene_path] has been in the manifest since
+## this card was written and nothing ever read it, so a game that wanted
+## artwork of its own had no way in except a third hardcoded style inside
+## [ShareCardArt] — which is the framework drawing a game's content, exactly
+## what the manifest exists to prevent. The declared scene replaces
+## `%ActionArt` in the same frame and is handed the same dictionary, so it is a
+## drop-in for the built-in art rather than a second art pathway.
+##
+## The swap is reversible because a card can be reconfigured for another game,
+## and a Desk-Can-Saw result must not be posted over another game's corridor.
+##
+## Anything that fails — a missing file, a scene that is not a `Control`, or
+## one with no `configure()` — leaves the installed art alone. A card is worth
+## rendering with generic art; it is not worth failing to render at all.
+func _install_game_art(manifest: GameManifest) -> void:
+	var wanted := manifest.share_art_scene_path if manifest != null else ""
+	if wanted == _installed_art_path:
+		return
+	var replacement: Control = _game_art(wanted) if not wanted.is_empty() else ShareCardArt.new()
+	if replacement == null:
+		return
+	replacement.name = _action_art.name
+	replacement.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	replacement.size_flags_horizontal = _action_art.size_flags_horizontal
+	replacement.size_flags_vertical = _action_art.size_flags_vertical
+
+	var frame := _action_art.get_parent()
+	var slot := _action_art.get_index()
+	frame.remove_child(_action_art)
+	_action_art.queue_free()
+	frame.add_child(replacement)
+	frame.move_child(replacement, slot)
+	# `%ActionArt` has to keep resolving: the card's own scene, and the tests,
+	# reach the artwork by unique name. A node added at runtime has no owner,
+	# and without one the unique-name flag registers against nothing.
+	replacement.owner = self
+	replacement.unique_name_in_owner = true
+	_action_art = replacement
+	_installed_art_path = wanted
+
+
+## Instantiates a game's declared art scene, or null if it cannot stand in for
+## the built-in artwork.
+func _game_art(path: String) -> Control:
+	var scene: PackedScene = load(path) if ResourceLoader.exists(path) else null
+	var art: Node = scene.instantiate() if scene != null else null
+	if art is Control and art.has_method("configure"):
+		return art
+	if art != null:
+		art.queue_free()
+	push_warning(
+		"Share art scene '%s' must be a Control with configure(); using built-in art."
+		% path
+	)
+	return null
 
 
 ## The payload's `game_id` decides the artwork, so a caller reusing a payload

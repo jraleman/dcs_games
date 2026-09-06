@@ -1,7 +1,7 @@
-class_name TargetRushOptions
+class_name TriangleRushOptions
 extends RefCounted
 
-## Setting keys and ranges owned by Target Rush.
+## Setting keys and ranges owned by Triangle Rush.
 ##
 ## The framework stores and clamps these through [method Settings.tunable];
 ## only this file and the game's own scenes decide what they mean.
@@ -9,8 +9,8 @@ extends RefCounted
 ## Constants only: this class is loaded by headless test scripts before
 ## autoloads exist, so it must not reference [Settings] or any other singleton.
 
-## Matches the folder name and `games/target_rush/game.gd`.
-const GAME_ID := "target_rush"
+## Matches the folder name and `games/triangle_rush/game.gd`.
+const GAME_ID := "triangle_rush"
 
 const SIZE_KEY := "game/triangle_size"
 const SPEED_KEY := "game/triangle_speed"

@@ -83,6 +83,20 @@ func cpu_opponent_available() -> bool:
 	return manifest != null and manifest.supports_cpu_opponent
 
 
+## True when a second player should be offered for the selected game.
+##
+## This is the question the menus ask. It is deliberately narrower than
+## [method multiplayer_available], which only reports whether the *platform*
+## can seat two players: a game whose manifest declares
+## `supports_multiplayer = false` has no two-player rules at all, so offering
+## the choice would only lead to a mode it cannot honour.
+func multiplayer_offered() -> bool:
+	if not multiplayer_available():
+		return false
+	var manifest := GameCatalog.current()
+	return manifest == null or manifest.supports_multiplayer
+
+
 func configure_single_player() -> void:
 	game_mode = GameMode.SINGLE_PLAYER
 	player_two_controller = PlayerTwoController.HUMAN

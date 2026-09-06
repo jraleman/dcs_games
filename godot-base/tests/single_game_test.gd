@@ -146,8 +146,8 @@ func _test_pinned_catalog(id: String) -> void:
 		GameCatalog.intro_scene_path(FRAMEWORK_INTRO) == expected_intro,
 		"A standalone build of '%s' must open with the intro it declares." % id
 	)
-	# Slice-and-Slash is gated behind progress in another game; a build that
-	# ships only Slice-and-Slash contains nothing that could ever open the gate.
+	# Desk-Can-Saw is gated behind progress in another game; a build that
+	# ships only Desk-Can-Saw contains nothing that could ever open the gate.
 	var available := GameCatalog.available()
 	_expect(
 		available.size() == 1 and available[0].id == id,
@@ -254,7 +254,7 @@ func _test_pinned_settings_screen(id: String) -> void:
 		"'%s' must get its rebindable controls on the main menu." % id
 	)
 
-	var one_button := menu.get_node_or_null("%OneButtonTargetRushToggle") as Control
+	var one_button := menu.get_node_or_null("%OneButtonTriangleRushToggle") as Control
 	var row: Control = one_button.get_parent() if one_button != null else null
 	_expect(
 		row != null

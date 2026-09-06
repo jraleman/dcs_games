@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://csu4y6f6ug1on"
-path="res://.godot/imported/tutorial_slice_and_slash_poster.webp-d06ac1196dd85e1b5914d907dd8324c8.ctex"
+uid="uid://c8geltb74qk35"
+path="res://.godot/imported/tutorial_triangle_rush_poster.webp-2445dc7f841e901b9bdb8de21046b641.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/video/tutorial_slice_and_slash_poster.webp"
-dest_files=["res://.godot/imported/tutorial_slice_and_slash_poster.webp-d06ac1196dd85e1b5914d907dd8324c8.ctex"]
+source_file="res://assets/video/tutorial_triangle_rush_poster.webp"
+dest_files=["res://.godot/imported/tutorial_triangle_rush_poster.webp-2445dc7f841e901b9bdb8de21046b641.ctex"]
 
 [params]
 

@@ -1,19 +1,19 @@
 extends RefCounted
 
-## Target Rush manifest — the default game shipped with the base project.
+## Triangle Rush manifest — the default game shipped with the base project.
 ##
 ## [GameCatalog] discovers this file automatically; nothing in the framework
-## refers to Target Rush by name.
+## refers to Triangle Rush by name.
 
-const GAME_ID := "target_rush"
+const GAME_ID := "triangle_rush"
 
 
 static func manifest() -> GameManifest:
 	var game := GameManifest.new()
 	game.id = GAME_ID
-	game.title = "Target Rush"
+	game.title = "Triangle Rush"
 	game.tagline = "Hit your highlighted target before the clock runs out."
-	game.gameplay_scene_path = "res://games/target_rush/gameplay.tscn"
+	game.gameplay_scene_path = "res://games/triangle_rush/gameplay.tscn"
 	game.menu_order = 0
 	game.supports_multiplayer = true
 	game.supports_cpu_opponent = true
@@ -23,10 +23,10 @@ static func manifest() -> GameManifest:
 		"mode_select_hint": "You will confirm the player controls next.",
 	}
 	game.stats_url = "https://deskcansaw.com/stats/tr"
-	game.tunables = TargetRushOptions.TUNABLES
-	game.share_art_style = ShareCardArt.STYLE_TARGET_RUSH
-	game.tutorial_video_path = "res://assets/video/tutorial_target_rush.ogv"
-	game.tutorial_poster_path = "res://assets/video/tutorial_target_rush_poster.webp"
+	game.tunables = TriangleRushOptions.TUNABLES
+	game.share_art_style = ShareCardArt.STYLE_TRIANGLE_RUSH
+	game.tutorial_video_path = "res://assets/video/tutorial_triangle_rush.ogv"
+	game.tutorial_poster_path = "res://assets/video/tutorial_triangle_rush_poster.webp"
 	game.credits = [
 		{
 			"heading": "Game Design & Code",

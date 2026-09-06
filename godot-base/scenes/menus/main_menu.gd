@@ -5,6 +5,7 @@ extends MenuScreen
 ## requires editing this screen.
 
 @export_file("*.tscn") var play_scene := "res://scenes/menus/mode_select.tscn"
+@export_file("*.tscn") var instructions_scene := "res://scenes/menus/instructions.tscn"
 @export_file("*.tscn") var settings_scene := "res://scenes/menus/settings_menu.tscn"
 @export_file("*.tscn") var credits_scene := "res://scenes/menus/credits.tscn"
 
@@ -368,7 +369,20 @@ func _launch_game_at(index: int) -> void:
 	for button in _menu_buttons:
 		button.disabled = true
 	GameCatalog.select(_game_ids[index])
-	Router.goto(play_scene)
+	Router.goto(_launch_scene())
+
+
+## Mode select exists to ask a question. A game that declares
+## `supports_multiplayer = false` has only one possible answer, so the screen is
+## skipped rather than shown with a single card on it — the player goes straight
+## to the instructions, exactly where confirming solo would have sent them.
+func _launch_scene() -> String:
+	if GameSession.multiplayer_offered():
+		return play_scene
+	GameSession.configure_single_player()
+	if bool(Settings.get_value("game/show_instructions", true)):
+		return instructions_scene
+	return GameCatalog.current_gameplay_scene_path()
 
 
 func _on_settings_pressed() -> void:

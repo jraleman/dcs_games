@@ -1,4 +1,4 @@
-class_name SliceOptions
+class_name DeskCanSawOptions
 extends RefCounted
 
 ## Setting keys, ranges and bindings owned by Desk-Can-Saw.
@@ -11,8 +11,8 @@ extends RefCounted
 ## Constants only: this class is loaded by headless test scripts before
 ## autoloads exist, so it must not reference [Settings] or any other singleton.
 
-## Matches the folder name and `games/slice_and_slash/game.gd`.
-const GAME_ID := "slice_and_slash"
+## Matches the folder name and `games/desk_can_saw/game.gd`.
+const GAME_ID := "desk_can_saw"
 
 const ROUND_LENGTH_KEY := "game/slice_round_length"
 const CAN_SPEED_KEY := "game/slice_can_speed"

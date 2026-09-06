@@ -27,7 +27,7 @@ const VISUAL_EFFECTS_KEY := "accessibility/visual_effects"
 const REDUCED_MOTION_KEY := "accessibility/reduced_motion"
 const AUDIO_CAPTIONS_KEY := "accessibility/audio_captions"
 const PLAYER_LABELS_KEY := "accessibility/player_labels"
-const ONE_BUTTON_TARGET_RUSH_KEY := "accessibility/one_button_target_rush"
+const ONE_BUTTON_TRIANGLE_RUSH_KEY := "accessibility/one_button_triangle_rush"
 const GAMEPLAY_SPEED_KEY := "accessibility/gameplay_speed"
 const TARGET_SIZE_KEY := "accessibility/target_size"
 const EXTRA_ROUND_TIME_KEY := "accessibility/extra_round_time"
@@ -144,7 +144,7 @@ const DEFAULTS := {
 	"accessibility/reduced_motion": false,
 	"accessibility/audio_captions": false,
 	"accessibility/player_labels": true,
-	"accessibility/one_button_target_rush": false,
+	"accessibility/one_button_triangle_rush": false,
 	"accessibility/gameplay_speed": 1.0,
 	"accessibility/target_size": 1.0,
 	"accessibility/extra_round_time": 0.0,
@@ -225,8 +225,8 @@ func player_labels_enabled() -> bool:
 	return bool(get_value(PLAYER_LABELS_KEY, true))
 
 
-func one_button_target_rush_enabled() -> bool:
-	return bool(get_value(ONE_BUTTON_TARGET_RUSH_KEY, false))
+func one_button_triangle_rush_enabled() -> bool:
+	return bool(get_value(ONE_BUTTON_TRIANGLE_RUSH_KEY, false))
 
 
 func gameplay_speed_scale() -> float:

@@ -389,15 +389,15 @@ func _drive_lives_round(manifest: GameManifest) -> void:
 	await process_frame
 
 
-## Target Rush is the game whose mistake is a key press, so it is where the
+## Triangle Rush is the game whose mistake is a key press, so it is where the
 ## "wrong key costs a life" rule is checked end to end.
 func _test_wrong_key_costs_a_life(settings: Node, session: Node) -> void:
 	settings.call("set_value", Settings.ROUND_MODE_KEY, Settings.RoundMode.LIVES)
 	settings.call("set_value", Settings.STARTING_LIVES_KEY, 2)
 
-	var manifest := GameCatalog.get_manifest("target_rush")
+	var manifest := GameCatalog.get_manifest("triangle_rush")
 	if manifest == null:
-		_failures.append("Target Rush must be registered in GameCatalog.")
+		_failures.append("Triangle Rush must be registered in GameCatalog.")
 		return
 	GameCatalog.select(manifest.id)
 	session.call("configure_single_player")
@@ -411,7 +411,7 @@ func _test_wrong_key_costs_a_life(settings: Node, session: Node) -> void:
 	var lives: Array = game.get("_lives")
 	_expect(
 		int(lives[0]) == 2,
-		"Target Rush must honour the chosen lives pool."
+		"Triangle Rush must honour the chosen lives pool."
 	)
 
 	game.call("_attempt_target", _wrong_target(game))
@@ -419,7 +419,7 @@ func _test_wrong_key_costs_a_life(settings: Node, session: Node) -> void:
 	lives = game.get("_lives")
 	_expect(
 		int(lives[0]) == 1,
-		"A wrong key or triangle must cost Target Rush a life."
+		"A wrong key or triangle must cost Triangle Rush a life."
 	)
 
 	var correct: Object = (game.get("_active_targets") as Array)[0]
@@ -428,7 +428,7 @@ func _test_wrong_key_costs_a_life(settings: Node, session: Node) -> void:
 	lives = game.get("_lives")
 	_expect(
 		int(lives[0]) == 1,
-		"A correct match must never cost Target Rush a life."
+		"A correct match must never cost Triangle Rush a life."
 	)
 
 	game.call("_attempt_target", _wrong_target(game))
@@ -444,7 +444,7 @@ func _test_wrong_key_costs_a_life(settings: Node, session: Node) -> void:
 	game.call("_attempt_target", correct)
 	_expect(
 		int((game.get("_scores") as Array)[0]) == score_before,
-		"An eliminated Target Rush player must stop scoring."
+		"An eliminated Triangle Rush player must stop scoring."
 	)
 
 	(game.get_node("%RoundTimer") as Timer).stop()

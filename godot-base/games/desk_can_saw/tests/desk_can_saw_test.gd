@@ -25,29 +25,29 @@ func _init() -> void:
 
 func _test_unlock_thresholds() -> void:
 	var state := {}
-	var outcome := SliceUnlockRules.apply_match(state, true, 24, 0, false)
+	var outcome := DeskCanSawUnlockRules.apply_match(state, true, 24, 0, false)
 	state = outcome["state"]
 	_expect(
-		not bool(state[SliceUnlockRules.SOLO_QUALIFIED_KEY]),
+		not bool(state[DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY]),
 		"A solo score of 24 must not satisfy the solo unlock condition."
 	)
 	_expect(
-		not bool(state[SliceUnlockRules.UNLOCKED_KEY]),
+		not bool(state[DeskCanSawUnlockRules.UNLOCKED_KEY]),
 		"A solo score of 24 must leave Desk-Can-Saw locked."
 	)
 
-	outcome = SliceUnlockRules.apply_match(state, true, 25, 0, false)
+	outcome = DeskCanSawUnlockRules.apply_match(state, true, 25, 0, false)
 	state = outcome["state"]
 	_expect(
-		bool(state[SliceUnlockRules.SOLO_QUALIFIED_KEY]),
+		bool(state[DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY]),
 		"A solo score of 25 must satisfy the solo unlock condition."
 	)
 	_expect(
-		not bool(state[SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY]),
+		not bool(state[DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY]),
 		"A solo unlock must not grant access to the multiplayer mode."
 	)
 	_expect(
-		bool(state[SliceUnlockRules.UNLOCKED_KEY]),
+		bool(state[DeskCanSawUnlockRules.UNLOCKED_KEY]),
 		"The solo condition must unlock Desk-Can-Saw by itself."
 	)
 	_expect(
@@ -55,7 +55,7 @@ func _test_unlock_thresholds() -> void:
 		"The qualifying solo result must report the new unlock."
 	)
 
-	var combined_outcome := SliceUnlockRules.apply_match(
+	var combined_outcome := DeskCanSawUnlockRules.apply_match(
 		state,
 		false,
 		25,
@@ -64,8 +64,8 @@ func _test_unlock_thresholds() -> void:
 	)
 	var combined_state: Dictionary = combined_outcome["state"]
 	_expect(
-		bool(combined_state[SliceUnlockRules.SOLO_QUALIFIED_KEY])
-		and bool(combined_state[SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY]),
+		bool(combined_state[DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY])
+		and bool(combined_state[DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY]),
 		"Completing the second condition must make both modes available."
 	)
 	_expect(
@@ -73,18 +73,18 @@ func _test_unlock_thresholds() -> void:
 		"Completing the second condition must not re-unlock the level."
 	)
 
-	outcome = SliceUnlockRules.apply_match({}, false, 25, 24, true)
+	outcome = DeskCanSawUnlockRules.apply_match({}, false, 25, 24, true)
 	var multiplayer_state: Dictionary = outcome["state"]
 	_expect(
-		bool(multiplayer_state[SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY]),
+		bool(multiplayer_state[DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY]),
 		"A qualifying Player 1 win must satisfy the multiplayer condition."
 	)
 	_expect(
-		not bool(multiplayer_state[SliceUnlockRules.SOLO_QUALIFIED_KEY]),
+		not bool(multiplayer_state[DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY]),
 		"A multiplayer unlock must not grant access to the single-player mode."
 	)
 	_expect(
-		bool(multiplayer_state[SliceUnlockRules.UNLOCKED_KEY]),
+		bool(multiplayer_state[DeskCanSawUnlockRules.UNLOCKED_KEY]),
 		"The multiplayer condition must unlock Desk-Can-Saw by itself."
 	)
 	_expect(
@@ -94,33 +94,33 @@ func _test_unlock_thresholds() -> void:
 
 
 func _test_race_condition() -> void:
-	var outcome := SliceUnlockRules.apply_match({}, false, 24, 25, true)
+	var outcome := DeskCanSawUnlockRules.apply_match({}, false, 24, 25, true)
 	var state: Dictionary = outcome["state"]
 	_expect(
-		not bool(state[SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY]),
+		not bool(state[DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY]),
 		"A Player 2 win must not satisfy Player 1's unlock condition."
 	)
 	_expect(
-		not bool(state[SliceUnlockRules.UNLOCKED_KEY]),
+		not bool(state[DeskCanSawUnlockRules.UNLOCKED_KEY]),
 		"A Player 2 win must not unlock Desk-Can-Saw."
 	)
 	_expect(
-		SliceUnlockRules.earns_race_condition(false, 24, 25),
+		DeskCanSawUnlockRules.earns_race_condition(false, 24, 25),
 		"A Player 2 win with 25 points must earn Race condition."
 	)
 	_expect(
-		not SliceUnlockRules.earns_race_condition(false, 25, 25),
+		not DeskCanSawUnlockRules.earns_race_condition(false, 25, 25),
 		"A draw must not earn Race condition."
 	)
 
 
 func _test_sticky_unlock() -> void:
 	var unlocked_state := {
-		SliceUnlockRules.SOLO_QUALIFIED_KEY: true,
-		SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY: true,
-		SliceUnlockRules.UNLOCKED_KEY: true,
+		DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY: true,
+		DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY: true,
+		DeskCanSawUnlockRules.UNLOCKED_KEY: true,
 	}
-	var outcome := SliceUnlockRules.apply_match(
+	var outcome := DeskCanSawUnlockRules.apply_match(
 		unlocked_state,
 		false,
 		0,
@@ -129,37 +129,37 @@ func _test_sticky_unlock() -> void:
 	)
 	var state: Dictionary = outcome["state"]
 	_expect(
-		bool(state[SliceUnlockRules.UNLOCKED_KEY]),
+		bool(state[DeskCanSawUnlockRules.UNLOCKED_KEY]),
 		"Later results must never relock Desk-Can-Saw."
 	)
 
 
 func _test_progression_round_trip() -> void:
-	var path := "user://slice-and-slash-progression-test.cfg"
+	var path := "user://desk-can-saw-progression-test.cfg"
 	var saved := ConfigFile.new()
 	saved.set_value(
 		"progression",
-		SliceUnlockRules.SOLO_QUALIFIED_KEY,
+		DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY,
 		true
 	)
 	_expect(saved.save(path) == OK, "Progression state must be writable.")
 
 	var loaded := ConfigFile.new()
 	_expect(loaded.load(path) == OK, "Progression state must be readable.")
-	var state := SliceUnlockRules.normalized_state({
-		SliceUnlockRules.SOLO_QUALIFIED_KEY: loaded.get_value(
+	var state := DeskCanSawUnlockRules.normalized_state({
+		DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY: loaded.get_value(
 			"progression",
-			SliceUnlockRules.SOLO_QUALIFIED_KEY,
+			DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY,
 			false
 		),
-		SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY: loaded.get_value(
+		DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY: loaded.get_value(
 			"progression",
-			SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY,
+			DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY,
 			false
 		),
 	})
 	_expect(
-		bool(state[SliceUnlockRules.UNLOCKED_KEY]),
+		bool(state[DeskCanSawUnlockRules.UNLOCKED_KEY]),
 		"A persisted solo qualification must restore the unlocked state."
 	)
 	var global_path := ProjectSettings.globalize_path(path)

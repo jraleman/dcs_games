@@ -24,7 +24,7 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_se
                                            │                              │
                                            │                    ┌─────────┴─────────┐
                                            │                    ▼                   ▼
-                                           │                gameplay       slice_and_slash
+                                           │                gameplay       desk_can_saw
                                            ├──►  settings_menu
                                            └──►  credits
 ```
@@ -55,8 +55,8 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_se
 | `ui/components/share_card.tscn` | Default score/achievement image; swap it or pass another scene to `ShareManager`. |
 | `ui/components/share_preview.tscn` | Modal generated-image preview with close and open-original actions. |
 | `ui/components/splash_motion.gd` | Lightweight animated geometry for logo stings and splash screens. |
-| `games/target_rush/` | Target Rush: manifest, gameplay scene, targets, options and its own tests. |
-| `games/slice_and_slash/` | Desk-Can-Saw: manifest, gameplay scene, cans, chainsaw cursor, unlock rule and its own tests. |
+| `games/triangle_rush/` | Triangle Rush: manifest, gameplay scene, targets, options and its own tests. |
+| `games/desk_can_saw/` | Desk-Can-Saw: manifest, gameplay scene, cans, chainsaw cursor, unlock rule and its own tests. |
 | `games/dead_metal_jam/` | Dead Metal Jam: manifest, pitch-detection instrument input, encounters, its own intro and theme, and its own tests. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
 | `tools/record_tutorials.ps1` | Records both tutorial clips through Godot's Movie Maker and encodes them to `assets/video/*.ogv` plus poster frames. |
@@ -91,14 +91,14 @@ space on the other. Layouts are written in those units and adapt at runtime:
   context and the main menu does not, because "triangle speed" means nothing
   before a game is chosen. Both tabs are generated from the running game's
   manifest, so they show Triangle Rush's size, speed, final-stretch rush and
-  round length in Target Rush; the round length, can fall speed, spawn rate,
+  round length in Triangle Rush; the round length, can fall speed, spawn rate,
   desk capacity, chainsaw speed and four rebindable movement keys in
   Desk-Can-Saw; and the waves per track, timing leniency, wrong-note penalty,
   note input and the octave and self-test keys in Dead Metal Jam. Options apply
   from the next round and stack with the Gameplay assists (size and speed
   multiply, extra time is added on top), so they can make a game harder as well
   as easier.
-- **One-button Target Rush** lets any of a player's assigned keys or mapped
+- **One-button Triangle Rush** lets any of a player's assigned keys or mapped
   controller target buttons activate their highlighted target. Desk-Can-Saw
   also exposes controller movement speed, stick deadzone and movement-layout
   controls. Every one of those pad-only rows hides itself until a controller is
@@ -159,7 +159,7 @@ switching modes shapes the *next* round rather than the live one. A game only
 has to report its own mistakes with `_lose_life(player_index)` and skip
 eliminated players with `_player_is_out(player_index)`; both no-op under the
 countdown, so a game never branches on the mode itself. What counts as a
-mistake is the game's call — a wrong key in Target Rush, an escaped can in
+mistake is the game's call — a wrong key in Triangle Rush, an escaped can in
 Desk-Can-Saw.
 
 **Add music** — drop an `.ogg` in `assets/audio/`, then set the `music` export
@@ -200,13 +200,13 @@ in browser exports. QR generation uses the MIT-licensed GDScript implementation
 vendored under `third_party/greaby_qrcode`.
 
 **Tune the sample game** — the exported values on
-`games/target_rush/gameplay.gd` control colours, target speed, round length,
+`games/triangle_rush/gameplay.gd` control colours, target speed, round length,
 points and miss penalty. Round length and the final-stretch speed rush are also
 player-facing under *Settings → Game* while the game is running, which
 overrides those exports at runtime; those ranges and their row titles, formats
-and descriptions live in `games/target_rush/target_rush_options.gd` and are
+and descriptions live in `games/triangle_rush/triangle_rush_options.gd` and are
 published to `Settings` through the manifest's `tunables`. Desk-Can-Saw and
-Dead Metal Jam do the same through `slice_options.gd` and `dmj_options.gd`.
+Dead Metal Jam do the same through `desk_can_saw_options.gd` and `dmj_options.gd`.
 Keyboard bindings are
 persisted by `Settings`, while the CPU difficulty profiles live in
 `GameSession`. The sample keeps rules in `gameplay.gd`, target input / movement
@@ -328,8 +328,8 @@ the project setting:
 
 ```bash
 godot --path . -- --game=dead_metal_jam    # one run, one game
-godot --path . -- --game=target_rush
-godot --path . -- --game=slice_and_slash
+godot --path . -- --game=triangle_rush
+godot --path . -- --game=desk_can_saw
 DCS_GAME=dead_metal_jam godot --path .     # same, for launchers that cannot pass args
 ```
 
@@ -373,7 +373,7 @@ and *Game* tabs, credits, the pause overlay, achievements and share cards.
 An intro is a plain `Control` scene. It must stay skippable (`skip` and
 `ui_cancel`) and hand over with `Router.goto(next_scene)` when it ends.
 Dead Metal Jam's — `games/dead_metal_jam/intro.gd` — is worth copying: it walks
-the game's real `RustDrone` actors across a stage so the opening cannot drift
+the game's real `RustyClanky` actors across a stage so the opening cannot drift
 away from the game, synthesises its own audio rather than adding sounds to
 `AudioManager`, and honours reduced motion, intense visual effects and audio
 captions.
@@ -451,14 +451,14 @@ A game that declares no theme, and every collection build, gets
 with, so nothing moves.
 
 That makes a standalone release **export configuration only**. All three games
-already have a preset — *Windows — Target Rush / Desk-Can-Saw / Dead Metal Jam
+already have a preset — *Windows — Triangle Rush / Desk-Can-Saw / Dead Metal Jam
 (standalone)* — each pinned by its own feature tag, spelled as the initials of
 the game's id (`tr`, `scs`, `dmj`). A preset carries the tag and drops the other
 games:
 
 ```ini
 custom_features="dmj"
-exclude_filter="games/target_rush/*, games/slice_and_slash/*"
+exclude_filter="games/triangle_rush/*, games/desk_can_saw/*"
 ```
 
 and in `project.godot`, override the pin and the identity for that feature tag:
@@ -504,7 +504,7 @@ while a game is running, because a key binding belongs to a game — and are
 saved in `user://settings.cfg`; assigning an occupied key swaps the two
 bindings within that game. Two different games may use the same key, since only
 one of them is ever running. A game with no `control_bindings` of its own
-inherits the built-in set for its `control_style`, which is where Target Rush's
+inherits the built-in set for its `control_style`, which is where Triangle Rush's
 six target keys come from. Desk-Can-Saw declares four movement keys (the arrow
 keys by default) and Dead Metal Jam declares its octave and self-test keys.
 Controller 1 controls Player 1 and Controller 2 controls Player 2. In Target
@@ -614,11 +614,11 @@ exclude filter to keep the recorder out of shipped builds.
 The sample unlocks **Solo Starter** after the first completed single-player
 round and **First Win** after Player 1's first multiplayer victory.
 Desk-Can-Saw is completely hidden until the player either scores at least 25
-in a solo Target Rush round or wins a multiplayer Target Rush round as Player 1
+in a solo Triangle Rush round or wins a multiplayer Triangle Rush round as Player 1
 with at least 25 points (Medium difficulty when the opponent is the CPU). Its
 first unlock triggers a dedicated fanfare and visual celebration. The
 Desk-Can-Saw's mode selector only shows the matching unlocked route: solo,
-local multiplayer, or both after both Target Rush conditions have been
+local multiplayer, or both after both Triangle Rush conditions have been
 completed. A Player 2 win with at least 25 points awards **Race condition** but
 does not satisfy Player 1's multiplayer requirement. These flags and
 achievements are stored in `user://achievements.cfg` and never regress after
@@ -630,11 +630,11 @@ and must not delete another build's saved options or unlocks out of a shared
 Focused regression checks can be run headlessly:
 
 ```bash
-godot --headless --path . --script res://games/slice_and_slash/tests/slice_and_slash_test.gd
-godot --headless --path . --script res://games/slice_and_slash/tests/slice_and_slash_scene_test.gd
+godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_test.gd
+godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_scene_test.gd
 godot --headless --path . --script res://tests/visual_effects_test.gd
 godot --headless --path . --script res://tests/accessibility_test.gd
-godot --headless --path . --script res://games/target_rush/tests/target_rush_options_test.gd
+godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd
 godot --headless --path . --script res://tests/share_card_test.gd
 godot --headless --path . --script res://tests/instructions_video_test.gd
 godot --headless --path . --script res://tests/game_shell_test.gd
@@ -644,7 +644,7 @@ godot --headless --path . --script res://tests/single_game_test.gd
 ```
 
 Run the suite against the full collection: several checks assert values that
-Target Rush and Desk-Can-Saw declare, so they cannot pass in a run pinned with
+Triangle Rush and Desk-Can-Saw declare, so they cannot pass in a run pinned with
 `--game`. `single_game_test.gd` is the exception — it passes in both, so a
 standalone build can still verify its own path.
 

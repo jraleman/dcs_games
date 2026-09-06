@@ -8,16 +8,30 @@ extends Node
 ## the file. Nothing here ships with the game; see `tools/record_tutorials.ps1`.
 ##
 ##     godot --path godot-base --resolution 1280x720 \
-##         --write-movie build/target_rush.avi \
-##         res://tools/tutorial_capture.tscn ++ --game=target_rush
+##         --write-movie build/triangle_rush.avi \
+##         res://tools/tutorial_capture.tscn ++ --game=triangle_rush
 
-const TARGET_RUSH := "target_rush"
-const SLICE_AND_SLASH := "slice_and_slash"
+const TRIANGLE_RUSH := "triangle_rush"
+const DESK_CAN_SAW := "desk_can_saw"
+const DEAD_METAL_JAM := "dead_metal_jam"
 
 const FADE_IN := 0.6
 const FADE_OUT := 1.0
 const KEYCAP_HOLD := 0.55
 const CLIP_DURATION := 24.0
+
+## Dead Metal Jam's clip runs longer than the other two. It has more to say —
+## a note to read, an instrument to play it on, a beat to land it on and a
+## robot that shoots back — and at 100 BPM the robots it is describing arrive
+## roughly three seconds apart. Measured against the shipped chart rather than
+## guessed: five steps is thirty seconds of Scrapyard Stomp.
+##
+## The armoured robot is deliberately *not* taught here. Every shipped chart
+## holds its first one back past the half-minute mark, on purpose — an enemy
+## that demands reading ahead is not the thing to meet before the one that
+## demands a single note (§8.2) — so a caption about it would be describing
+## something the viewer cannot see.
+const DEAD_METAL_JAM_DURATION := 30.0
 
 ## Non-persistent Settings overrides so a developer's saved preferences cannot
 ## change what the recording looks like. Written straight into the backing
@@ -28,7 +42,7 @@ const SETTING_OVERRIDES := {
 	"accessibility/reduced_motion": false,
 	"accessibility/audio_captions": false,
 	"accessibility/player_labels": true,
-	"accessibility/one_button_target_rush": false,
+	"accessibility/one_button_triangle_rush": false,
 	"accessibility/gameplay_speed": 1.0,
 	"accessibility/target_size": 1.0,
 	"accessibility/extra_round_time": 0.0,
@@ -36,9 +50,25 @@ const SETTING_OVERRIDES := {
 	"game/triangle_speed": 1.0,
 	"game/triangle_speed_rush": 0.35,
 	"game/triangle_round_length": 30.0,
+	# Dead Metal Jam. The note source is pinned to the computer keyboard
+	# because the scripted player cannot hold a guitar — the reason that source
+	# exists at all (§4.5) — and pinning it also stops a real microphone in the
+	# room from scoring notes nobody played into the recording.
+	#
+	# The track is a shipped chart rather than the practice ramp because the
+	# ramp is seeded from the clock: every take would be a different song, and
+	# a caption timed against one take would be describing another. A chart is
+	# fixed data, so re-recording after an art change gives the same robots in
+	# the same lanes at the same beats. Scrapyard Stomp is the slowest of the
+	# three (§10), which is what a first viewer needs.
+	"game/dmj_mode": DmjOptions.MODE_JAM,
+	"game/dmj_track": DmjOptions.TRACK_SONG_02,
+	"game/dmj_timing_window": 1.0,
+	"game/dmj_wrong_note_penalty": DmjOptions.DEFAULT_WRONG_NOTE_PENALTY,
+	"game/dmj_note_source": DmjOptions.SOURCE_KEYBOARD,
 }
 
-const TARGET_RUSH_STEPS: Array[Dictionary] = [
+const TRIANGLE_RUSH_STEPS: Array[Dictionary] = [
 	{
 		"time": 0.0,
 		"title": "Follow the bright triangle",
@@ -66,7 +96,7 @@ const TARGET_RUSH_STEPS: Array[Dictionary] = [
 	},
 ]
 
-const SLICE_STEPS: Array[Dictionary] = [
+const DESK_CAN_SAW_STEPS: Array[Dictionary] = [
 	{
 		"time": 0.0,
 		"title": "Cans drop onto the desk",
@@ -94,14 +124,60 @@ const SLICE_STEPS: Array[Dictionary] = [
 	},
 ]
 
-const TARGET_RUSH_WRONG_PRESS_TIME := 11.4
-const TARGET_RUSH_REACTION := 0.52
+const DEAD_METAL_JAM_STEPS: Array[Dictionary] = [
+	{
+		"time": 0.0,
+		"title": "Every robot calls a note",
+		"body": "The letter on its chest is the note it wants. Read it while it is still far away.",
+	},
+	{
+		"time": 5.6,
+		"title": "Play that note to drop it",
+		"body": "Guitar, bass, keys or voice into your microphone. Any octave counts.",
+	},
+	{
+		"time": 11.6,
+		"title": "Land it on the beat",
+		"body": "Notes are scored against the song. The closer to the beat, the more it is worth.",
+	},
+	{
+		"time": 17.4,
+		"title": "Do not let one reach you",
+		"body": "A robot that gets to the front charges up and fires. Answer it before the bar fills.",
+	},
+	{
+		"time": 25.0,
+		"title": "No instrument? Use the keys",
+		"body": "A S D F G H J plays a scale, so you can learn the game before you plug in.",
+	},
+]
+
+const TRIANGLE_RUSH_WRONG_PRESS_TIME := 11.4
+const TRIANGLE_RUSH_REACTION := 0.52
+
 ## While this step is on screen the demo player parks the chainsaw so a few
 ## cans reach the floor and the clatter penalty is actually shown.
-const SLICE_IDLE_WINDOW := Vector2(15.0, 18.6)
+const DESK_CAN_SAW_IDLE_WINDOW := Vector2(15.0, 18.6)
 
-var _game := TARGET_RUSH
-var _steps: Array[Dictionary] = TARGET_RUSH_STEPS
+## How close to the beat the scripted player answers, in seconds. Well inside
+## the Perfect window, because a tutorial should show the game being played
+## right — but not exactly zero, which no hand achieves and which would make
+## the judgement callouts look scripted rather than earned.
+const DEAD_METAL_JAM_ACCURACY := 0.018
+
+## Shortest gap between two synthesised notes. A plated knuckle asks for its
+## next plate 0.8 s later (§8.2), so this cannot swallow a plate beat, and it
+## is long enough that one press cannot be counted twice across frames.
+const DEAD_METAL_JAM_REPRESS := 0.2
+
+## While this step is on screen the scripted player stops answering, so a robot
+## reaches the front, charges, and fires — the thing step four is describing.
+## The window has to outlast a full wind-up or the lesson is a robot that gets
+## close and is then quietly shot anyway.
+const DEAD_METAL_JAM_IDLE_WINDOW := Vector2(17.6, 23.2)
+
+var _game := TRIANGLE_RUSH
+var _steps: Array[Dictionary] = TRIANGLE_RUSH_STEPS
 var _elapsed := 0.0
 var _step_index := -1
 var _scene: Node
@@ -122,11 +198,13 @@ var _press_due := -1.0
 var _wrong_press_done := false
 var _pending_releases: Array[InputEventKey] = []
 var _saw_position := Vector2.ZERO
+## When the scripted Dead Metal Jam player is next allowed to play a note.
+var _note_ready_at := 0.0
 
 
 func _ready() -> void:
 	_game = _requested_game()
-	_steps = SLICE_STEPS if _game == SLICE_AND_SLASH else TARGET_RUSH_STEPS
+	_steps = _steps_for(_game)
 	AudioServer.set_bus_mute(AudioServer.get_bus_index(&"Master"), true)
 	_apply_setting_overrides()
 	_configure_session()
@@ -150,12 +228,14 @@ func _process(delta: float) -> void:
 	):
 		_advance_step()
 
-	if _game == SLICE_AND_SLASH:
-		_drive_slice_and_slash(delta)
+	if _game == DESK_CAN_SAW:
+		_drive_desk_can_saw(delta)
+	elif _game == DEAD_METAL_JAM:
+		_drive_dead_metal_jam()
 	else:
-		_drive_target_rush()
+		_drive_triangle_rush()
 
-	if _elapsed >= CLIP_DURATION:
+	if _elapsed >= _clip_duration():
 		set_process(false)
 		get_tree().quit()
 
@@ -169,11 +249,30 @@ func _requested_game() -> String:
 		if not argument.begins_with("--game="):
 			continue
 		var requested := argument.trim_prefix("--game=").strip_edges()
-		if requested == SLICE_AND_SLASH or requested == TARGET_RUSH:
+		if GameCatalog.get_manifest(requested) != null and not _steps_for(requested).is_empty():
 			return requested
-		push_warning("Unknown --game=%s; recording Target Rush." % requested)
-		return TARGET_RUSH
-	return TARGET_RUSH
+		push_warning("No tutorial script for --game=%s; recording Triangle Rush." % requested)
+		return TRIANGLE_RUSH
+	return TRIANGLE_RUSH
+
+
+## The captions for a game, or empty when the recorder has no script for it.
+## Recording a game the tool cannot drive would produce a clip of a round
+## nobody is playing, which is worse than no clip at all.
+func _steps_for(game: String) -> Array[Dictionary]:
+	match game:
+		DESK_CAN_SAW:
+			return DESK_CAN_SAW_STEPS
+		DEAD_METAL_JAM:
+			return DEAD_METAL_JAM_STEPS
+		TRIANGLE_RUSH:
+			return TRIANGLE_RUSH_STEPS
+		_:
+			return [] as Array[Dictionary]
+
+
+func _clip_duration() -> float:
+	return DEAD_METAL_JAM_DURATION if _game == DEAD_METAL_JAM else CLIP_DURATION
 
 
 func _apply_setting_overrides() -> void:
@@ -187,6 +286,12 @@ func _apply_setting_overrides() -> void:
 func _configure_session() -> void:
 	GameCatalog.select(_game)
 	GameSession.configure_single_player()
+	# A recorded round is not a played round. An achievement toast would slide
+	# a badge the viewer has not earned across the corner of the clip, so the
+	# overlay is hidden for the take.
+	var toasts: Variant = AchievementManager.get("_toast_layer")
+	if toasts is CanvasLayer:
+		(toasts as CanvasLayer).hide()
 
 
 # --- Overlay ----------------------------------------------------------------
@@ -230,7 +335,15 @@ func _build_overlay() -> void:
 	row.add_child(text_column)
 
 	var eyebrow := Label.new()
-	eyebrow.text = "HOW TO PLAY · %s" % GameSession.game_title().to_upper()
+	# The game's own title, from the catalog. `GameSession` used to answer this
+	# and no longer does, which took the whole overlay down with it: the error
+	# aborted `_build_overlay` before the captions, the keycap and the fade were
+	# built, and every clip recorded was a bare game with a numbered badge over
+	# it. The catalog is the manifest's own title and cannot drift from it.
+	var manifest := GameCatalog.get_manifest(_game)
+	eyebrow.text = "HOW TO PLAY · %s" % (
+		manifest.title if manifest != null else _game
+	).to_upper()
 	eyebrow.add_theme_font_size_override("font_size", 21)
 	eyebrow.add_theme_color_override("font_color", Color(StudioInfo.SKY, 0.85))
 	text_column.add_child(eyebrow)
@@ -249,11 +362,14 @@ func _build_overlay() -> void:
 	_keycap_column = VBoxContainer.new()
 	_keycap_column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_keycap_column.add_theme_constant_override("separation", 6)
-	_keycap_column.visible = _game == TARGET_RUSH
+	_keycap_column.visible = _game != DESK_CAN_SAW
 	row.add_child(_keycap_column)
 
 	var keycap_caption := Label.new()
-	keycap_caption.text = "PRESSED"
+	# Dead Metal Jam is played on an instrument; the keyboard is only how this
+	# recording holds one. So the badge names the note that was played, not the
+	# key that produced it, and the caption has to say so.
+	keycap_caption.text = "PLAYED" if _game == DEAD_METAL_JAM else "PRESSED"
 	keycap_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	keycap_caption.add_theme_font_size_override("font_size", 17)
 	keycap_caption.add_theme_color_override("font_color", StudioInfo.MUTED)
@@ -328,11 +444,12 @@ func _advance_step() -> void:
 
 
 func _update_fade() -> void:
+	var duration := _clip_duration()
 	var alpha := 0.0
 	if _elapsed < FADE_IN:
 		alpha = 1.0 - _elapsed / FADE_IN
-	elif _elapsed > CLIP_DURATION - FADE_OUT:
-		alpha = (_elapsed - (CLIP_DURATION - FADE_OUT)) / FADE_OUT
+	elif _elapsed > duration - FADE_OUT:
+		alpha = (_elapsed - (duration - FADE_OUT)) / FADE_OUT
 	_fade.color.a = clampf(alpha, 0.0, 1.0)
 
 
@@ -357,7 +474,7 @@ func _update_keycap(delta: float) -> void:
 
 # --- Scripted demo player ---------------------------------------------------
 
-func _drive_target_rush() -> void:
+func _drive_triangle_rush() -> void:
 	if not bool(_scene.get("_round_active")):
 		return
 
@@ -366,13 +483,13 @@ func _drive_target_rush() -> void:
 		return
 	if active != _last_active_target:
 		_last_active_target = active
-		_press_due = _elapsed + TARGET_RUSH_REACTION + randf() * 0.16
+		_press_due = _elapsed + TRIANGLE_RUSH_REACTION + randf() * 0.16
 
 	if _press_due < 0.0 or _elapsed < _press_due:
 		return
 	_press_due = -1.0
 
-	if not _wrong_press_done and _elapsed >= TARGET_RUSH_WRONG_PRESS_TIME:
+	if not _wrong_press_done and _elapsed >= TRIANGLE_RUSH_WRONG_PRESS_TIME:
 		_wrong_press_done = true
 		var decoy := _decoy_target(active)
 		if decoy != null:
@@ -413,6 +530,61 @@ func _action_for_target(target: TriangleTarget) -> StringName:
 	return &""
 
 
+## Plays Dead Metal Jam by reading the encounter and answering the front robot
+## on its beat.
+##
+## It reaches into the gameplay scene for the director and synthesises key
+## events into [KeyboardNoteSource] rather than calling the scoring code, so
+## what the recording shows is a round genuinely played through the game's own
+## input path — the same reason the other two drivers press keys and move a
+## mouse instead of adding points directly.
+func _drive_dead_metal_jam() -> void:
+	if _elapsed >= DEAD_METAL_JAM_IDLE_WINDOW.x and _elapsed <= DEAD_METAL_JAM_IDLE_WINDOW.y:
+		return
+	if _elapsed < _note_ready_at:
+		return
+	var director: Object = _scene.get("_director")
+	if director == null:
+		return
+
+	var live: Array = director.call("live_drones")
+	for entry in live:
+		var drone: JamBot = entry
+		if drone == null or drone.required_note < 0:
+			continue
+		# `time_to_beat` is negative before the beat and positive after it, so
+		# this fires on the last frame before the beat rather than after it.
+		if drone.time_to_beat() < -DEAD_METAL_JAM_ACCURACY:
+			continue
+		_play_note(drone.required_note)
+		return
+
+
+## Presses whichever key on [KeyboardNoteSource]'s layout sounds `note`.
+##
+## Notes are matched by pitch class (§4), so the octave never has to be shifted
+## — every note the game can ask for is somewhere on the one row of keys.
+func _play_note(note: int) -> void:
+	var source: Object = _scene.get("_keys")
+	if source == null:
+		return
+	var base: int = source.call("base_midi")
+	var semitone := posmod(note - base, 12)
+	for keycode: int in KeyboardNoteSource.LAYOUT:
+		if int(KeyboardNoteSource.LAYOUT[keycode]) != semitone:
+			continue
+		var press := InputEventKey.new()
+		press.keycode = keycode
+		press.physical_keycode = keycode
+		press.pressed = true
+		press.echo = false
+		Input.parse_input_event(press)
+		_pending_releases.append(press)
+		_show_keycap(PitchDetector.note_name(note))
+		_note_ready_at = _elapsed + DEAD_METAL_JAM_REPRESS
+		return
+
+
 func _flush_key_releases() -> void:
 	for press in _pending_releases:
 		var release := press.duplicate() as InputEventKey
@@ -421,7 +593,7 @@ func _flush_key_releases() -> void:
 	_pending_releases.clear()
 
 
-func _drive_slice_and_slash(delta: float) -> void:
+func _drive_desk_can_saw(delta: float) -> void:
 	if not bool(_scene.get("_round_active")):
 		return
 
@@ -437,7 +609,7 @@ func _drive_slice_and_slash(delta: float) -> void:
 
 
 func _slice_goal(bounds: Rect2) -> Vector2:
-	if _elapsed >= SLICE_IDLE_WINDOW.x and _elapsed <= SLICE_IDLE_WINDOW.y:
+	if _elapsed >= DESK_CAN_SAW_IDLE_WINDOW.x and _elapsed <= DESK_CAN_SAW_IDLE_WINDOW.y:
 		return Vector2(bounds.position.x + 120.0, bounds.end.y - 90.0)
 	return _best_can_position(bounds)
 

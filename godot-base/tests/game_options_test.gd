@@ -244,33 +244,33 @@ func _test_menu_for_game(settings: Node, manifest: GameManifest) -> void:
 ## A generated slider is only useful if it writes through to the store the game
 ## reads at the start of the next round.
 func _test_slider_writes_through(settings: Node) -> void:
-	var menu := await _open_menu(SliceOptions.GAME_ID)
+	var menu := await _open_menu(DeskCanSawOptions.GAME_ID)
 	if menu == null:
 		return
 
 	var options := menu.get("_option_controls") as Dictionary
-	var slider := options.get(SliceOptions.MAX_CANS_KEY) as HSlider
+	var slider := options.get(DeskCanSawOptions.MAX_CANS_KEY) as HSlider
 	if slider == null:
 		_failures.append("Desk-Can-Saw must offer a cans-on-the-desk slider.")
 		await _free_scene(menu)
 		return
 
 	_expect(
-		is_equal_approx(slider.min_value, float(SliceOptions.MIN_MAX_CANS))
-		and is_equal_approx(slider.max_value, float(SliceOptions.MAX_MAX_CANS)),
+		is_equal_approx(slider.min_value, float(DeskCanSawOptions.MIN_MAX_CANS))
+		and is_equal_approx(slider.max_value, float(DeskCanSawOptions.MAX_MAX_CANS)),
 		"The generated slider must span the range Settings clamps to."
 	)
-	_remember(settings, SliceOptions.MAX_CANS_KEY)
+	_remember(settings, DeskCanSawOptions.MAX_CANS_KEY)
 	slider.value = 12.0
 	_expect(
-		int(settings.call("tunable", SliceOptions.MAX_CANS_KEY)) == 12,
+		int(settings.call("tunable", DeskCanSawOptions.MAX_CANS_KEY)) == 12,
 		"Moving a generated slider must write through to Settings."
 	)
 
-	_remember(settings, SliceOptions.CAN_SPEED_KEY)
-	settings.call("set_value", SliceOptions.CAN_SPEED_KEY, 1.5)
+	_remember(settings, DeskCanSawOptions.CAN_SPEED_KEY)
+	settings.call("set_value", DeskCanSawOptions.CAN_SPEED_KEY, 1.5)
 	await process_frame
-	var speed := options.get(SliceOptions.CAN_SPEED_KEY) as HSlider
+	var speed := options.get(DeskCanSawOptions.CAN_SPEED_KEY) as HSlider
 	_expect(
 		speed != null and is_equal_approx(speed.value, 1.5),
 		"A generated slider must follow a change made elsewhere."
@@ -324,17 +324,17 @@ func _test_choice_writes_through(settings: Node) -> void:
 ## conflict only means something inside one game's own bindings.
 func _test_binding_scope(settings: Node) -> void:
 	for key: String in [
-		SliceOptions.MOVE_UP_KEY,
-		SliceOptions.MOVE_DOWN_KEY,
+		DeskCanSawOptions.MOVE_UP_KEY,
+		DeskCanSawOptions.MOVE_DOWN_KEY,
 		DmjOptions.OCTAVE_DOWN_BINDING,
 	]:
 		_remember(settings, key)
 
 	settings.call(
-		"set_binding_key", SliceOptions.MOVE_UP_KEY, KEY_W, SliceOptions.GAME_ID
+		"set_binding_key", DeskCanSawOptions.MOVE_UP_KEY, KEY_W, DeskCanSawOptions.GAME_ID
 	)
 	_expect(
-		int(settings.call("binding_keycode", SliceOptions.MOVE_UP_KEY)) == KEY_W,
+		int(settings.call("binding_keycode", DeskCanSawOptions.MOVE_UP_KEY)) == KEY_W,
 		"Rebinding must store the new key."
 	)
 	settings.call(
@@ -344,7 +344,7 @@ func _test_binding_scope(settings: Node) -> void:
 		DmjOptions.GAME_ID
 	)
 	_expect(
-		int(settings.call("binding_keycode", SliceOptions.MOVE_UP_KEY)) == KEY_W
+		int(settings.call("binding_keycode", DeskCanSawOptions.MOVE_UP_KEY)) == KEY_W
 		and int(settings.call("binding_keycode", DmjOptions.OCTAVE_DOWN_BINDING))
 		== KEY_W,
 		"A key used by another game must not be taken away from it."
@@ -352,29 +352,29 @@ func _test_binding_scope(settings: Node) -> void:
 
 	# Inside one game the same key cannot mean two things, so it swaps.
 	var displaced := int(
-		settings.call("binding_keycode", SliceOptions.MOVE_DOWN_KEY)
+		settings.call("binding_keycode", DeskCanSawOptions.MOVE_DOWN_KEY)
 	)
 	settings.call(
 		"set_binding_key",
-		SliceOptions.MOVE_DOWN_KEY,
+		DeskCanSawOptions.MOVE_DOWN_KEY,
 		KEY_W,
-		SliceOptions.GAME_ID
+		DeskCanSawOptions.GAME_ID
 	)
 	_expect(
-		int(settings.call("binding_keycode", SliceOptions.MOVE_DOWN_KEY)) == KEY_W
-		and int(settings.call("binding_keycode", SliceOptions.MOVE_UP_KEY))
+		int(settings.call("binding_keycode", DeskCanSawOptions.MOVE_DOWN_KEY)) == KEY_W
+		and int(settings.call("binding_keycode", DeskCanSawOptions.MOVE_UP_KEY))
 		== displaced,
 		"Reusing a key inside one game must swap the two bindings."
 	)
 	_expect(
-		_action_uses_key(SliceOptions.MOVE_DOWN_ACTION, KEY_W)
-		and _action_uses_key(SliceOptions.MOVE_UP_ACTION, displaced),
+		_action_uses_key(DeskCanSawOptions.MOVE_DOWN_ACTION, KEY_W)
+		and _action_uses_key(DeskCanSawOptions.MOVE_UP_ACTION, displaced),
 		"A rebind must reach the InputMap, not just the config file."
 	)
 
-	settings.call("reset_controls_to_defaults", SliceOptions.GAME_ID)
+	settings.call("reset_controls_to_defaults", DeskCanSawOptions.GAME_ID)
 	_expect(
-		int(settings.call("binding_keycode", SliceOptions.MOVE_UP_KEY)) == KEY_UP
+		int(settings.call("binding_keycode", DeskCanSawOptions.MOVE_UP_KEY)) == KEY_UP
 		and int(settings.call("binding_keycode", DmjOptions.OCTAVE_DOWN_BINDING))
 		== KEY_W,
 		"Restoring one game's controls must leave every other game alone."
@@ -385,19 +385,19 @@ func _test_binding_scope(settings: Node) -> void:
 ## but only once the player has actually moved them — the shipped wording reads
 ## better than four key names.
 func _test_movement_summary(settings: Node) -> void:
-	_remember(settings, SliceOptions.MOVE_LEFT_KEY)
+	_remember(settings, DeskCanSawOptions.MOVE_LEFT_KEY)
 	_expect(
 		str(settings.call(
-			"movement_summary_for_game", SliceOptions.GAME_ID, "/", "ARROWS"
+			"movement_summary_for_game", DeskCanSawOptions.GAME_ID, "/", "ARROWS"
 		)) == "ARROWS",
 		"Untouched movement keys must keep the shipped wording."
 	)
 	settings.call(
-		"set_binding_key", SliceOptions.MOVE_LEFT_KEY, KEY_J, SliceOptions.GAME_ID
+		"set_binding_key", DeskCanSawOptions.MOVE_LEFT_KEY, KEY_J, DeskCanSawOptions.GAME_ID
 	)
 	_expect(
 		str(settings.call(
-			"movement_summary_for_game", SliceOptions.GAME_ID, "/", "ARROWS"
+			"movement_summary_for_game", DeskCanSawOptions.GAME_ID, "/", "ARROWS"
 		)).contains("J"),
 		"Rebound movement keys must be named instead of assumed."
 	)

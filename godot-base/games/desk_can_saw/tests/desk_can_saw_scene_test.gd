@@ -20,7 +20,7 @@ func _run() -> void:
 		return
 
 	var original_progress: Dictionary = achievement_manager.call(
-		"game_progress", "slice_and_slash"
+		"game_progress", "desk_can_saw"
 	)
 	await _test_slice_mode_access(session, achievement_manager)
 	achievement_manager.set("_progression", _slice_progress(true, true))
@@ -35,7 +35,7 @@ func _test_slice_mode_access(
 	session: Node,
 	achievement_manager: Node
 ) -> void:
-	GameCatalog.select("slice_and_slash")
+	GameCatalog.select("desk_can_saw")
 	await _assert_slice_mode_access(
 		achievement_manager,
 		true,
@@ -123,7 +123,7 @@ func _assert_slice_mode_access(
 
 
 func _test_slice_mode_flow(session: Node) -> void:
-	GameCatalog.select("slice_and_slash")
+	GameCatalog.select("desk_can_saw")
 	session.call("configure_single_player")
 
 	var menu := _instantiate_scene("res://scenes/menus/mode_select.tscn")
@@ -132,7 +132,7 @@ func _test_slice_mode_flow(session: Node) -> void:
 	await process_frame
 	var title := menu.get_node("Margins/Layout/Header/Title") as Label
 	_expect(
-		title.text == GameCatalog.get_manifest("slice_and_slash").title,
+		title.text == GameCatalog.get_manifest("desk_can_saw").title,
 		"The unlocked menu flow must identify Desk-Can-Saw."
 	)
 	menu.call("_on_multiplayer_pressed")
@@ -175,16 +175,16 @@ func _slice_progress(
 	single_player_unlocked: bool,
 	multiplayer_unlocked: bool
 ) -> Dictionary:
-	return SliceUnlockRules.normalized_state({
-		SliceUnlockRules.SOLO_QUALIFIED_KEY: single_player_unlocked,
-		SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY: multiplayer_unlocked,
+	return DeskCanSawUnlockRules.normalized_state({
+		DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY: single_player_unlocked,
+		DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY: multiplayer_unlocked,
 	})
 
 
 func _test_single_player_scene(session: Node) -> void:
-	GameCatalog.select("slice_and_slash")
+	GameCatalog.select("desk_can_saw")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://games/slice_and_slash/slice_and_slash.tscn")
+	var game := _instantiate_scene("res://games/desk_can_saw/desk_can_saw.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -281,13 +281,13 @@ func _test_single_player_scene(session: Node) -> void:
 
 
 func _test_multiplayer_isolation(session: Node) -> void:
-	GameCatalog.select("slice_and_slash")
+	GameCatalog.select("desk_can_saw")
 	session.call(
 		"configure_multiplayer",
 		GAME_SESSION_SCRIPT.PlayerTwoController.HUMAN,
 		GAME_SESSION_SCRIPT.CpuDifficulty.MEDIUM
 	)
-	var game := _instantiate_scene("res://games/slice_and_slash/slice_and_slash.tscn")
+	var game := _instantiate_scene("res://games/desk_can_saw/desk_can_saw.tscn")
 	if game == null:
 		return
 	await process_frame

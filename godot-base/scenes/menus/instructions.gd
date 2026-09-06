@@ -7,6 +7,10 @@ extends MenuScreen
 ## The clip is the centrepiece here: it reserves a fixed slice of the screen
 ## height so a viewer can actually read the round it is showing.
 
+## The screen a solo-only game came from, since it reaches this screen without
+## passing through mode select.
+@export_file("*.tscn") var main_menu_scene := "res://scenes/menus/main_menu.tscn"
+
 ## Smallest usable clip width; also stops the grid squeezing the video column.
 const VIDEO_MIN_WIDTH := 420.0
 ## Share of the viewport height reserved for the clip. Tuned so a 16:9 screen
@@ -63,6 +67,11 @@ func _ready() -> void:
 	first_focus = _start_button
 	margins = _margins
 	_multiplayer = GameSession.player_two_enabled()
+	# Back has to undo however the player got here. A solo-only game skips mode
+	# select entirely (see `main_menu.gd`), so returning to it would bounce
+	# straight back and trap the player in a loop.
+	if not GameSession.multiplayer_offered():
+		back_scene = main_menu_scene
 	_populate_instructions()
 	_setup_video()
 	_show_again.button_pressed = bool(Settings.get_value("game/show_instructions", true))
@@ -112,7 +121,7 @@ func _populate_instructions() -> void:
 	_rules.text = (
 		"Bright target = correct  ·  Correct hit +1  ·  Wrong target -1  ·  Esc pauses"
 	)
-	_player_one_controls.text = _target_rush_controls(0, 1)
+	_player_one_controls.text = _triangle_rush_controls(0, 1)
 	if GameSession.is_single_player():
 		_summary.text = (
 			"Only Player 1 is active. Score as many correct hits as possible "
@@ -147,7 +156,7 @@ func _populate_instructions() -> void:
 		)
 		_demo_prompt.text = "EACH PLAYER FOLLOWS THEIR OWN HIGHLIGHT"
 		_opponent_title.text = "PLAYER 2"
-		_opponent_controls.text = _target_rush_controls(1, 2)
+		_opponent_controls.text = _triangle_rush_controls(1, 2)
 	_append_round_mode_note()
 
 
@@ -404,14 +413,14 @@ func _on_video_finished() -> void:
 # --- Static explanation ------------------------------------------------------
 
 
-func _target_rush_controls(player_index: int, controller_number: int) -> String:
+func _triangle_rush_controls(player_index: int, controller_number: int) -> String:
 	var keyboard_summary := Settings.control_summary(player_index)
 	var triangle_summary := "P%d triangles" % (player_index + 1)
 	var lines := PackedStringArray(["Keyboard: %s" % keyboard_summary])
 	if GameSession.gamepad_connected():
 		var controller_summary := (
 			"any mapped button (%s)" % Settings.controller_target_summary(", ")
-			if Settings.one_button_target_rush_enabled()
+			if Settings.one_button_triangle_rush_enabled()
 			else Settings.controller_target_summary(", ")
 		)
 		lines.append("Controller %d: %s" % [controller_number, controller_summary])

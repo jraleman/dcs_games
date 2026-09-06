@@ -1,52 +1,52 @@
-class_name SliceAndSlashUnlockRule
+class_name DeskCanSawUnlockRule
 extends GameUnlockRule
 
-## Gates Desk-Can-Saw behind a strong Target Rush result.
+## Gates Desk-Can-Saw behind a strong Triangle Rush result.
 ##
 ## The player qualifies by either scoring [constant
-## SliceUnlockRules.SCORE_THRESHOLD]+ in a solo round, or winning a multiplayer
+## DeskCanSawUnlockRules.SCORE_THRESHOLD]+ in a solo round, or winning a multiplayer
 ## round as Player 1 with that score (Medium difficulty when facing the CPU).
 ## Both flags are sticky, so a later weak round never re-locks the game.
 ##
-## The pure maths lives in [SliceUnlockRules] so it stays unit-testable; this
+## The pure maths lives in [DeskCanSawUnlockRules] so it stays unit-testable; this
 ## class only adapts it to the framework's [GameUnlockRule] contract.
 
 ## Only results from this game count towards the unlock.
-const SOURCE_GAME_ID := "target_rush"
+const SOURCE_GAME_ID := "triangle_rush"
 const RACE_CONDITION_ACHIEVEMENT := "race_condition"
 
 
 func progression_keys() -> Array[String]:
 	var keys: Array[String] = []
-	for key: String in SliceUnlockRules.PROGRESSION_KEYS:
+	for key: String in DeskCanSawUnlockRules.PROGRESSION_KEYS:
 		keys.append(key)
 	return keys
 
 
 func normalized_state(state: Dictionary) -> Dictionary:
-	return SliceUnlockRules.normalized_state(state)
+	return DeskCanSawUnlockRules.normalized_state(state)
 
 
 func is_unlocked(state: Dictionary) -> bool:
 	return bool(
-		SliceUnlockRules.normalized_state(state).get(
-			SliceUnlockRules.UNLOCKED_KEY, false
+		DeskCanSawUnlockRules.normalized_state(state).get(
+			DeskCanSawUnlockRules.UNLOCKED_KEY, false
 		)
 	)
 
 
 func solo_qualified(state: Dictionary) -> bool:
 	return bool(
-		SliceUnlockRules.normalized_state(state).get(
-			SliceUnlockRules.SOLO_QUALIFIED_KEY, false
+		DeskCanSawUnlockRules.normalized_state(state).get(
+			DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY, false
 		)
 	)
 
 
 func multiplayer_qualified(state: Dictionary) -> bool:
 	return bool(
-		SliceUnlockRules.normalized_state(state).get(
-			SliceUnlockRules.MULTIPLAYER_QUALIFIED_KEY, false
+		DeskCanSawUnlockRules.normalized_state(state).get(
+			DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY, false
 		)
 	)
 
@@ -61,7 +61,7 @@ func apply_result(state: Dictionary, result: Dictionary) -> Dictionary:
 	var single_player := bool(result.get("single_player", true))
 	var player_one_score := int(result.get("player_one_score", 0))
 	var player_two_score := int(result.get("player_two_score", 0))
-	var outcome := SliceUnlockRules.apply_match(
+	var outcome := DeskCanSawUnlockRules.apply_match(
 		state,
 		single_player,
 		player_one_score,
@@ -79,7 +79,7 @@ func apply_result(state: Dictionary, result: Dictionary) -> Dictionary:
 	outcome["notes"] = notes
 
 	var achievements := PackedStringArray()
-	if SliceUnlockRules.earns_race_condition(
+	if DeskCanSawUnlockRules.earns_race_condition(
 		single_player, player_one_score, player_two_score
 	):
 		achievements.append(RACE_CONDITION_ACHIEVEMENT)
@@ -94,14 +94,14 @@ func requirement_text(state: Dictionary) -> String:
 		"Unlock either: Solo score %d+ [%s]  |  "
 		+ "OR P1 multiplayer win with %d+ [%s] (Medium when facing CPU)"
 	) % [
-		SliceUnlockRules.SCORE_THRESHOLD,
+		DeskCanSawUnlockRules.SCORE_THRESHOLD,
 		solo_state,
-		SliceUnlockRules.SCORE_THRESHOLD,
+		DeskCanSawUnlockRules.SCORE_THRESHOLD,
 		multiplayer_state,
 	]
 
 
-## Each Target Rush route unlocks the matching Desk-Can-Saw route, so the menu
+## Each Triangle Rush route unlocks the matching Desk-Can-Saw route, so the menu
 ## only advertises the modes the player actually earned.
 func unlocked_modes(state: Dictionary) -> PackedStringArray:
 	var modes := PackedStringArray()

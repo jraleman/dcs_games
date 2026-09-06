@@ -22,16 +22,13 @@ boot_splash/show_image=false
 config/icon="res://icon.svg"
 config/name.dmj="Dead Metal Jam"
 config/custom_user_dir_name.dmj="DeskCanSaw Games/Dead Metal Jam"
-config/name.tr="Target Rush"
+config/name.tr="Triangle Rush"
 config/custom_user_dir_name.tr="DeskCanSaw Games/Target Rush"
-config/name.scs="Desk-Can-Saw"
-config/custom_user_dir_name.scs="DeskCanSaw Games/Desk-Can-Saw"
+config/name.dcs="Desk-Can-Saw"
+config/custom_user_dir_name.dcs="DeskCanSaw Games/Desk-Can-Saw"
 
 [audio]
 
-; Godot initialises the audio driver at startup, so microphone capture cannot
-; be switched on at runtime. Dead Metal Jam's input model is a microphone, and
-; a game must not have to edit the framework in order to be playable.
 driver/enable_input=true
 
 [autoload]
@@ -45,16 +42,10 @@ ShareManager="*res://autoload/share_manager.gd"
 
 [dcs]
 
-; Pins the build to one game, which is how a standalone release is made: the
-; catalog then holds a single game, so the menu, branding and share cards all
-; describe that game instead of the collection. Empty ships everything.
-; Overridden per export preset through its custom feature tag, and per run with
-; `godot --path . -- --game=<id>` or the DCS_GAME environment variable.
-; One tag per game, spelled as the initials of its id.
 build/single_game_id=""
 build/single_game_id.dmj="dead_metal_jam"
-build/single_game_id.tr="target_rush"
-build/single_game_id.scs="slice_and_slash"
+build/single_game_id.tr="triangle_rush"
+build/single_game_id.dcs="desk_can_saw"
 
 [display]
 
@@ -134,5 +125,5 @@ environment/defaults/default_clear_color=Color(0.054902, 0.082353, 0.098039, 1)
 
 [share]
 
-stats_urls/target_rush="https://deskcansaw.com/stats/tr"
-stats_urls/slice_and_slash="https://deskcansaw.com/stats/dcs"
+stats_urls/triangle_rush="https://deskcansaw.com/stats/tr"
+stats_urls/desk_can_saw="https://deskcansaw.com/stats/dcs"

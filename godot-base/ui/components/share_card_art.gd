@@ -10,7 +10,7 @@ const DARK_METAL := Color("1b252b")
 
 ## Built-in art styles. A game selects one through
 ## [member GameManifest.share_art_style]; anything else draws the neutral mark.
-const STYLE_TARGET_RUSH := "target_rush"
+const STYLE_TRIANGLE_RUSH := "triangle_rush"
 const STYLE_DESK_CAN_SAW := "desk_can_saw"
 
 var _art_style := ""
@@ -47,10 +47,10 @@ func _draw() -> void:
 		STYLE_DESK_CAN_SAW:
 			_draw_desk_can_saw()
 		_:
-			_draw_target_rush()
+			_draw_triangle_rush()
 
 
-func _draw_target_rush() -> void:
+func _draw_triangle_rush() -> void:
 	var centers := [
 		Vector2(size.x * 0.28, size.y * 0.28),
 		Vector2(size.x * 0.68, size.y * 0.24),

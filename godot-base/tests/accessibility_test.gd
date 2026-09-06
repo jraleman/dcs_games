@@ -34,8 +34,8 @@ func _run() -> void:
 	await _test_background_motion(settings)
 	await _test_player_cues(settings, audio_manager)
 	await _test_reduced_motion_menus(session)
-	await _test_target_rush(session, settings)
-	await _test_slice_and_slash(session, settings)
+	await _test_triangle_rush(session, settings)
+	await _test_desk_can_saw(session, settings)
 	await _finish(settings)
 
 
@@ -45,7 +45,7 @@ func _test_values() -> Dictionary:
 		Settings.REDUCED_MOTION_KEY: true,
 		Settings.AUDIO_CAPTIONS_KEY: true,
 		Settings.PLAYER_LABELS_KEY: true,
-		Settings.ONE_BUTTON_TARGET_RUSH_KEY: true,
+		Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY: true,
 		Settings.GAMEPLAY_SPEED_KEY: 0.7,
 		Settings.TARGET_SIZE_KEY: 1.3,
 		Settings.EXTRA_ROUND_TIME_KEY: 15.0,
@@ -101,8 +101,8 @@ func _test_settings_helpers(settings: Node) -> void:
 		"Player identity labels must be available through Settings."
 	)
 	_expect(
-		bool(settings.call("one_button_target_rush_enabled")),
-		"One-button Target Rush must be available through Settings."
+		bool(settings.call("one_button_triangle_rush_enabled")),
+		"One-button Triangle Rush must be available through Settings."
 	)
 	_expect_approx(
 		float(settings.call("gameplay_speed_scale")),
@@ -342,7 +342,7 @@ func _test_settings_menu(settings: Node) -> void:
 	var audio_captions := menu.get_node_or_null("%AudioCaptionsToggle") as CheckButton
 	var player_labels := menu.get_node_or_null("%PlayerLabelsToggle") as CheckButton
 	var one_button := menu.get_node_or_null(
-		"%OneButtonTargetRushToggle"
+		"%OneButtonTriangleRushToggle"
 	) as CheckButton
 	var gameplay_speed := menu.get_node_or_null("%GameplaySpeedSlider") as HSlider
 	var target_size := menu.get_node_or_null("%TargetSizeSlider") as HSlider
@@ -448,7 +448,7 @@ func _test_settings_menu(settings: Node) -> void:
 	)
 	_expect(
 		one_button != null and one_button.button_pressed,
-		"The Accessibility tab must synchronize one-button Target Rush."
+		"The Accessibility tab must synchronize one-button Triangle Rush."
 	)
 	_expect_slider(gameplay_speed, 0.7, "moving-object speed")
 	_expect_slider(target_size, 1.3, "target and can size")
@@ -499,7 +499,7 @@ func _test_settings_menu(settings: Node) -> void:
 	if one_button != null:
 		one_button.button_pressed = false
 		_expect(
-			not bool(settings.call("one_button_target_rush_enabled")),
+			not bool(settings.call("one_button_triangle_rush_enabled")),
 			"The one-button toggle must update Settings."
 		)
 		one_button.button_pressed = true
@@ -652,7 +652,7 @@ func _test_background_motion(settings: Node) -> void:
 
 func _test_player_cues(settings: Node, audio_manager: Node) -> void:
 	var target := _instantiate_scene(
-		"res://games/target_rush/triangle_target.tscn"
+		"res://games/triangle_rush/triangle_target.tscn"
 	) as TriangleTarget
 	if target == null:
 		return
@@ -762,7 +762,7 @@ func _test_player_cues(settings: Node, audio_manager: Node) -> void:
 
 
 func _test_reduced_motion_menus(session: Node) -> void:
-	GameCatalog.select("target_rush")
+	GameCatalog.select("triangle_rush")
 	session.call("configure_single_player")
 	var instructions := _instantiate_scene(
 		"res://scenes/menus/instructions.tscn"
@@ -858,10 +858,10 @@ func _test_opponent_selector(mode_select: Node) -> void:
 		)
 
 
-func _test_target_rush(session: Node, settings: Node) -> void:
-	GameCatalog.select("target_rush")
+func _test_triangle_rush(session: Node, settings: Node) -> void:
+	GameCatalog.select("triangle_rush")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://games/target_rush/gameplay.tscn")
+	var game := _instantiate_scene("res://games/triangle_rush/gameplay.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -872,27 +872,27 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	_expect(
 		(game.get_node("%Callout") as Label).text
 		== "FOLLOW THE HIGHLIGHT - PRESS ANY ASSIGNED CONTROL",
-		"Target Rush callout copy must match reduced motion and one-button input."
+		"Triangle Rush callout copy must match reduced motion and one-button input."
 	)
 	_expect_approx(
 		float(game.get("_active_round_duration")),
 		float(game.get("_round_length")) + 15.0,
-		"Target Rush must apply the extra-time assist to a new round."
+		"Triangle Rush must apply the extra-time assist to a new round."
 	)
 	_expect_approx(
 		float(game.get("_round_gameplay_speed")),
 		0.7,
-		"Target Rush must apply the moving-object speed assist."
+		"Triangle Rush must apply the moving-object speed assist."
 	)
 	_expect_approx(
 		float(game.get("_round_target_size")),
 		1.3,
-		"Target Rush must apply the target-size assist."
+		"Triangle Rush must apply the target-size assist."
 	)
 	_expect_approx(
 		timer.wait_time,
 		float(game.get("_active_round_duration")),
-		"Target Rush must start its timer with the assisted duration."
+		"Triangle Rush must start its timer with the assisted duration."
 	)
 	settings.call("set_value", Settings.GAMEPLAY_SPEED_KEY, 0.8)
 	settings.call("set_value", Settings.TARGET_SIZE_KEY, 1.1)
@@ -900,17 +900,17 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	_expect_approx(
 		float(game.get("_active_round_duration")),
 		float(game.get("_round_length")) + 15.0,
-		"Target Rush must defer extra-time changes until the next round."
+		"Triangle Rush must defer extra-time changes until the next round."
 	)
 	_expect_approx(
 		float(game.get("_round_gameplay_speed")),
 		0.7,
-		"Target Rush must defer speed changes until the next round."
+		"Triangle Rush must defer speed changes until the next round."
 	)
 	_expect_approx(
 		float(game.get("_round_target_size")),
 		1.3,
-		"Target Rush must defer size changes until the next round."
+		"Triangle Rush must defer size changes until the next round."
 	)
 	settings.call("set_value", Settings.GAMEPLAY_SPEED_KEY, 0.7)
 	settings.call("set_value", Settings.TARGET_SIZE_KEY, 1.3)
@@ -922,11 +922,11 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 		var target := entry as TriangleTarget
 		_expect(
 			target.scale.is_equal_approx(Vector2.ONE * assisted_scale),
-			"Every Target Rush target must use the assisted size."
+			"Every Triangle Rush target must use the assisted size."
 		)
 		_expect(
 			(target.get_node("%OwnerLabel") as Label).visible,
-			"Target Rush must show P1/P2 identity labels."
+			"Triangle Rush must show P1/P2 identity labels."
 		)
 
 	var active_targets: Array = game.get("_active_targets")
@@ -948,7 +948,7 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	) as TriangleTarget
 	_expect(
 		one_button_target == active_target,
-		"One-button Target Rush must route any assigned key to the active target."
+		"One-button Triangle Rush must route any assigned key to the active target."
 	)
 	var fake_controller_devices: Array[int] = [41, -1]
 	session.set("_controller_devices", fake_controller_devices)
@@ -972,17 +972,17 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	) as TriangleTarget
 	_expect(
 		one_button_controller_target == active_target,
-		"One-button Target Rush must route any mapped controller button to the active target."
+		"One-button Triangle Rush must route any mapped controller button to the active target."
 	)
 
-	settings.call("set_value", Settings.ONE_BUTTON_TARGET_RUSH_KEY, false)
+	settings.call("set_value", Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY, false)
 	var direct_target := game.call(
 		"_target_for_keyboard_event",
 		key_event
 	) as TriangleTarget
 	_expect(
 		direct_target == mapped_target,
-		"Standard Target Rush input must retain one key per target."
+		"Standard Triangle Rush input must retain one key per target."
 	)
 	var direct_controller_target := game.call(
 		"_target_for_controller_event",
@@ -990,14 +990,14 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	) as TriangleTarget
 	_expect(
 		direct_controller_target == mapped_target,
-		"Standard Target Rush input must route each remapped controller button directly."
+		"Standard Triangle Rush input must route each remapped controller button directly."
 	)
 	_expect(
 		(game.get_node("%Callout") as Label).text
 		== "FOLLOW THE HIGHLIGHT - PRESS THE MATCHING CONTROL",
-		"Target Rush callout copy must update when one-button mode changes live."
+		"Triangle Rush callout copy must update when one-button mode changes live."
 	)
-	settings.call("set_value", Settings.ONE_BUTTON_TARGET_RUSH_KEY, true)
+	settings.call("set_value", Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY, true)
 
 	var caption := game.get_node_or_null("%AudioCaption") as Control
 	var world_fx := game.get_node("%WorldFX") as Node2D
@@ -1013,12 +1013,12 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 		caption != null
 		and caption.visible
 		and str(caption.call("caption_text")) == "Player 1: correct target",
-		"Target Rush must caption its correct-target sound cue."
+		"Triangle Rush must caption its correct-target sound cue."
 	)
 	_expect(
 		world_fx.get_child_count() == 1
 		and world_fx.get_child(0) is Label,
-		"Reduced motion must keep static score text while suppressing Target Rush bursts."
+		"Reduced motion must keep static score text while suppressing Triangle Rush bursts."
 	)
 	_expect(
 		(game.get_node("%PlayerOneScore") as Label).scale.is_equal_approx(
@@ -1039,19 +1039,19 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	_expect(
 		caption != null
 		and str(caption.call("caption_text")) == "Player 1: wrong target",
-		"Target Rush must caption its wrong-target sound cue."
+		"Triangle Rush must caption its wrong-target sound cue."
 	)
 	game.call("_update_time", 3)
 	_expect(
 		caption != null
 		and str(caption.call("caption_text")) == "3 seconds remaining",
-		"Target Rush must caption its final countdown."
+		"Triangle Rush must caption its final countdown."
 	)
 	game.call("_celebrate_level_unlock", "Desk-Can-Saw")
 	_expect(
 		caption != null
 		and str(caption.call("caption_text")).contains("unlocked"),
-		"Target Rush must caption the Desk-Can-Saw unlock cue."
+		"Triangle Rush must caption the Desk-Can-Saw unlock cue."
 	)
 
 	game.set("_ambient_time", PI / 22.0)
@@ -1097,7 +1097,7 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 		and (moving_target.get_node("%Trail") as Line2D).visible
 		and world_fx.get_child_count() > 1
 		and float(game.get("_shake_strength")) > 0.0,
-		"Disabling reduced motion live must restore Target Rush motion feedback."
+		"Disabling reduced motion live must restore Triangle Rush motion feedback."
 	)
 
 	settings.call("set_value", Settings.REDUCED_MOTION_KEY, true)
@@ -1110,7 +1110,7 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 		and not (moving_target.get_node("%Trail") as Line2D).visible
 		and world_fx.get_child_count() == 0
 		and is_zero_approx(float(game.get("_shake_strength"))),
-		"Enabling reduced motion live must clear active Target Rush motion effects."
+		"Enabling reduced motion live must clear active Triangle Rush motion effects."
 	)
 
 	settings.call("set_value", Settings.PLAYER_LABELS_KEY, false)
@@ -1118,16 +1118,16 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 		var target := entry as TriangleTarget
 		_expect(
 			not (target.get_node("%OwnerLabel") as Label).visible,
-			"Target Rush must update player labels while paused."
+			"Triangle Rush must update player labels while paused."
 		)
 	settings.call("set_value", Settings.PLAYER_LABELS_KEY, true)
 	await _free_scene(game)
 
 
-func _test_slice_and_slash(session: Node, settings: Node) -> void:
-	GameCatalog.select("slice_and_slash")
+func _test_desk_can_saw(session: Node, settings: Node) -> void:
+	GameCatalog.select("desk_can_saw")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://games/slice_and_slash/slice_and_slash.tscn")
+	var game := _instantiate_scene("res://games/desk_can_saw/desk_can_saw.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -1150,12 +1150,12 @@ func _test_slice_and_slash(session: Node, settings: Node) -> void:
 	_expect(
 		(game.get_node("%Callout") as Label).text
 		== "DRIVE THE CHAIN THROUGH EACH CAN",
-		"Desk-Can-Saw must replace Target Rush's matching-control callout."
+		"Desk-Can-Saw must replace Triangle Rush's matching-control callout."
 	)
 	_expect(
 		(game.get_node("%ModeTitle") as Label).text
-		== GameCatalog.get_manifest("slice_and_slash").title.to_upper(),
-		"Desk-Can-Saw must replace the inherited Target Rush title."
+		== GameCatalog.get_manifest("desk_can_saw").title.to_upper(),
+		"Desk-Can-Saw must replace the inherited Triangle Rush title."
 	)
 	_expect_approx(
 		float(game.get("_active_round_duration")),

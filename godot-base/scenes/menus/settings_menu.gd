@@ -53,7 +53,7 @@ var game_context_id := ""
 @onready var _reduced_motion: CheckButton = %ReducedMotionToggle
 @onready var _audio_captions: CheckButton = %AudioCaptionsToggle
 @onready var _player_labels: CheckButton = %PlayerLabelsToggle
-@onready var _one_button_target_rush: CheckButton = %OneButtonTargetRushToggle
+@onready var _one_button_triangle_rush: CheckButton = %OneButtonTriangleRushToggle
 @onready var _gameplay_speed: HSlider = %GameplaySpeedSlider
 @onready var _gameplay_speed_value: Label = %GameplaySpeedValue
 @onready var _target_size: HSlider = %TargetSizeSlider
@@ -294,7 +294,7 @@ func _option_title(definition: Dictionary) -> String:
 ## because a collection's main menu is configuring all of them at once.
 func _configure_style_rows(manifest: GameManifest) -> void:
 	var targets := manifest.control_style == GameManifest.CONTROL_STYLE_TARGETS
-	var row := _one_button_target_rush.get_parent() as Control
+	var row := _one_button_triangle_rush.get_parent() as Control
 	if row != null:
 		row.visible = targets
 
@@ -373,8 +373,8 @@ func _connect_ui() -> void:
 	_player_labels.toggled.connect(
 		_on_bool_toggled.bind(Settings.PLAYER_LABELS_KEY)
 	)
-	_one_button_target_rush.toggled.connect(
-		_on_bool_toggled.bind(Settings.ONE_BUTTON_TARGET_RUSH_KEY)
+	_one_button_triangle_rush.toggled.connect(
+		_on_bool_toggled.bind(Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY)
 	)
 	_gameplay_speed.value_changed.connect(
 		_on_setting_slider_changed.bind(Settings.GAMEPLAY_SPEED_KEY)
@@ -437,7 +437,7 @@ func _configure_setting_help() -> void:
 			+ "out of lives."
 		),
 		_starting_lives: "Lives each player gets per round in Lives mode.",
-		_one_button_target_rush: "Any target input activates the highlighted target.",
+		_one_button_triangle_rush: "Any target input activates the highlighted target.",
 		_controller_speed: "Changes controller cursor speed in direct-movement games.",
 		_controller_deadzone: "Sets how far a stick moves before input begins.",
 		_controller_pause: (
@@ -570,7 +570,7 @@ func _sync_from_settings() -> void:
 	_reduced_motion.button_pressed = Settings.reduced_motion_enabled()
 	_audio_captions.button_pressed = Settings.audio_captions_enabled()
 	_player_labels.button_pressed = Settings.player_labels_enabled()
-	_one_button_target_rush.button_pressed = Settings.one_button_target_rush_enabled()
+	_one_button_triangle_rush.button_pressed = Settings.one_button_triangle_rush_enabled()
 	_gameplay_speed.value = Settings.gameplay_speed_scale()
 	_target_size.value = Settings.target_size_scale()
 	_extra_round_time.value = Settings.extra_round_time()

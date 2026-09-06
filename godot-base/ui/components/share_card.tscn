@@ -171,7 +171,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
 theme_override_font_sizes/font_size = 31
-text = "TARGET RUSH"
+text = "TRIANGLE RUSH"
 
 [node name="Hero" type="HBoxContainer" parent="Margins/Columns/Main"]
 layout_mode = 2
@@ -413,7 +413,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.9)
 theme_override_font_sizes/font_size = 14
-text = "TARGET RUSH"
+text = "TRIANGLE RUSH"
 horizontal_alignment = 1
 
 [node name="QrFrame" type="PanelContainer" parent="Margins/Columns/InfoPanel/Layout"]

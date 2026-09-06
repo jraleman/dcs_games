@@ -401,9 +401,12 @@ func _populate_cpu_difficulties() -> void:
 
 
 func _configure_platform_options() -> void:
+	# The platform flag and the offer are separate questions: the platform one
+	# is what the "mobile" copy below is about, while the offer also honours a
+	# manifest that declares the game single-player only.
 	var platform_multiplayer_available := GameSession.multiplayer_available()
 	_single_player_available = true
-	_multiplayer_available = platform_multiplayer_available
+	_multiplayer_available = GameSession.multiplayer_offered()
 
 	# A gated game may have unlocked only some of its modes.
 	var unlocked_modes := AchievementManager.game_unlocked_modes(
@@ -413,7 +416,7 @@ func _configure_platform_options() -> void:
 	if mode_gated:
 		_single_player_available = unlocked_modes.has(MODE_SINGLE_PLAYER)
 		_multiplayer_available = (
-			platform_multiplayer_available
+			_multiplayer_available
 			and unlocked_modes.has(MODE_MULTIPLAYER)
 		)
 
@@ -543,7 +546,7 @@ func _update_control_copy() -> void:
 	var mapped_buttons := Settings.controller_target_summary(" ")
 	var pad_copy := (
 		"ANY %s" % mapped_buttons
-		if Settings.one_button_target_rush_enabled()
+		if Settings.one_button_triangle_rush_enabled()
 		else mapped_buttons
 	)
 	_single_player_controls.text = (
@@ -566,7 +569,7 @@ func _update_control_copy() -> void:
 func _target_pad_copy() -> String:
 	return (
 		"any mapped button (%s)" % Settings.controller_target_summary(", ")
-		if Settings.one_button_target_rush_enabled()
+		if Settings.one_button_triangle_rush_enabled()
 		else "buttons %s" % Settings.controller_target_summary(", ")
 	)
 

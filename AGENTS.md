@@ -13,12 +13,16 @@ Three games currently live in it:
 
 | Game | ID | Folder |
 | --- | --- | --- |
-| Target Rush | `target_rush` | `godot-base/games/target_rush/` |
-| Desk-Can-Saw (a.k.a. Slice-and-Slash) | `slice_and_slash` | `godot-base/games/slice_and_slash/` |
+| Triangle Rush | `triangle_rush` | `godot-base/games/triangle_rush/` |
+| Desk-Can-Saw | `desk_can_saw` | `godot-base/games/desk_can_saw/` |
 | Dead Metal Jam | `dead_metal_jam` | `godot-base/games/dead_metal_jam/` |
 
-> The display name is **Desk-Can-Saw**; the internal ID is **`slice_and_slash`**.
-> Do not use `desk_can_saw` as an ID — it is not a valid `game_id`.
+> Triangle Rush and Desk-Can-Saw were previously `target_rush` and
+> `slice_and_slash`. Those ids are gone — no alias, no migration — so a
+> `user://` written by an older build keeps its progress under the old strings
+> and reads as a fresh save. The one thing that did *not* move is
+> `config/custom_user_dir_name.tr`, which still says `Target Rush` because it
+> names the folder those saves live in.
 
 Renderer is `gl_compatibility` so the project exports to web and mobile
 unchanged. Keep it that way: do not introduce Forward+/Vulkan-only features.
@@ -61,11 +65,11 @@ Tests are standalone headless `SceneTree` scripts, run one at a time. All eleven
 must exit 0:
 
 ```bash
-godot --headless --path . --script res://games/slice_and_slash/tests/slice_and_slash_test.gd
-godot --headless --path . --script res://games/slice_and_slash/tests/slice_and_slash_scene_test.gd
+godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_test.gd
+godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_scene_test.gd
 godot --headless --path . --script res://tests/visual_effects_test.gd
 godot --headless --path . --script res://tests/accessibility_test.gd
-godot --headless --path . --script res://games/target_rush/tests/target_rush_options_test.gd
+godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd
 godot --headless --path . --script res://tests/share_card_test.gd
 godot --headless --path . --script res://tests/instructions_video_test.gd
 godot --headless --path . --script res://tests/game_shell_test.gd
@@ -136,7 +140,7 @@ add data to `GameManifest` instead.
 | `supports_multiplayer`, `supports_cpu_opponent` | Mode availability |
 
 `tunables` and `control_bindings` are declared in a constants-only
-`games/<id>/<prefix>_options.gd` (`TargetRushOptions`, `SliceOptions`,
+`games/<id>/<prefix>_options.gd` (`TriangleRushOptions`, `DeskCanSawOptions`,
 `DmjOptions`) so headless tests can import the keys without touching an
 autoload. The game's scenes read the same constants back through `Settings`.
 
@@ -153,7 +157,7 @@ manifest, so **a new game's options need no scene edit**.
 **Key APIs**
 
 - `GameCatalog.current()` / `.select(id)` / `.all()` / `.available()` —
-  which game is active. Never ask "is this Slice-and-Slash?".
+  which game is active. Never ask "is this Desk-Can-Saw?".
 - `GameCatalog.single_game_id()` / `.restrict_to(id)` / `.is_single_game_build()`
   — standalone builds. A catalog holding one game *is* the standalone product,
   so the pin lives in one place: the project setting `dcs/build/single_game_id`
@@ -310,7 +314,7 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   Resolve it from the tree instead: `get_root().get_node_or_null("Settings")`,
   then use `.call("method", ...)`. Any `class_name` script a test imports must
   likewise avoid autoload instances — that is why every `<prefix>_options.gd`
-  (`target_rush_options.gd`, `slice_options.gd`, `dmj_options.gd`) is
+  (`triangle_rush_options.gd`, `desk_can_saw_options.gd`, `dmj_options.gd`) is
   constants-only. `GameShell` is
   the other side of this rule: it *does* use autoload instances, so a test must
   never name `GameShell` (no `is GameShell`, no typed parameter). Load the
@@ -332,7 +336,7 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   32-bit and silently corrupts stored values.
 - Achievement and unlock flags must never regress after a later match.
 - Progression keys in `user://achievements.cfg` are globally unique strings
-  (e.g. `slice_and_slash_solo_qualified`); keep them stable so saves survive.
+  (e.g. `desk_can_saw_solo_qualified`); keep them stable so saves survive.
 - Mobile exports are single-player only (`GameSession.multiplayer_available()`).
 - Quit is hidden on web and mobile.
 - `tools/*` is development-only; keep it out of export presets.

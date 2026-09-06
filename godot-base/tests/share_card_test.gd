@@ -19,12 +19,12 @@ func _run() -> void:
 
 func _test_configured_urls() -> void:
 	_expect(
-		GameCatalog.get_manifest("target_rush").resolved_stats_url()
+		GameCatalog.get_manifest("triangle_rush").resolved_stats_url()
 		== "https://deskcansaw.com/stats/tr",
-		"Target Rush must expose its configured stats route."
+		"Triangle Rush must expose its configured stats route."
 	)
 	_expect(
-		GameCatalog.get_manifest("slice_and_slash").resolved_stats_url()
+		GameCatalog.get_manifest("desk_can_saw").resolved_stats_url()
 		== "https://deskcansaw.com/stats/dcs",
 		"Desk-Can-Saw must expose its configured stats route."
 	)
@@ -106,7 +106,7 @@ func _test_qr_image() -> void:
 
 
 func _test_slice_counts() -> void:
-	var game_script := load("res://games/slice_and_slash/slice_and_slash.gd") as Script
+	var game_script := load("res://games/desk_can_saw/desk_can_saw.gd") as Script
 	var game: Node = game_script.new()
 	game.set("points_per_can", 5)
 	game.set("_scores", [10, 5])
@@ -142,7 +142,7 @@ func _test_prepared_share_data() -> void:
 			"Prepared card data must include a QR texture."
 		)
 		_expect(
-			str(data.get("stats_url")) == GameCatalog.get_manifest("target_rush").resolved_stats_url(),
+			str(data.get("stats_url")) == GameCatalog.get_manifest("triangle_rush").resolved_stats_url(),
 			"Prepared card data must retain the QR destination."
 		)
 
@@ -184,7 +184,7 @@ func _test_share_card() -> void:
 	await process_frame
 
 	_expect(
-		(card.get_node("%GameTitle") as Label).text == "TARGET RUSH",
+		(card.get_node("%GameTitle") as Label).text == "TRIANGLE RUSH",
 		"The score card must prominently show the game name."
 	)
 	_expect(
@@ -214,8 +214,8 @@ func _test_share_card() -> void:
 		"A negative solo score must not be mistaken for a versus score."
 	)
 
-	desk_data["game_id"] = "slice_and_slash"
-	desk_data["game_title"] = GameCatalog.get_manifest("slice_and_slash").title
+	desk_data["game_id"] = "desk_can_saw"
+	desk_data["game_title"] = GameCatalog.get_manifest("desk_can_saw").title
 	desk_data["score"] = "28 - 24"
 	desk_data["score_values"] = [28, 24]
 	desk_data["result"] = "PLAYER 1 WINS"
@@ -238,8 +238,70 @@ func _test_share_card() -> void:
 	)
 	_expect_card_fits(card)
 
+	_test_game_supplied_art(card, desk_data)
+
 	card.queue_free()
 	await process_frame
+
+
+## A game may bring its own art scene instead of one of the built-in styles.
+##
+## The swap has to survive being undone. One card is reconfigured for every
+## result the player shares, so a card that installed a game's scene and then
+## kept it would put Dead Metal Jam's corridor behind a Desk-Can-Saw score.
+## Reverting is also where the unique-name lookup breaks if the replacement is
+## added without an owner, which is why `%ActionArt` is fetched again each time
+## rather than held from before the swap.
+func _test_game_supplied_art(card: SessionShareCard, base: Dictionary) -> void:
+	var manifest := GameCatalog.get_manifest("dead_metal_jam")
+	if manifest == null:
+		return
+	_expect(
+		not manifest.share_art_scene_path.is_empty(),
+		"Dead Metal Jam must declare its own share art scene."
+	)
+	_expect(
+		ResourceLoader.exists(manifest.share_art_scene_path),
+		"And the scene it names must exist: %s" % manifest.share_art_scene_path
+	)
+
+	var jam_data: Dictionary = base.duplicate(true)
+	jam_data["game_id"] = "dead_metal_jam"
+	jam_data["game_title"] = manifest.title
+	jam_data["score"] = "12,450"
+	jam_data["score_values"] = [12450]
+	jam_data["result"] = ""
+	card.configure(jam_data)
+
+	var jam_art := card.get_node_or_null("%ActionArt") as Control
+	_expect(
+		jam_art != null,
+		"The art panel must still answer to %ActionArt after the swap."
+	)
+	if jam_art != null:
+		_expect(
+			jam_art.scene_file_path == manifest.share_art_scene_path,
+			"The card must draw the game's own art, got '%s'."
+			% jam_art.scene_file_path
+		)
+		_expect(
+			not (jam_art is ShareCardArt),
+			"The built-in art must have been replaced, not drawn underneath."
+		)
+	_expect_card_fits(card)
+
+	card.configure(base)
+	var reverted := card.get_node_or_null("%ActionArt") as ShareCardArt
+	_expect(
+		reverted != null,
+		"A game with no art scene must get the built-in art back."
+	)
+	if reverted != null:
+		_expect(
+			str(reverted.get("_art_style")) == ShareCardArt.STYLE_DESK_CAN_SAW,
+			"And it must be styled for the game now on the card."
+		)
+	_expect_card_fits(card)
 
 
 func _expect_card_fits(card: Control) -> void:
@@ -258,11 +320,11 @@ func _expect_card_fits(card: Control) -> void:
 
 func _base_payload() -> Dictionary:
 	return {
-		"game_id": "target_rush",
-		"game_title": GameCatalog.get_manifest("target_rush").title,
+		"game_id": "triangle_rush",
+		"game_title": GameCatalog.get_manifest("triangle_rush").title,
 		"studio": StudioInfo.STUDIO,
 		"website": StudioInfo.WEBSITE,
-		"stats_url": GameCatalog.get_manifest("target_rush").resolved_stats_url(),
+		"stats_url": GameCatalog.get_manifest("triangle_rush").resolved_stats_url(),
 		"mode": "Solo",
 		"result": "Round Complete",
 		"score_caption": "Solo Score",

@@ -36,8 +36,8 @@ func _run() -> void:
 	await _test_target_feedback()
 	_test_can_spin()
 	await _test_chainsaw_feedback()
-	await _test_target_rush(session, settings)
-	await _test_slice_and_slash(session, settings)
+	await _test_triangle_rush(session, settings)
+	await _test_desk_can_saw(session, settings)
 
 	settings.call(
 		"set_value",
@@ -109,7 +109,7 @@ func _test_settings_menu(settings: Node) -> void:
 
 func _test_target_feedback() -> void:
 	var target := _instantiate_scene(
-		"res://games/target_rush/triangle_target.tscn"
+		"res://games/triangle_rush/triangle_target.tscn"
 	) as TriangleTarget
 	if target == null:
 		return
@@ -169,10 +169,10 @@ func _test_chainsaw_feedback() -> void:
 	await _free_scene(chainsaw)
 
 
-func _test_target_rush(session: Node, settings: Node) -> void:
-	GameCatalog.select("target_rush")
+func _test_triangle_rush(session: Node, settings: Node) -> void:
+	GameCatalog.select("triangle_rush")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://games/target_rush/gameplay.tscn")
+	var game := _instantiate_scene("res://games/triangle_rush/gameplay.tscn")
 	if game == null:
 		return
 	await process_frame
@@ -185,7 +185,7 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	var active_targets: Array = game.get("_active_targets")
 	var target := active_targets[0] as TriangleTarget
 	if target == null:
-		_failures.append("Target Rush must create an active Player 1 target.")
+		_failures.append("Triangle Rush must create an active Player 1 target.")
 		await _free_scene(game)
 		return
 
@@ -196,24 +196,24 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	var scores_after: Array = game.get("_scores")
 	_expect(
 		scores_after[0] == score_before + int(game.get("points_per_match")),
-		"Target Rush must still award a point when intense effects are disabled."
+		"Triangle Rush must still award a point when intense effects are disabled."
 	)
 	_expect_hard_effects_cleared(
 		game,
-		"Target Rush",
+		"Triangle Rush",
 		game.get_node("%Playfield") as Node2D
 	)
 	var world_fx := game.get_node("%WorldFX") as Node2D
 	_expect(
 		world_fx.get_child_count() > 0,
-		"Target Rush must keep point bursts and score feedback enabled."
+		"Triangle Rush must keep point bursts and score feedback enabled."
 	)
 
 	game.set("_ambient_time", PI / 22.0)
 	game.call("_update_urgency", 0.0)
 	_expect(
 		(game.get_node("%TimeLabel") as Label).scale.x > 1.0,
-		"Target Rush must keep urgency pulsing enabled."
+		"Triangle Rush must keep urgency pulsing enabled."
 	)
 
 	var soft_effect_count := world_fx.get_child_count()
@@ -224,25 +224,25 @@ func _test_target_rush(session: Node, settings: Node) -> void:
 	_expect(
 		(game.get_node("%ScreenFlash") as ColorRect).color.a > 0.0
 		and float(game.get("_shake_strength")) > 0.0,
-		"Target Rush must allow intense effects when the setting is enabled."
+		"Triangle Rush must allow intense effects when the setting is enabled."
 	)
 	settings.call("set_value", Settings.VISUAL_EFFECTS_KEY, false)
 	_expect_hard_effects_cleared(
 		game,
-		"Target Rush",
+		"Triangle Rush",
 		game.get_node("%Playfield") as Node2D
 	)
 	_expect(
 		world_fx.get_child_count() == soft_effect_count,
-		"Disabling intense effects live must not remove Target Rush point feedback."
+		"Disabling intense effects live must not remove Triangle Rush point feedback."
 	)
 	await _free_scene(game)
 
 
-func _test_slice_and_slash(session: Node, settings: Node) -> void:
-	GameCatalog.select("slice_and_slash")
+func _test_desk_can_saw(session: Node, settings: Node) -> void:
+	GameCatalog.select("desk_can_saw")
 	session.call("configure_single_player")
-	var game := _instantiate_scene("res://games/slice_and_slash/slice_and_slash.tscn")
+	var game := _instantiate_scene("res://games/desk_can_saw/desk_can_saw.tscn")
 	if game == null:
 		return
 	await process_frame

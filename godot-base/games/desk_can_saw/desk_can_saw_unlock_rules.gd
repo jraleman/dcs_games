@@ -1,10 +1,10 @@
-class_name SliceUnlockRules
+class_name DeskCanSawUnlockRules
 extends RefCounted
 
 const SCORE_THRESHOLD := 25
-const SOLO_QUALIFIED_KEY := "slice_and_slash_solo_qualified"
-const MULTIPLAYER_QUALIFIED_KEY := "slice_and_slash_multiplayer_qualified"
-const UNLOCKED_KEY := "slice_and_slash_unlocked"
+const SOLO_QUALIFIED_KEY := "desk_can_saw_solo_qualified"
+const MULTIPLAYER_QUALIFIED_KEY := "desk_can_saw_multiplayer_qualified"
+const UNLOCKED_KEY := "desk_can_saw_unlocked"
 const PROGRESSION_KEYS := [
 	SOLO_QUALIFIED_KEY,
 	MULTIPLAYER_QUALIFIED_KEY,
