@@ -112,6 +112,8 @@ func _test_settings_helpers(settings: Node) -> void:
 	)
 
 
+## Round mode and starting lives shape one game's round, so they live on the
+## in-game Game tab and the screen has to be told which game is running.
 func _test_settings_menu(settings: Node) -> void:
 	settings.call("set_value", Settings.ROUND_MODE_KEY, Settings.RoundMode.TIMER)
 	settings.call("set_value", Settings.STARTING_LIVES_KEY, 3)
@@ -121,6 +123,7 @@ func _test_settings_menu(settings: Node) -> void:
 		_failures.append("Could not load the settings menu scene.")
 		return
 	var menu := packed.instantiate()
+	menu.set("game_context_id", GameCatalog.current_id())
 	get_root().add_child(menu)
 	await process_frame
 

@@ -63,12 +63,33 @@ static func manifest() -> GameManifest:
 	}
 	game.hidden_until_unlocked = true
 	game.unlock_rule = SliceAndSlashUnlockRule.new()
+	game.tunables = SliceOptions.TUNABLES
+	game.control_bindings = SliceOptions.CONTROL_BINDINGS
 	game.stats_url = "https://deskcansaw.com/stats/dcs"
 	game.share_art_style = ShareCardArt.STYLE_DESK_CAN_SAW
 	game.tutorial_video_path = "res://assets/video/tutorial_slice_and_slash.ogv"
 	game.tutorial_poster_path = (
 		"res://assets/video/tutorial_slice_and_slash_poster.webp"
 	)
+	game.credits = [
+		{
+			"heading": "Game Design & Code",
+			"lines": ["DeskCanSaw"],
+		},
+		{
+			"heading": "Sound",
+			"lines": [
+				"Chainsaw motor, can slices and clatter synthesised in-engine",
+			],
+		},
+		{
+			"heading": "Accessibility",
+			"lines": [
+				"Rebindable movement keys for both players",
+				"Audio captions, reduced motion and player labels",
+			],
+		},
+	]
 	game.achievements = {
 		SliceAndSlashUnlockRule.RACE_CONDITION_ACHIEVEMENT: {
 			"title": "Race condition",

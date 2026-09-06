@@ -5,6 +5,9 @@ extends Control
 
 @export var fade_time := 0.7
 @export var hold_time := 1.6
+## Where to go when the sting ends. A standalone build overrides this with its
+## game's own opening through [method GameCatalog.intro_scene_path]; the
+## placeholder intro is what a collection build sees.
 @export_file("*.tscn") var next_scene := "res://scenes/boot/intro.tscn"
 
 ## Share of the shorter viewport axis kept as empty space around the logo.
@@ -81,4 +84,4 @@ func _advance() -> void:
 	_advanced = true
 	if _tween and _tween.is_running():
 		_tween.kill()
-	Router.goto(next_scene)
+	Router.goto(GameCatalog.intro_scene_path(next_scene))

@@ -368,19 +368,19 @@ func _test_settings_menu(settings: Node) -> void:
 	) as OptionButton
 	var hint := menu.get_node_or_null("%Hint") as Label
 	var tabs := menu.get_node_or_null("%Tabs") as TabContainer
-	var handicap_list := menu.get_node_or_null(
-		"Margins/Layout/Tabs/Handicap/Pad/List"
+	var gameplay_list := menu.get_node_or_null(
+		"Margins/Layout/Tabs/Gameplay/Pad/List"
 	) as VBoxContainer
 
 	_expect(
-		handicap_list != null
+		gameplay_list != null
 		and gameplay_speed != null
 		and target_size != null
 		and extra_time != null
-		and gameplay_speed.get_parent().get_parent() == handicap_list
-		and target_size.get_parent().get_parent() == handicap_list
-		and extra_time.get_parent().get_parent() == handicap_list,
-		"Next-round gameplay assists must live on their own Handicap tab."
+		and gameplay_speed.get_parent().get_parent() == gameplay_list
+		and target_size.get_parent().get_parent() == gameplay_list
+		and extra_time.get_parent().get_parent() == gameplay_list,
+		"Next-round gameplay assists must live on their own Gameplay tab."
 	)
 	_expect(
 		menu.find_children("Intro", "Label", true, false).is_empty()
@@ -391,7 +391,6 @@ func _test_settings_menu(settings: Node) -> void:
 		"%MasterSlider",
 		"%WindowMode",
 		"%ReducedMotionToggle",
-		"%PlayerOneTargetOne",
 		"%ShowInstructionsToggle",
 	]:
 		var help_control := menu.get_node_or_null(control_path) as Control

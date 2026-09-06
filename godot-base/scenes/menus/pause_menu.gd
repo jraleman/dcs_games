@@ -50,6 +50,9 @@ func _on_settings_pressed() -> void:
 	if packed == null:
 		return
 	_settings_overlay = packed.instantiate()
+	# The pause overlay only exists during a round, so the running game is the
+	# one the Controls and Game tabs should configure.
+	_settings_overlay.set("game_context_id", GameCatalog.current_id())
 	# The tree is paused while this overlay is up.
 	_settings_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
 	_settings_overlay.z_index = z_index

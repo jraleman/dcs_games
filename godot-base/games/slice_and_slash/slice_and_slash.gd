@@ -9,7 +9,6 @@ extends GameShell
 @export_range(1, 100, 1) var points_per_can := 1
 @export_range(0.1, 2.0, 0.05) var minimum_spawn_interval := 0.28
 @export_range(0.1, 2.0, 0.05) var maximum_spawn_interval := 0.48
-@export_range(1, 100, 1) var maximum_cans := 24
 @export_range(100.0, 1600.0, 10.0) var chainsaw_speed := 920.0
 @export_range(10.0, 100.0, 1.0) var can_radius := 34.0
 @export_range(0.1, 5.0, 0.1) var combo_window := 1.25
@@ -36,10 +35,25 @@ var _last_slice_times := [-1000.0, -1000.0]
 var _spawned_cans := 0
 var _escaped_cans := 0
 var _spawn_time := 0.0
+var _round_can_speed := SliceOptions.DEFAULT_CAN_SPEED
+var _round_spawn_rate := SliceOptions.DEFAULT_SPAWN_RATE
+var _round_max_cans := SliceOptions.DEFAULT_MAX_CANS
+var _round_chainsaw_speed := SliceOptions.DEFAULT_CHAINSAW_SPEED
 
 
 func game_id() -> String:
 	return GAME_ID
+
+
+## Options are read once per round so a slider moved mid-round never reshapes
+## the round being played.
+func _load_round_settings() -> void:
+	round_duration = Settings.tunable(SliceOptions.ROUND_LENGTH_KEY)
+	super()
+	_round_can_speed = Settings.tunable(SliceOptions.CAN_SPEED_KEY)
+	_round_spawn_rate = Settings.tunable(SliceOptions.SPAWN_RATE_KEY)
+	_round_max_cans = roundi(Settings.tunable(SliceOptions.MAX_CANS_KEY))
+	_round_chainsaw_speed = Settings.tunable(SliceOptions.CHAINSAW_SPEED_KEY)
 
 
 ## Desk-Can-Saw is a two-human game; a CPU opponent never drives a chainsaw.
@@ -59,12 +73,13 @@ func _update_round(delta: float, _time_left: float) -> void:
 	_update_cans(delta)
 	_spawn_time -= delta
 	if _spawn_time <= 0.0:
-		if _cans.size() < maximum_cans:
+		if _cans.size() < _round_max_cans:
 			_spawn_can()
+		# A faster spawn rate is a shorter gap, so the interval divides by it.
 		_spawn_time = _rng.randf_range(
 			minf(minimum_spawn_interval, maximum_spawn_interval),
 			maxf(minimum_spawn_interval, maximum_spawn_interval)
-		)
+		) / maxf(_round_spawn_rate, 0.01)
 
 
 func _handle_gameplay_input(event: InputEvent) -> void:
@@ -393,7 +408,7 @@ func _update_chainsaws(delta: float) -> void:
 		var movement_velocity := combine_movement_velocity(
 			_keyboard_direction(player_index),
 			_controller_direction(player_index),
-			chainsaw_speed,
+			_effective_chainsaw_speed(),
 			_controller_movement_speed()
 		)
 		if not movement_velocity.is_zero_approx():
@@ -401,6 +416,8 @@ func _update_chainsaws(delta: float) -> void:
 		chainsaw.clamp_to(bounds)
 
 
+## The keyboard chainsaw follows the game's own rebindable movement bindings,
+## so a player who moved them in Settings → Controls is obeyed here.
 func _keyboard_direction(player_index: int) -> Vector2:
 	var keyboard_player := (
 		PLAYER_ONE if GameSession.is_single_player() else PLAYER_TWO
@@ -409,10 +426,10 @@ func _keyboard_direction(player_index: int) -> Vector2:
 		return Vector2.ZERO
 
 	return Vector2(
-		float(Input.is_physical_key_pressed(KEY_RIGHT))
-			- float(Input.is_physical_key_pressed(KEY_LEFT)),
-		float(Input.is_physical_key_pressed(KEY_DOWN))
-			- float(Input.is_physical_key_pressed(KEY_UP))
+		float(Input.is_action_pressed(SliceOptions.MOVE_RIGHT_ACTION))
+			- float(Input.is_action_pressed(SliceOptions.MOVE_LEFT_ACTION)),
+		float(Input.is_action_pressed(SliceOptions.MOVE_DOWN_ACTION))
+			- float(Input.is_action_pressed(SliceOptions.MOVE_UP_ACTION))
 	)
 
 
@@ -481,8 +498,14 @@ static func combine_movement_velocity(
 	return velocity.limit_length(maximum_speed)
 
 
+## The scene's tuned speed scaled by the player's own preference, so the
+## controller sensitivity setting still layers on top of it.
+func _effective_chainsaw_speed() -> float:
+	return chainsaw_speed * _round_chainsaw_speed
+
+
 func _controller_movement_speed() -> float:
-	return chainsaw_speed * Settings.controller_movement_scale()
+	return _effective_chainsaw_speed() * Settings.controller_movement_scale()
 
 
 func _move_player_one_to(viewport_position: Vector2) -> void:
@@ -502,9 +525,9 @@ func _spawn_can() -> void:
 		effective_radius,
 		Vector2(
 			_rng.randf_range(-150.0, 150.0),
-			_rng.randf_range(145.0, 245.0)
+			_rng.randf_range(145.0, 245.0) * _round_can_speed
 		),
-		_rng.randf_range(165.0, 255.0),
+		_rng.randf_range(165.0, 255.0) * _round_can_speed,
 		color,
 		_rng.randf_range(-2.8, 2.8)
 	)
@@ -623,22 +646,28 @@ func _configure_mode_ui() -> void:
 	var multiplayer := GameSession.player_two_enabled()
 	var controller_movement := Settings.controller_movement_scheme_label()
 	var gamepad := GameSession.gamepad_connected()
+	# The keyboard chainsaw is rebindable, so the copy names whatever keys are
+	# actually bound and only falls back to "arrows" while they are untouched.
+	var keys_short := Settings.movement_summary_for_game(GAME_ID, "/", "ARROWS")
+	var keys_long := Settings.movement_summary_for_game(
+		GAME_ID, "/", "arrow keys"
+	)
 	_callout.text = "DRIVE THE CHAIN THROUGH EACH CAN"
 	if gamepad:
 		_player_one_caption.text = (
 			"PLAYER 1 · MOUSE / PAD 1"
 			if multiplayer
-			else "PLAYER 1 · SOLO · MOUSE / ARROWS / PAD 1"
+			else "PLAYER 1 · SOLO · MOUSE / %s / PAD 1" % keys_short
 		)
-		_player_two_caption.text = "PLAYER 2 · ARROWS / PAD 2"
+		_player_two_caption.text = "PLAYER 2 · %s / PAD 2" % keys_short
 		_hint.text = (
 			(
-				"P1: mouse or Pad 1   |   P2: arrows or Pad 2   |   "
+				"P1: mouse or Pad 1   |   P2: %s or Pad 2   |   " % keys_long
 				+ "Pads: %s" % controller_movement
 			)
 			if multiplayer
 			else (
-				"Mouse, arrow keys or Pad 1 (%s)   |   " % controller_movement
+				"Mouse, %s or Pad 1 (%s)   |   " % [keys_long, controller_movement]
 				+ "Drive the moving chain through each can"
 			)
 		)
@@ -646,14 +675,14 @@ func _configure_mode_ui() -> void:
 		_player_one_caption.text = (
 			"PLAYER 1 · MOUSE"
 			if multiplayer
-			else "PLAYER 1 · SOLO · MOUSE / ARROWS"
+			else "PLAYER 1 · SOLO · MOUSE / %s" % keys_short
 		)
-		_player_two_caption.text = "PLAYER 2 · ARROWS"
+		_player_two_caption.text = "PLAYER 2 · %s" % keys_short
 		_hint.text = (
-			"P1: mouse   |   P2: arrow keys"
+			"P1: mouse   |   P2: %s" % keys_long
 			if multiplayer
 			else (
-				"Mouse or arrow keys   |   "
+				"Mouse or %s   |   " % keys_long
 				+ "Drive the moving chain through each can"
 			)
 		)

@@ -22,6 +22,7 @@ var _busy := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_apply_game_theme()
 	_build_overlay()
 	Settings.changed.connect(_on_setting_changed)
 	_fps.visible = bool(Settings.get_value("ui/show_fps"))
@@ -30,6 +31,19 @@ func _ready() -> void:
 	var scene := get_tree().current_scene
 	if scene:
 		current_scene_path = scene.scene_file_path
+
+
+## Dresses the whole tree in the current game's accent, once, at boot.
+##
+## A theme set on the root window is inherited by every Control under it, so
+## this reaches screens the router never loaded — overlays, toasts, in-game
+## HUDs — without any of them asking. A collection build gets the project theme
+## back unchanged, so nothing moves unless a standalone build wants it to.
+func _apply_game_theme() -> void:
+	var base := ThemeDB.get_project_theme()
+	if base == null:
+		return
+	get_tree().root.theme = GameCatalog.theme().restyle(base)
 
 
 func _build_overlay() -> void:
@@ -53,7 +67,7 @@ func _build_overlay() -> void:
 	_fps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_fps.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fps.add_theme_font_size_override("font_size", 22)
-	_fps.add_theme_color_override("font_color", StudioInfo.SKY)
+	_fps.add_theme_color_override("font_color", GameCatalog.theme().accent)
 	_fps.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	_fps.add_theme_constant_override("outline_size", 6)
 	_fps.visible = false

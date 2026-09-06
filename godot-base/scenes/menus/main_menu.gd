@@ -16,6 +16,11 @@ const COMPACT_HEIGHT := 720.0
 const BUTTON_FOCUS_SCALE := Vector2(1.035, 1.035)
 const BUTTON_PRESS_SCALE := Vector2(0.985, 0.985)
 
+## How much of the plaque the logo spans on its longest side, in metres. Kept
+## as a span rather than a pixel size so a logo of any resolution or aspect
+## sits on the slab the same way.
+const LOGO_FACE_SPAN := 3.04
+
 @onready var _title: Label = %Title
 @onready var _tagline: Label = %Tagline
 @onready var _rule: ColorRect = %Rule
@@ -33,6 +38,10 @@ const BUTTON_PRESS_SCALE := Vector2(0.985, 0.985)
 @onready var _footer_right: Label = %FooterRight
 @onready var _logo_showcase: SubViewportContainer = %LogoShowcase
 @onready var _logo_rig: Node3D = %LogoRig
+@onready var _logo_body: MeshInstance3D = %Body
+@onready var _logo_face: Sprite3D = %Face
+@onready var _key_light: DirectionalLight3D = %KeyLight
+@onready var _fill_light: OmniLight3D = %FillLight
 @onready var _focus_accent: ColorRect = %FocusAccent
 
 var _menu_buttons: Array[Button] = []
@@ -73,6 +82,7 @@ func _ready() -> void:
 	first_focus = _play_button
 	margins = _margins
 	_setup_button_motion()
+	_apply_theme()
 	_logo_showcase.resized.connect(_center_logo_pivot)
 	_logo_showcase.modulate.a = 1.0 if _reduced_motion else 0.0
 	_logo_showcase.scale = Vector2.ONE if _reduced_motion else Vector2(0.88, 0.88)
@@ -273,6 +283,46 @@ func _center_button_pivot(button: Button) -> void:
 
 func _center_logo_pivot() -> void:
 	_logo_showcase.pivot_offset = _logo_showcase.size * 0.5
+
+
+## Dresses the plaque, its lights and the focus bar in the current game's
+## colours. The rig, its motion and its lighting setup are the framework's; a
+## game only supplies what it looks like.
+##
+## The mesh is duplicated first: it is a sub-resource shared by every instance
+## of this scene, and tinting it in place would outlive the screen.
+func _apply_theme() -> void:
+	var theme := GameCatalog.theme()
+
+	var mesh := _logo_body.mesh
+	if mesh != null:
+		var tinted := mesh.duplicate(true) as PrimitiveMesh
+		var material := tinted.material as StandardMaterial3D
+		if material != null:
+			material.albedo_color = theme.plaque_color
+			_logo_body.mesh = tinted
+
+	var logo := theme.logo_texture()
+	if logo != null:
+		_logo_face.texture = logo
+	_logo_face.modulate = theme.logo_color
+	_fit_logo_to_plaque()
+
+	_key_light.light_color = theme.light
+	_fill_light.light_color = theme.accent
+	_focus_accent.color = theme.accent
+
+
+## Scales the logo so its longest side spans the plaque, whatever the texture's
+## resolution and aspect happen to be.
+func _fit_logo_to_plaque() -> void:
+	var texture := _logo_face.texture
+	if texture == null:
+		return
+	var longest := maxf(texture.get_width(), texture.get_height())
+	if longest <= 0.0:
+		return
+	_logo_face.pixel_size = LOGO_FACE_SPAN / longest
 
 
 func _set_logo_anchors(left: float, top: float, right: float, bottom: float) -> void:

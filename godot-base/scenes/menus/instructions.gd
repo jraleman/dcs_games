@@ -219,8 +219,15 @@ func _populate_direct_movement_instructions() -> void:
 			"instructions_solo_summary",
 			"Steer Player 1 around the board and clear every target you reach."
 		)
-		_player_one_controls.text = _direct_movement_controls(
-			"Mouse or arrow keys", 1
+		# A game that describes its own controls describes all of them. The
+		# framework cannot know whether a connected pad does anything in a game
+		# it knows nothing about, and offering a controller to someone holding
+		# a guitar is worse than saying nothing.
+		var solo_controls := _game_text("instructions_player_one_controls", "")
+		_player_one_controls.text = (
+			solo_controls
+			if not solo_controls.is_empty()
+			else _direct_movement_controls("Mouse or arrow keys", 1)
 		)
 		_opponent_card.hide()
 	else:

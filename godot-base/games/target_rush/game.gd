@@ -27,6 +27,23 @@ static func manifest() -> GameManifest:
 	game.share_art_style = ShareCardArt.STYLE_TARGET_RUSH
 	game.tutorial_video_path = "res://assets/video/tutorial_target_rush.ogv"
 	game.tutorial_poster_path = "res://assets/video/tutorial_target_rush_poster.webp"
+	game.credits = [
+		{
+			"heading": "Game Design & Code",
+			"lines": ["DeskCanSaw"],
+		},
+		{
+			"heading": "Sound",
+			"lines": ["Shared UI tones, pitched up as your streak climbs"],
+		},
+		{
+			"heading": "Accessibility",
+			"lines": [
+				"One-button mode for players who cannot reach two keys",
+				"Audio captions, reduced motion and player labels",
+			],
+		},
+	]
 	game.achievements = {
 		"first_single_player_game": {
 			"title": "Solo Starter",

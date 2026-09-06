@@ -147,22 +147,35 @@ func _test_target_size_range() -> void:
 	await _free_scene(target)
 
 
+## The triangle rows are generated from the manifest, so the screen only has
+## them while it is configuring Target Rush — which is what the pause menu
+## tells it. Opened from the main menu there is no game and no Game tab.
 func _test_settings_menu(settings: Node) -> void:
-	var menu := _instantiate_scene("res://scenes/menus/settings_menu.tscn")
+	var menu := _open_settings_menu("")
+	if menu == null:
+		return
+	await process_frame
+	_expect(
+		(menu.get("_option_controls") as Dictionary).is_empty(),
+		"The main menu must not offer one game's options."
+	)
+	await _free_scene(menu)
+
+	menu = _open_settings_menu(TargetRushOptions.GAME_ID)
 	if menu == null:
 		return
 	await process_frame
 
-	var size_slider := menu.get_node_or_null("%TriangleSizeSlider") as HSlider
-	var speed_slider := menu.get_node_or_null("%TriangleSpeedSlider") as HSlider
-	var rush_slider := menu.get_node_or_null(
-		"%TriangleSpeedRushSlider"
-	) as HSlider
-	var length_slider := menu.get_node_or_null(
-		"%TriangleRoundLengthSlider"
+	var controls := menu.get("_option_controls") as Dictionary
+	var value_labels := menu.get("_option_values") as Dictionary
+	var size_slider := controls.get(TargetRushOptions.SIZE_KEY) as HSlider
+	var speed_slider := controls.get(TargetRushOptions.SPEED_KEY) as HSlider
+	var rush_slider := controls.get(TargetRushOptions.SPEED_RUSH_KEY) as HSlider
+	var length_slider := controls.get(
+		TargetRushOptions.ROUND_LENGTH_KEY
 	) as HSlider
 	var game_list := menu.get_node_or_null(
-		"Margins/Layout/Tabs/Game/Pad/List"
+		"Margins/Layout/Tabs/Game/Pad/List/GameOptions"
 	) as VBoxContainer
 
 	if (
@@ -216,10 +229,12 @@ func _test_settings_menu(settings: Node) -> void:
 		"the round length"
 	)
 
-	var length_value := menu.get_node_or_null(
-		"%TriangleRoundLengthValue"
+	var length_value := value_labels.get(
+		TargetRushOptions.ROUND_LENGTH_KEY
 	) as Label
-	var rush_value := menu.get_node_or_null("%TriangleSpeedRushValue") as Label
+	var rush_value := value_labels.get(
+		TargetRushOptions.SPEED_RUSH_KEY
+	) as Label
 	_expect(
 		length_value != null and length_value.text == "45 sec",
 		"The round-length option must read out in seconds."
@@ -368,6 +383,19 @@ func _expect_range(
 		and is_equal_approx(slider.max_value, maximum),
 		"The slider for %s must match the range Settings accepts." % title
 	)
+
+
+## The pause menu names the running game before the screen enters the tree,
+## because `_ready` is what builds the per-game tabs.
+func _open_settings_menu(game_id: String) -> Node:
+	var packed := load("res://scenes/menus/settings_menu.tscn") as PackedScene
+	if packed == null:
+		_failures.append("Could not load the settings menu scene.")
+		return null
+	var menu := packed.instantiate()
+	menu.set("game_context_id", game_id)
+	get_root().add_child(menu)
+	return menu
 
 
 func _instantiate_scene(path: String) -> Node:

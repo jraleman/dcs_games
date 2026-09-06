@@ -243,6 +243,11 @@ func _load_state() -> void:
 
 func _save_state() -> void:
 	var config := ConfigFile.new()
+	# Merge into the stored file instead of replacing it. Only catalogued games
+	# register achievements and progression keys, so a build that ships one game
+	# must not wipe another build's unlocks out of a shared `user://` — an
+	# unlock may never regress.
+	config.load(SAVE_PATH)
 	for raw_id: Variant in _unlocked:
 		var id := str(raw_id)
 		config.set_value("unlocked", id, _unlocked[raw_id])

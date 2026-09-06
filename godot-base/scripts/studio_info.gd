@@ -52,6 +52,18 @@ const CREDITS: Array[Dictionary] = [
 	},
 ]
 
+## Heading the credits screen puts above the game list in a build that ships
+## more than one game. No single game's credits would be the right ones there,
+## so the roll points at the games instead of guessing.
+const COLLECTION_CREDITS_HEADING := "Game Credits"
+
+## The line under that list. The game names themselves come from GameCatalog so
+## this stays true whatever the build contains; only the wording lives here,
+## next to the rest of the studio copy.
+const COLLECTION_CREDITS_NOTE := (
+	"Each game keeps its own credits, listed in that game's own release."
+)
+
 ## Brand palette, mirrored by ui/theme/dcs_theme.tres.
 const INK := Color("0e1519")
 const DEEP := Color("162128")

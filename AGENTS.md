@@ -9,12 +9,13 @@ plus the games built on it. The base ships everything a game needs *before* it
 is a game: studio sting, intro, main menu, persistent settings, credits, pause
 overlay, achievements, responsive UI, share-image generation and audio.
 
-Two games currently live in it:
+Three games currently live in it:
 
 | Game | ID | Folder |
 | --- | --- | --- |
 | Target Rush | `target_rush` | `godot-base/games/target_rush/` |
 | Desk-Can-Saw (a.k.a. Slice-and-Slash) | `slice_and_slash` | `godot-base/games/slice_and_slash/` |
+| Dead Metal Jam | `dead_metal_jam` | `godot-base/games/dead_metal_jam/` |
 
 > The display name is **Desk-Can-Saw**; the internal ID is **`slice_and_slash`**.
 > Do not use `desk_can_saw` as an ID — it is not a valid `game_id`.
@@ -32,7 +33,8 @@ godot-base/
   autoload/                # Settings, AudioManager, Router, GameSession,
                            #   AchievementManager, ShareManager  (load order matters)
   scripts/                 # StudioInfo, GameManifest, GameCatalog, GameUnlockRule,
-                           #   GameShell, ShareQrCode  (class_name globals, not autoloads)
+                           #   GameTheme, GameShell, ShareQrCode
+                           #   (class_name globals, not autoloads)
   ui/                      # MenuScreen, Responsive, theme, reusable components
   scenes/boot/             # studio_logo, intro
   scenes/game/             # game_shell.tscn — the round/HUD scene games inherit
@@ -51,10 +53,11 @@ environment — check before assuming a command will run.
 
 ```bash
 godot --path .                       # run the game (or open project.godot)
+godot --path . -- --game=dead_metal_jam   # run one game as a standalone build
 godot --headless --path . --import   # reimport assets and refresh the class cache
 ```
 
-Tests are standalone headless `SceneTree` scripts, run one at a time. All nine
+Tests are standalone headless `SceneTree` scripts, run one at a time. All eleven
 must exit 0:
 
 ```bash
@@ -67,10 +70,33 @@ godot --headless --path . --script res://tests/share_card_test.gd
 godot --headless --path . --script res://tests/instructions_video_test.gd
 godot --headless --path . --script res://tests/game_shell_test.gd
 godot --headless --path . --script res://tests/lives_mode_test.gd
+godot --headless --path . --script res://tests/game_options_test.gd
+godot --headless --path . --script res://tests/single_game_test.gd
+```
+
+Dead Metal Jam adds six of its own:
+
+```bash
+godot --headless --path . --script res://games/dead_metal_jam/tests/pitch_detector_test.gd
+godot --headless --path . --script res://games/dead_metal_jam/tests/note_router_test.gd
+godot --headless --path . --script res://games/dead_metal_jam/tests/playing_techniques_test.gd
+godot --headless --path . --script res://games/dead_metal_jam/tests/latency_calibration_test.gd
+godot --headless --path . --script res://games/dead_metal_jam/tests/encounter_test.gd
+godot --headless --path . --script res://games/dead_metal_jam/tests/intro_test.gd
 ```
 
 `tests/game_shell_test.gd` iterates `GameCatalog.all()`, so every game is
-covered automatically — do not add a per-game copy of it.
+covered automatically — do not add a per-game copy of it. `tests/game_options_test.gd`
+does the same for a game's declared `tunables` and `control_bindings`, and
+`tests/single_game_test.gd` pins the catalog to each game in turn to check the
+standalone path, including that every `intro_scene_path` a manifest declares
+loads and leads somewhere, that the main-menu settings screen exposes that
+game's Controls and Game tabs, that the credits roll is that game's own
+while a collection build points at each game instead, and that a declared
+`GameTheme` reaches the plaque and the shared theme. Run the suite unpinned:
+several tests assert
+values that a specific game declares, so only `single_game_test.gd` passes under
+`--game`.
 
 There is no linter, formatter or CI configured. Match the existing style by hand.
 
@@ -96,24 +122,67 @@ add data to `GameManifest` instead.
 | --- | --- |
 | `id`, `title`, `tagline`, `menu_order` | Identity and main-menu ordering |
 | `gameplay_scene_path` | The scene `Router` loads to play |
+| `intro_scene_path` | The game's own opening, played instead of the framework intro — **only** in a build that ships this game alone |
+| `credits` | The game's own credits sections (`StudioInfo.CREDITS` shape); they lead the credits roll in a standalone build |
+| `theme` | A `GameTheme`: logo plus accent/background colours, worn by every screen in a standalone build |
 | `achievements` | Registered and persisted by `AchievementManager` |
 | `copy` | Overrides menu/instructions wording; omitted keys fall back to neutral text |
-| `tunables` | Player-facing numeric options stored and clamped by `Settings` |
+| `tunables` | Player-facing options (slider/toggle/choice) stored and clamped by `Settings`, rendered as rows on the in-game Game tab |
+| `control_bindings` | Rebindable keys, rendered on the in-game Controls tab; empty means "inherit my `control_style`'s built-ins" |
 | `control_style` | `targets` or `direct_movement` — menus branch on this *trait*, never on a game name |
 | `unlock_rule`, `hidden_until_unlocked` | Gate the game behind progress elsewhere |
 | `share_art_style`, `stats_url` | Share-card art variant and QR link |
 | `tutorial_video_path`, `tutorial_poster_path` | Instructions-screen media |
 | `supports_multiplayer`, `supports_cpu_opponent` | Mode availability |
 
+`tunables` and `control_bindings` are declared in a constants-only
+`games/<id>/<prefix>_options.gd` (`TargetRushOptions`, `SliceOptions`,
+`DmjOptions`) so headless tests can import the keys without touching an
+autoload. The game's scenes read the same constants back through `Settings`.
+
+**Settings tabs**: Audio · Display · Accessibility · Gameplay · **Controls** ·
+**Game**. The last two configure one game, so in a collection build they only
+exist while a round is running — `pause_menu.gd` sets
+`settings_menu.game_context_id` between `instantiate()` and `add_child()`, and
+the main menu leaves it empty, which hides both tabs. In a **standalone build**
+`_resolve_game_context()` adopts the only game in the catalog, so both tabs are
+on the main menu too; `_configure_style_rows()` then hides rows elsewhere that
+suit only the other `control_style`. Their rows are generated from the
+manifest, so **a new game's options need no scene edit**.
+
 **Key APIs**
 
 - `GameCatalog.current()` / `.select(id)` / `.all()` / `.available()` —
   which game is active. Never ask "is this Slice-and-Slash?".
+- `GameCatalog.single_game_id()` / `.restrict_to(id)` / `.is_single_game_build()`
+  — standalone builds. A catalog holding one game *is* the standalone product,
+  so the pin lives in one place: the project setting `dcs/build/single_game_id`
+  (feature-overridable per export preset), `--game=<id>` after `--`, or
+  `DCS_GAME`. Never add a second way to hide a game.
+- `GameCatalog.intro_scene_path(fallback)` — the opening `studio_logo.gd` hands
+  over to. Returns a game's `intro_scene_path` only when the catalog holds one
+  game; a collection has not chosen a game yet, so it gets the framework intro.
+- `credits.gd` follows the same rule for `GameManifest.credits`: one game in
+  the catalog rolls that game's credits, a collection names the games it ships
+  and sends the player to each game's own.
+- `GameCatalog.theme()` — never null. The pinned game's `GameTheme` in a
+  standalone build, `GameTheme.studio_default()` otherwise. Read by
+  `background.gd` (every screen), `main_menu.gd` (the rotating logo plaque)
+  and `router.gd`, which restyles the project theme onto the root window so
+  every Control inherits the game's accent. `MenuScreen` and `GameShell` also
+  call `theme().restyle_tree(self)` in `_ready()`, because a `Theme` cannot
+  reach the accents baked into `theme_override_*` entries, scene-local
+  styleboxes and `ColorRect`s. Player colours are excluded on purpose —
+  telling P1 from P2 is an accessibility contract.
 - `AchievementManager.record_round(source_game_id, result)` — offers every
   finished round to **every** game's `GameUnlockRule`, so "playing A unlocks B"
   needs no framework change. Rules filter by `source_game_id` themselves.
-- `Settings.tunable(key)` / `.tunable_min(key)` / `.tunable_max(key)` — read a
-  game-declared option. `Settings` never hardcodes a game's numbers.
+- `Settings.tunable(key)` / `.tunable_bool(key)` / `.tunable_choice(key)` /
+  `.tunable_min(key)` / `.tunable_max(key)` — read a game-declared option.
+  `Settings` never hardcodes a game's numbers.
+- `Settings.binding_keycode(key)` / `.set_binding_key(key, code, game_id)` /
+  `.control_bindings_for_game(id)` / `.movement_summary_for_game(id, sep, fallback)`
+  — a game's own keys. Conflicts are scoped to one game; two games may share a key.
 - `manifest.text(key, fallback)` — screen copy with a neutral default.
 
 ## `GameShell` — the shared round loop
@@ -170,9 +239,6 @@ Shell notes:
 
 **Known remaining coupling** (fix opportunistically, do not extend):
 
-- `settings_menu.tscn` still hand-authors the four Target Rush option rows;
-  `settings_menu.gd::_configure_game_tunables()` maps them to manifest keys and
-  hides them when unregistered. A new game's tunables need a new row.
 - `audio_manager.gd` synthesises chainsaw/can SFX for Desk-Can-Saw.
 - `share_card_art.gd` draws both games' art variants.
 
@@ -216,6 +282,9 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
 **Persistence**
 - Settings → `user://settings.cfg`; achievements/progression →
   `user://achievements.cfg`. Both via `ConfigFile`.
+- Both saves **merge into the stored file** rather than rebuilding it. A build
+  only registers the keys of the games it ships, so rewriting from the registry
+  would delete an absent game's options and unlocks out of a shared `user://`.
 - `application/config/custom_user_dir_name` must be unique per derived game and
   then **stable forever** — changing it strands player saves.
 
@@ -230,8 +299,8 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
 
 - Autoload order in `project.godot` is deliberate (`Settings` before
   `AudioManager`/`Router`). Do not reorder.
-- `StudioInfo`, `GameCatalog`, `GameManifest` and `GameUnlockRule` are
-  `class_name` globals, **not** autoloads. `GameCatalog` is a *static* registry
+- `StudioInfo`, `GameCatalog`, `GameManifest`, `GameUnlockRule` and `GameTheme`
+  are `class_name` globals, **not** autoloads. `GameCatalog` is a *static* registry
   on purpose: autoload names are unavailable at compile time to other autoloads
   and to headless test scripts, and `AchievementManager` and the catalog need
   each other.
@@ -240,8 +309,9 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   autoload's *constants* (`Settings.SAVE_PATH`) but not the autoload *instance*.
   Resolve it from the tree instead: `get_root().get_node_or_null("Settings")`,
   then use `.call("method", ...)`. Any `class_name` script a test imports must
-  likewise avoid autoload instances — that is why
-  `games/target_rush/target_rush_options.gd` is constants-only. `GameShell` is
+  likewise avoid autoload instances — that is why every `<prefix>_options.gd`
+  (`target_rush_options.gd`, `slice_options.gd`, `dmj_options.gd`) is
+  constants-only. `GameShell` is
   the other side of this rule: it *does* use autoload instances, so a test must
   never name `GameShell` (no `is GameShell`, no typed parameter). Load the
   scene at runtime and poke it with `call`/`get`/`has_method`.
@@ -249,7 +319,15 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   class cache will not know it.
 - Setting `min_value`/`max_value` on a `Range` re-emits `value_changed`. Do it
   while the screen's `_syncing` guard is set, or the pre-sync value is written
-  back to disk.
+  back to disk. A generated slider sets its bounds *before* connecting the
+  signal, for the same reason.
+- A test that opens `settings_menu.tscn` must assign `game_context_id` before
+  `add_child()` if it needs the Controls or Game tab; `_ready()` is what builds
+  them. Generated widgets are not scene-unique names — reach them through the
+  screen's `_option_controls` / `_option_values` / `_binding_buttons`.
+- `Settings` now restores manifest-declared options from `settings.cfg` (it
+  used to save them and never read them back). A test that changes one must put
+  it back, or it leaks into every later run.
 - Prefer `float` accessors over `Vector2` for setting ranges — `Vector2` is
   32-bit and silently corrupts stored values.
 - Achievement and unlock flags must never regress after a later match.

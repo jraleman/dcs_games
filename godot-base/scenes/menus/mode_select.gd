@@ -510,26 +510,31 @@ func _update_control_copy() -> void:
 	var gamepad := GameSession.gamepad_connected()
 	if _uses_direct_movement():
 		var movement_copy := Settings.controller_movement_scheme_label().to_upper()
+		# Truthful after a rebind: the game's own movement keys when it has
+		# them, and the shipped wording while they are untouched.
+		var keys_copy := Settings.movement_summary_for_game(
+			GameCatalog.current_id(), " ", "ARROW KEYS"
+		).to_upper()
 		_single_player_controls.text = (
-			"MOUSE · ARROW KEYS · PAD 1 %s" % movement_copy
+			"MOUSE · %s · PAD 1 %s" % [keys_copy, movement_copy]
 			if gamepad
-			else "MOUSE · ARROW KEYS"
+			else "MOUSE · %s" % keys_copy
 		)
 		_multiplayer_controls.text = (
-			"P1 · MOUSE / PAD 1     P2 · ARROWS / PAD 2"
+			"P1 · MOUSE / PAD 1     P2 · %s / PAD 2" % keys_copy
 			if gamepad
-			else "P1 · MOUSE     P2 · ARROW KEYS"
+			else "P1 · MOUSE     P2 · %s" % keys_copy
 		)
 		var multiplayer := _pending_mode == GameSession.GameMode.MULTIPLAYER
 		if gamepad:
 			_player_one_control_keys.text = (
 				"MOUSE · PAD 1 %s" % movement_copy
 				if multiplayer
-				else "MOUSE · ARROWS · PAD 1 %s" % movement_copy
+				else "MOUSE · %s · PAD 1 %s" % [keys_copy, movement_copy]
 			)
 		else:
 			_player_one_control_keys.text = (
-				"MOUSE" if multiplayer else "MOUSE · ARROWS"
+				"MOUSE" if multiplayer else "MOUSE · %s" % keys_copy
 			)
 		return
 

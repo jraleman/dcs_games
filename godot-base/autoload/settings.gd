@@ -168,6 +168,11 @@ const DEFAULTS := {
 
 var _values: Dictionary = {}
 var _tunables: Dictionary = {}
+var _options_by_game: Dictionary = {}
+var _control_bindings: Dictionary = {}
+var _bindings_by_game: Dictionary = {}
+var _bindings_by_style: Dictionary = {}
+var _registered := false
 var _save_timer: Timer
 
 
@@ -182,7 +187,7 @@ func _ready() -> void:
 	add_child(_save_timer)
 
 	_values = DEFAULTS.duplicate(true)
-	_register_tunables()
+	_register_games()
 	load_settings()
 	var repaired_controls := _repair_control_values()
 	apply_controls()
@@ -290,11 +295,27 @@ func round_mode_label(mode := -1) -> String:
 ## [member GameManifest.tunables]; the framework only stores and clamps them.
 
 
-## Registered tunable definitions across every game, keyed by setting key.
+## Registered option definitions across every game, keyed by setting key.
 func tunables() -> Dictionary:
-	if _tunables.is_empty():
-		_register_tunables()
+	_ensure_registered()
 	return _tunables
+
+
+## Options [param game_id] declared, in the order the manifest listed them.
+## This is what the in-game Settings → Game tab renders.
+func options_for_game(game_id: String) -> Array[Dictionary]:
+	_ensure_registered()
+	var declared: Array = _options_by_game.get(game_id, [])
+	var result: Array[Dictionary] = []
+	for definition: Dictionary in declared:
+		result.append(definition)
+	return result
+
+
+## Kind of widget [param key] wants: one of the `GameManifest.OPTION_*` values.
+func option_type(key: String) -> String:
+	var definition: Dictionary = tunables().get(key, {})
+	return str(definition.get("type", GameManifest.OPTION_SLIDER))
 
 
 ## Clamped value for a game-declared numeric option.
@@ -308,6 +329,34 @@ func tunable(key: String) -> float:
 	)
 
 
+## Value of a game-declared toggle.
+func tunable_bool(key: String) -> bool:
+	var definition: Dictionary = tunables().get(key, {})
+	return bool(get_value(key, definition.get("default", false)))
+
+
+## Selected id of a game-declared choice list, falling back to the declared
+## default when the stored value names a choice the game no longer offers.
+func tunable_choice(key: String) -> int:
+	var definition: Dictionary = tunables().get(key, {})
+	var fallback := int(definition.get("default", 0))
+	var value := int(get_value(key, fallback))
+	for choice: Dictionary in option_choices(key):
+		if int(choice.get("value", 0)) == value:
+			return value
+	return fallback
+
+
+## Selectable entries of a choice option, as `{"value": int, "title": String}`.
+func option_choices(key: String) -> Array[Dictionary]:
+	var definition: Dictionary = tunables().get(key, {})
+	var result: Array[Dictionary] = []
+	for choice: Variant in definition.get("choices", []):
+		if choice is Dictionary:
+			result.append(choice)
+	return result
+
+
 ## `Vector2` would truncate to 32-bit, so the bounds are exposed separately.
 func tunable_min(key: String) -> float:
 	var definition: Dictionary = tunables().get(key, {})
@@ -319,18 +368,147 @@ func tunable_max(key: String) -> float:
 	return float(definition.get("max", definition.get("default", 0.0)))
 
 
-func _register_tunables() -> void:
+func tunable_step(key: String) -> float:
+	var definition: Dictionary = tunables().get(key, {})
+	var span := tunable_max(key) - tunable_min(key)
+	# A hundred stops reads smoothly on every slider width the project uses.
+	return float(definition.get("step", 0.01 if span <= 2.0 else 1.0))
+
+
+## Renders a slider value the way its declared `format` asks for. Shared with
+## the framework's own rows so a generated option is indistinguishable from a
+## hand-authored one.
+static func format_value(value: float, format: String) -> String:
+	match format:
+		GameManifest.FORMAT_PERCENT:
+			return "%d%%" % roundi(value * 100.0)
+		GameManifest.FORMAT_PLUS_PERCENT:
+			return (
+				"Off"
+				if is_zero_approx(value)
+				else "+%d%%" % roundi(value * 100.0)
+			)
+		GameManifest.FORMAT_SECONDS:
+			return "%d sec" % roundi(value)
+		GameManifest.FORMAT_PLUS_SECONDS:
+			return "Off" if is_zero_approx(value) else "+%d sec" % roundi(value)
+		GameManifest.FORMAT_MILLISECONDS:
+			return "%d ms" % roundi(value)
+		GameManifest.FORMAT_LIVES:
+			var lives := roundi(value)
+			return "%d %s" % [lives, "life" if lives == 1 else "lives"]
+		GameManifest.FORMAT_COUNT:
+			return str(roundi(value))
+		_:
+			return (
+				str(roundi(value))
+				if is_equal_approx(value, roundf(value))
+				else "%.2f" % value
+			)
+
+
+## Read-out for one registered option, using the format it declared.
+func format_option(key: String, value: float) -> String:
+	var definition: Dictionary = tunables().get(key, {})
+	return format_value(value, str(definition.get("format", GameManifest.FORMAT_NUMBER)))
+
+
+## Discovers everything the installed games declare. Runs once, before the
+## saved file is read, so stored values land on registered keys.
+func _register_games() -> void:
+	if _registered:
+		return
+	_registered = true
+	_register_options()
+	_register_control_bindings()
+
+
+func _ensure_registered() -> void:
+	if not _registered:
+		_register_games()
+
+
+func _register_options() -> void:
 	for manifest in GameCatalog.all():
+		var declared: Array[Dictionary] = []
 		for definition in manifest.tunables:
 			var key := str(definition.get("key", ""))
 			if key.is_empty():
 				continue
 			if _tunables.has(key):
-				push_warning("Settings: duplicate tunable key '%s'." % key)
+				push_warning("Settings: duplicate option key '%s'." % key)
 				continue
 			_tunables[key] = definition
+			declared.append(definition)
 			if not _values.has(key):
 				_values[key] = definition.get("default", 0.0)
+		_options_by_game[manifest.id] = declared
+
+
+## Builds the keyboard-binding registry: the framework's own bindings, indexed
+## by the control style they serve, plus whatever each game declared.
+##
+## Nothing here names a game. A game that declares no bindings inherits the
+## built-in set for its [member GameManifest.control_style], so a `targets`
+## game keeps the six target keys without saying so.
+func _register_control_bindings() -> void:
+	var built_in_targets: Array[Dictionary] = []
+	for index in CONTROL_ACTIONS.size():
+		var action: StringName = CONTROL_ACTIONS[index]
+		var setting_key := str(CONTROL_SETTING_KEYS[action])
+		var player := 0 if index < PLAYER_ONE_ACTIONS.size() else 1
+		var definition := {
+			"key": setting_key,
+			"action": action,
+			"default": DEFAULTS[setting_key],
+			"title": "Target %d" % (index % PLAYER_ONE_ACTIONS.size() + 1),
+			"description": (
+				"Select, then press a key. Reusing a key swaps the bindings."
+			),
+			"player": player,
+			"heading": "Player %d" % (player + 1),
+		}
+		_control_bindings[setting_key] = definition
+		built_in_targets.append(definition)
+	_bindings_by_style[GameManifest.CONTROL_STYLE_TARGETS] = built_in_targets
+
+	for manifest in GameCatalog.all():
+		var declared: Array[Dictionary] = []
+		for definition in manifest.control_bindings:
+			var key := str(definition.get("key", ""))
+			if key.is_empty() or not definition.has("default"):
+				push_warning(
+					"Settings: %s declared a binding without a key or default."
+					% manifest.id
+				)
+				continue
+			if _control_bindings.has(key):
+				push_warning("Settings: duplicate control binding '%s'." % key)
+				continue
+			_control_bindings[key] = definition
+			declared.append(definition)
+			if not _values.has(key):
+				_values[key] = int(definition.get("default", KEY_NONE))
+		if not declared.is_empty():
+			_bindings_by_game[manifest.id] = declared
+
+
+## Keyboard bindings the Controls tab should offer while [param game_id] runs.
+func control_bindings_for_game(game_id: String) -> Array[Dictionary]:
+	_ensure_registered()
+	var result: Array[Dictionary] = []
+	var source: Array = _bindings_by_game.get(game_id, [])
+	if source.is_empty():
+		var manifest := GameCatalog.get_manifest(game_id)
+		var style := (
+			manifest.control_style
+			if manifest
+			else GameManifest.CONTROL_STYLE_TARGETS
+		)
+		source = _bindings_by_style.get(style, [])
+	for definition: Dictionary in source:
+		result.append(definition)
+	return result
 
 
 func controller_movement_scale() -> float:
@@ -358,15 +536,28 @@ func set_value(key: String, value: Variant) -> void:
 	_save_timer.start()
 
 
+## Restores every framework setting and every game-declared option. Progress
+## and achievements are stored elsewhere and are never touched.
 func reset_to_defaults() -> void:
 	for key: String in DEFAULTS:
 		set_value(key, DEFAULTS[key])
+	for key: String in tunables():
+		var definition: Dictionary = _tunables[key]
+		set_value(key, definition.get("default", 0.0))
 
 
-func reset_controls_to_defaults() -> void:
-	for action: StringName in CONTROL_ACTIONS:
-		var setting_key := str(CONTROL_SETTING_KEYS[action])
-		set_value(setting_key, DEFAULTS[setting_key])
+## Restores keyboard and controller bindings. Passing a game id restores only
+## that game's keyboard bindings, which is what the in-game Controls tab wants:
+## resetting the running game must not silently rebind another one.
+func reset_controls_to_defaults(game_id := "") -> void:
+	_ensure_registered()
+	var bindings := (
+		control_bindings_for_game(game_id)
+		if not game_id.is_empty()
+		else _all_control_bindings()
+	)
+	for definition: Dictionary in bindings:
+		set_value(str(definition["key"]), int(definition.get("default", KEY_NONE)))
 	for setting_key: String in CONTROLLER_BINDING_KEYS:
 		set_value(setting_key, DEFAULTS[setting_key])
 	set_value(
@@ -375,24 +566,32 @@ func reset_controls_to_defaults() -> void:
 	)
 
 
-func control_actions_for_player(player_index: int) -> Array[StringName]:
-	var result: Array[StringName] = []
-	var source: Array = []
-	match player_index:
-		0:
-			source = PLAYER_ONE_ACTIONS
-		1:
-			source = PLAYER_TWO_ACTIONS
-	for action: StringName in source:
-		result.append(action)
+func _all_control_bindings() -> Array[Dictionary]:
+	_ensure_registered()
+	var result: Array[Dictionary] = []
+	for key: String in _control_bindings:
+		result.append(_control_bindings[key])
 	return result
 
 
+## Keyboard actions [param player_index] uses in the selected game. Games that
+## declare no bindings fall back to the built-in set for their control style,
+## so this keeps describing target games exactly as it always has.
+func control_actions_for_player(player_index: int) -> Array[StringName]:
+	var result: Array[StringName] = []
+	for definition: Dictionary in control_bindings_for_game(GameCatalog.current_id()):
+		if int(definition.get("player", -1)) != player_index:
+			continue
+		var action := StringName(definition.get("action", &""))
+		if not action.is_empty():
+			result.append(action)
+	return result
+
+
+## Keycode currently bound to an InputMap action, in any registered game.
 func control_keycode(action: StringName) -> int:
-	if not CONTROL_SETTING_KEYS.has(action):
-		return KEY_NONE
-	var setting_key := str(CONTROL_SETTING_KEYS[action])
-	return int(get_value(setting_key, KEY_NONE))
+	var setting_key := _setting_key_for_action(action)
+	return binding_keycode(setting_key) if not setting_key.is_empty() else KEY_NONE
 
 
 func control_key_label(action: StringName) -> String:
@@ -407,38 +606,126 @@ func control_summary(player_index: int, separator := ", ") -> String:
 	return separator.join(labels)
 
 
+## The movement keys [param game_id] uses, for menus that describe a game's
+## controls in one line.
+##
+## Returns [param fallback] when the game declares no movement bindings, and
+## also while every one of them is still at its default — the shipped wording
+## ("ARROW KEYS") reads better than four key names, and it is only a lie once
+## the player has actually rebound something.
+func movement_summary_for_game(
+	game_id: String,
+	separator := " · ",
+	fallback := ""
+) -> String:
+	var labels := PackedStringArray()
+	var customised := false
+	for definition: Dictionary in control_bindings_for_game(game_id):
+		if not bool(definition.get("movement", false)):
+			continue
+		var setting_key := str(definition["key"])
+		var keycode := binding_keycode(setting_key)
+		if keycode != int(definition.get("default", KEY_NONE)):
+			customised = true
+		labels.append(binding_key_label(setting_key))
+	if labels.is_empty() or not customised:
+		return fallback
+	return separator.join(labels)
+
+
 func control_action_title(action: StringName) -> String:
-	var action_index := CONTROL_ACTIONS.find(action)
-	if action_index < 0:
-		return "Unknown control"
-	var player_number := 1 if action_index < PLAYER_ONE_ACTIONS.size() else 2
-	var target_number := action_index % PLAYER_ONE_ACTIONS.size() + 1
-	return "Player %d target %d" % [player_number, target_number]
+	var setting_key := _setting_key_for_action(action)
+	return binding_title(setting_key) if not setting_key.is_empty() else "Unknown control"
+
+
+func binding_keycode(setting_key: String) -> int:
+	_ensure_registered()
+	var definition: Dictionary = _control_bindings.get(setting_key, {})
+	return int(get_value(setting_key, definition.get("default", KEY_NONE)))
+
+
+func binding_key_label(setting_key: String) -> String:
+	var label := OS.get_keycode_string(binding_keycode(setting_key))
+	return label if not label.is_empty() else "Unbound"
+
+
+func binding_title(setting_key: String) -> String:
+	_ensure_registered()
+	var definition: Dictionary = _control_bindings.get(setting_key, {})
+	var title := str(definition.get("title", "")).strip_edges()
+	return title if not title.is_empty() else "Unknown control"
+
+
+func binding_description(setting_key: String) -> String:
+	_ensure_registered()
+	var definition: Dictionary = _control_bindings.get(setting_key, {})
+	return str(definition.get("description", "")).strip_edges()
 
 
 func is_control_key_allowed(keycode: int) -> bool:
 	return keycode != KEY_NONE and not RESERVED_CONTROL_KEYS.has(keycode)
 
 
-func set_control_key(action: StringName, keycode: int) -> bool:
-	if not CONTROL_SETTING_KEYS.has(action) or not is_control_key_allowed(keycode):
+## Rebinds one key. Conflicts are swapped rather than rejected, but only inside
+## [param scope_game_id]: two games may share a key without either noticing,
+## because only one of them is ever running.
+func set_binding_key(
+	setting_key: String,
+	keycode: int,
+	scope_game_id := ""
+) -> bool:
+	_ensure_registered()
+	if not _control_bindings.has(setting_key) or not is_control_key_allowed(keycode):
 		return false
 
-	var setting_key := str(CONTROL_SETTING_KEYS[action])
-	var previous_keycode := control_keycode(action)
+	var previous_keycode := binding_keycode(setting_key)
 	if previous_keycode == keycode:
 		return true
 
-	var conflicting_action: StringName = &""
-	for candidate: StringName in CONTROL_ACTIONS:
-		if candidate != action and control_keycode(candidate) == keycode:
-			conflicting_action = candidate
+	var scope := (
+		control_bindings_for_game(scope_game_id)
+		if not scope_game_id.is_empty()
+		else _scope_containing(setting_key)
+	)
+	for definition: Dictionary in scope:
+		var candidate := str(definition["key"])
+		if candidate != setting_key and binding_keycode(candidate) == keycode:
+			set_value(candidate, previous_keycode)
 			break
-
-	if not conflicting_action.is_empty():
-		set_value(str(CONTROL_SETTING_KEYS[conflicting_action]), previous_keycode)
 	set_value(setting_key, keycode)
 	return true
+
+
+func set_control_key(action: StringName, keycode: int) -> bool:
+	var setting_key := _setting_key_for_action(action)
+	return (
+		set_binding_key(setting_key, keycode)
+		if not setting_key.is_empty()
+		else false
+	)
+
+
+func _setting_key_for_action(action: StringName) -> String:
+	_ensure_registered()
+	for setting_key: String in _control_bindings:
+		var definition: Dictionary = _control_bindings[setting_key]
+		if StringName(definition.get("action", &"")) == action:
+			return setting_key
+	return ""
+
+
+## The group of bindings [param setting_key] belongs to, used when a caller
+## rebinds without saying which game it is configuring.
+func _scope_containing(setting_key: String) -> Array[Dictionary]:
+	for game_id: String in _bindings_by_game:
+		for definition: Dictionary in _bindings_by_game[game_id]:
+			if str(definition["key"]) == setting_key:
+				return _bindings_by_game[game_id]
+	for style: String in _bindings_by_style:
+		for definition: Dictionary in _bindings_by_style[style]:
+			if str(definition["key"]) == setting_key:
+				return _bindings_by_style[style]
+	return []
 
 
 func controller_target_button(target_index: int) -> int:
@@ -590,23 +877,38 @@ func set_controller_button(setting_key: String, button: int) -> bool:
 	return true
 
 
+## Reads the saved file over the defaults. Every registered key is considered,
+## not just the framework's own, so game-declared options and bindings survive
+## a restart. A value whose type drifted from its default is ignored, which is
+## how settings written by an older build are discarded safely.
 func load_settings() -> void:
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) != OK:
 		return
-	for key: String in DEFAULTS:
+	for key: String in _values.keys():
 		var parts := key.split("/", false, 1)
+		if parts.size() < 2:
+			continue
 		var section := parts[0]
 		var name := parts[1]
-		if config.has_section_key(section, name):
-			var stored: Variant = config.get_value(section, name)
-			# Ignore values whose type drifted from the default (old save files).
-			if typeof(stored) == typeof(DEFAULTS[key]):
-				_values[key] = stored
+		if not config.has_section_key(section, name):
+			continue
+		var stored: Variant = config.get_value(section, name)
+		var expected: Variant = _values[key]
+		if typeof(stored) == typeof(expected):
+			_values[key] = stored
+		elif typeof(expected) == TYPE_FLOAT and typeof(stored) == TYPE_INT:
+			# A whole-numbered float round-trips through ConfigFile as an int.
+			_values[key] = float(stored)
 
 
 func save() -> void:
 	var config := ConfigFile.new()
+	# Start from what is on disk rather than from an empty file: a build that
+	# ships one game registers one game's option and binding keys, and rewriting
+	# the file from those alone would delete another build's saved values out of
+	# a shared `user://`.
+	config.load(SAVE_PATH)
 	for key: String in _values:
 		var parts := key.split("/", false, 1)
 		config.set_value(parts[0], parts[1], _values[key])
@@ -761,11 +1063,17 @@ func apply_display() -> void:
 			_apply(key, _values[key])
 
 
+## Pushes every registered keyboard binding into the InputMap. Bindings from
+## games that are not running are applied too: their actions are unique, so a
+## dormant game costs nothing and never has to re-apply on load.
 func apply_controls() -> void:
-	for action: StringName in CONTROL_ACTIONS:
+	for definition: Dictionary in _all_control_bindings():
+		var action := StringName(definition.get("action", &""))
+		if action.is_empty():
+			continue
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
-		_apply_control_binding(action, control_keycode(action))
+		_apply_control_binding(action, binding_keycode(str(definition["key"])))
 	_apply_pause_control_binding(controller_pause_button())
 
 
@@ -828,24 +1136,33 @@ func _apply_pause_control_binding(button: int) -> void:
 
 
 func _control_action_for_setting(setting_key: String) -> StringName:
-	for action: StringName in CONTROL_ACTIONS:
-		if str(CONTROL_SETTING_KEYS[action]) == setting_key:
-			return action
-	return &""
+	_ensure_registered()
+	var definition: Dictionary = _control_bindings.get(setting_key, {})
+	return StringName(definition.get("action", &""))
 
 
+## Repairs bindings that a hand-edited or stale save left unusable. Each scope
+## is checked on its own, so a key shared by two games is not a conflict.
 func _repair_control_values() -> bool:
 	var repaired := false
-	var used_keycodes := {}
-	for action: StringName in CONTROL_ACTIONS:
-		var keycode := control_keycode(action)
-		if not is_control_key_allowed(keycode) or used_keycodes.has(keycode):
-			for reset_action: StringName in CONTROL_ACTIONS:
-				var setting_key := str(CONTROL_SETTING_KEYS[reset_action])
-				_values[setting_key] = DEFAULTS[setting_key]
-			repaired = true
-			break
-		used_keycodes[keycode] = true
+	var scopes: Array[Array] = []
+	for style: String in _bindings_by_style:
+		scopes.append(_bindings_by_style[style])
+	for game_id: String in _bindings_by_game:
+		scopes.append(_bindings_by_game[game_id])
+
+	for scope: Array in scopes:
+		var used_keycodes := {}
+		for definition: Dictionary in scope:
+			var keycode := binding_keycode(str(definition["key"]))
+			if not is_control_key_allowed(keycode) or used_keycodes.has(keycode):
+				for reset: Dictionary in scope:
+					_values[str(reset["key"])] = int(
+						reset.get("default", KEY_NONE)
+					)
+				repaired = true
+				break
+			used_keycodes[keycode] = true
 
 	var used_buttons := {}
 	for setting_key: String in CONTROLLER_BINDING_KEYS:

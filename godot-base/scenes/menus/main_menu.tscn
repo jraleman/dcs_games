@@ -47,12 +47,14 @@ fov = 34.0
 current = true
 
 [node name="KeyLight" type="DirectionalLight3D" parent="LogoShowcase/LogoViewport"]
+unique_name_in_owner = true
 rotation_degrees = Vector3(-28, -32, 0)
 light_color = Color(0.788235, 0.921569, 0.956863, 1)
 light_energy = 1.5
 shadow_enabled = true
 
 [node name="FillLight" type="OmniLight3D" parent="LogoShowcase/LogoViewport"]
+unique_name_in_owner = true
 position = Vector3(-2.4, 1.8, 3.2)
 light_color = Color(0.686275, 0.866667, 0.917647, 1)
 light_energy = 4.0
@@ -62,9 +64,11 @@ omni_range = 8.0
 unique_name_in_owner = true
 
 [node name="Body" type="MeshInstance3D" parent="LogoShowcase/LogoViewport/LogoRig"]
+unique_name_in_owner = true
 mesh = SubResource("BoxMesh_logo_body")
 
 [node name="Face" type="Sprite3D" parent="LogoShowcase/LogoViewport/LogoRig"]
+unique_name_in_owner = true
 position = Vector3(0, 0, 0.116)
 texture = ExtResource("3_logo")
 pixel_size = 0.00338

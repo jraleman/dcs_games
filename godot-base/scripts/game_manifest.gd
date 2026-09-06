@@ -26,9 +26,32 @@ var tagline := ""
 ## Scene loaded when the player starts this game.
 var gameplay_scene_path := ""
 
+## Optional opening played instead of `scenes/boot/intro.tscn`.
+##
+## Only a build that ships this game on its own uses it: the intro runs before
+## the main menu, so in a collection no game has been chosen yet and the
+## framework's placeholder is the only honest opening. Empty keeps that
+## placeholder. The scene's only contract is the intro's: reach
+## `Router.goto()` eventually, and let the player skip.
+var intro_scene_path := ""
+
 ## Achievement definitions merged into [AchievementManager] at boot.
 ## `{ id: { "title": String, "description": String, "badge": String } }`
 var achievements := {}
+
+## This game's own credits sections, in the same shape as [StudioInfo.CREDITS]:
+## `[{ "heading": String, "lines": Array[String] }]`.
+##
+## The credits screen renders them above the shared studio sections when this
+## game is the whole build. A collection cannot show one game's credits over
+## another's, so it lists the games it ships instead. Empty is fine — the
+## studio sections still roll.
+var credits: Array[Dictionary] = []
+
+## This game's logo and colours. Like the intro, it dresses the shared screens
+## only in a build that ships this game alone: a collection has no one game to
+## look like. `null` keeps the studio's own look.
+var theme: GameTheme = null
 
 ## Optional gating. `null` means the game is always available.
 var unlock_rule: GameUnlockRule = null
@@ -79,14 +102,72 @@ var menu_order := 0
 ## `instructions_versus_summary`.
 var copy := {}
 
-## Player-facing numeric options this game adds to the Settings screen. The
-## framework stores and clamps them; the game reads them through
-## [method Settings.tunable].
+## Player-facing options this game adds to the in-game Settings → Game tab. The
+## framework stores, clamps and renders them; the game reads them through
+## [method Settings.tunable], [method Settings.tunable_bool] or
+## [method Settings.tunable_choice].
 ##
-## Each entry is `{"key": String, "default": float, "min": float, "max": float}`
-## where `key` is a globally unique `section/name` string so saved settings from
-## different games never collide.
+## `key` is a globally unique `section/name` string so saved settings from
+## different games never collide. Every other field is optional and has a
+## neutral default, so a bare `{"key": …, "default": …}` still works.
+##
+## [codeblock]
+## {
+##     "key": "game/triangle_size",   # required, globally unique
+##     "type": OPTION_SLIDER,         # SLIDER (default), TOGGLE or CHOICE
+##     "default": 1.5,
+##     "min": 0.6, "max": 1.6, "step": 0.05,   # sliders only
+##     "choices": [{"value": 0, "title": "Auto"}],  # choice lists only
+##     "title": "Triangle size",      # row label; derived from the key if absent
+##     "description": "…",            # hint line and assistive-tech description
+##     "format": FORMAT_PERCENT,      # how the value reads out beside a slider
+##     "heading": "Triangles",        # groups consecutive rows under a heading
+## }
+## [/codeblock]
 var tunables: Array[Dictionary] = []
+
+## Option kinds the Settings screen knows how to render.
+const OPTION_SLIDER := "slider"
+const OPTION_TOGGLE := "toggle"
+const OPTION_CHOICE := "choice"
+
+## Read-outs available to a slider option. Unknown values render the raw number.
+const FORMAT_NUMBER := "number"
+const FORMAT_PERCENT := "percent"
+## Renders `0` as "Off" and anything else as a signed percentage or count, for
+## options that add to a baseline rather than replacing it.
+const FORMAT_PLUS_PERCENT := "plus_percent"
+const FORMAT_SECONDS := "seconds"
+const FORMAT_PLUS_SECONDS := "plus_seconds"
+const FORMAT_LIVES := "lives"
+const FORMAT_COUNT := "count"
+const FORMAT_MILLISECONDS := "milliseconds"
+
+## Rebindable keyboard controls this game owns, rendered on the in-game
+## Settings → Controls tab.
+##
+## A game that leaves this empty inherits the framework's built-in bindings for
+## its [member control_style], so a `targets` game gets the six target keys for
+## free. Declare bindings when the game is driven by something else — movement
+## keys, instrument keys — rather than living with controls it does not use.
+##
+## [codeblock]
+## {
+##     "key": "controls/slice_move_up",  # required, globally unique
+##     "default": KEY_UP,                # required
+##     "action": &"slice_move_up",       # optional InputMap action kept in sync
+##     "title": "Move up",               # row label
+##     "description": "…",
+##     "player": 0,                      # 0 = P1, 1 = P2, -1 = shared (default)
+##     "movement": true,                 # drives the character; see below
+##     "heading": "Chainsaw movement",   # groups consecutive rows
+## }
+## [/codeblock]
+##
+## `movement` marks the keys that move the player, so menus can describe them
+## in one line with [method Settings.movement_summary_for_game] instead of
+## hardcoding "arrow keys". Leave it off for keys that do something else.
+var control_bindings: Array[Dictionary] = []
 
 
 ## Reads one [member copy] entry, falling back to [param fallback].

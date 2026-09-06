@@ -160,6 +160,7 @@ var _round_target_size := 1.0
 
 
 func _ready() -> void:
+	GameCatalog.theme().restyle_tree(self)
 	_rng.randomize()
 	_intense_effects_enabled = Settings.visual_effects_enabled()
 	_reduced_motion_enabled = Settings.reduced_motion_enabled()

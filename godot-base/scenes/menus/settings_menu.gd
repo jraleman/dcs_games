@@ -6,10 +6,35 @@ extends MenuScreen
 ## Works both as a standalone scene (from the main menu) and as an overlay
 ## (from the pause menu); MenuScreen.go_back() handles the difference.
 ##
+## The Controls and Game tabs configure one game. In a collection build they
+## only exist while a game is running: the pause menu sets
+## [member game_context_id] before adding this screen to the tree, and the main
+## menu does not, because until a game is picked there is nothing to configure.
+## A build that ships one game has no such ambiguity, so the screen adopts that
+## game and shows both tabs everywhere. Their rows are built from the active
+## [GameManifest], so adding a game never means editing this file.
+##
 ## Signals are connected in code rather than in the scene so adding a setting
 ## means touching one file.
 
 const FPS_OPTIONS := [0, 30, 60, 90, 120, 144]
+
+## Metrics copied from the authored rows so a generated row lines up with them.
+const ROW_LABEL_WIDTH := 340.0
+const ROW_VALUE_WIDTH := 110.0
+const ROW_CONTROL_WIDTH := 280.0
+const ROW_SLIDER_SIZE := Vector2(260, 40)
+const ROW_SEPARATION := 24
+const HEADING_FONT_SIZE := 22
+const HEADING_COLOR := Color(0.301961, 0.639216, 1, 1)
+const PLAYER_TWO_HEADING_COLOR := Color(1, 0.360784, 0.423529, 1)
+const VALUE_COLOR := Color(0.686275, 0.866667, 0.917647, 1)
+const REBIND_HELP := "Select, then press a key. Reusing a key swaps the bindings."
+
+## Game whose Controls and Game tabs this screen configures. Empty means the
+## screen was opened outside a game, where per-game options are meaningless —
+## which a standalone build resolves for itself in [method _resolve_game_context].
+var game_context_id := ""
 
 @onready var _master: HSlider = %MasterSlider
 @onready var _master_value: Label = %MasterValue
@@ -38,25 +63,13 @@ const FPS_OPTIONS := [0, 30, 60, 90, 120, 144]
 @onready var _round_mode: OptionButton = %RoundModeOption
 @onready var _starting_lives: HSlider = %StartingLivesSlider
 @onready var _starting_lives_value: Label = %StartingLivesValue
-@onready var _triangle_size: HSlider = %TriangleSizeSlider
-@onready var _triangle_size_value: Label = %TriangleSizeValue
-@onready var _triangle_speed: HSlider = %TriangleSpeedSlider
-@onready var _triangle_speed_value: Label = %TriangleSpeedValue
-@onready var _triangle_speed_rush: HSlider = %TriangleSpeedRushSlider
-@onready var _triangle_speed_rush_value: Label = %TriangleSpeedRushValue
-@onready var _triangle_round_length: HSlider = %TriangleRoundLengthSlider
-@onready var _triangle_round_length_value: Label = %TriangleRoundLengthValue
+@onready var _game_options: VBoxContainer = %GameOptions
+@onready var _keyboard_bindings: VBoxContainer = %KeyboardBindings
 @onready var _controller_speed: HSlider = %ControllerSpeedSlider
 @onready var _controller_speed_value: Label = %ControllerSpeedValue
 @onready var _controller_deadzone: HSlider = %ControllerDeadzoneSlider
 @onready var _controller_deadzone_value: Label = %ControllerDeadzoneValue
 @onready var _show_instructions: CheckButton = %ShowInstructionsToggle
-@onready var _player_one_target_one: Button = %PlayerOneTargetOne
-@onready var _player_one_target_two: Button = %PlayerOneTargetTwo
-@onready var _player_one_target_three: Button = %PlayerOneTargetThree
-@onready var _player_two_target_one: Button = %PlayerTwoTargetOne
-@onready var _player_two_target_two: Button = %PlayerTwoTargetTwo
-@onready var _player_two_target_three: Button = %PlayerTwoTargetThree
 @onready var _controller_target_one: OptionButton = %ControllerTargetOne
 @onready var _controller_target_two: OptionButton = %ControllerTargetTwo
 @onready var _controller_target_three: OptionButton = %ControllerTargetThree
@@ -73,9 +86,12 @@ const FPS_OPTIONS := [0, 30, 60, 90, 120, 144]
 
 var _syncing := false
 var _writing_settings := false
+## Generated rebind buttons and option widgets, keyed by their setting key.
 var _binding_buttons: Dictionary = {}
+var _option_controls: Dictionary = {}
+var _option_values: Dictionary = {}
 var _controller_buttons: Dictionary = {}
-var _listening_action: StringName = &""
+var _listening_binding := ""
 var _default_hint := ""
 
 
@@ -83,14 +99,6 @@ func _ready() -> void:
 	first_focus = _back_button
 	margins = _margins
 	_default_hint = _hint.text
-	_binding_buttons = {
-		Settings.PLAYER_ONE_ACTIONS[0]: _player_one_target_one,
-		Settings.PLAYER_ONE_ACTIONS[1]: _player_one_target_two,
-		Settings.PLAYER_ONE_ACTIONS[2]: _player_one_target_three,
-		Settings.PLAYER_TWO_ACTIONS[0]: _player_two_target_one,
-		Settings.PLAYER_TWO_ACTIONS[1]: _player_two_target_two,
-		Settings.PLAYER_TWO_ACTIONS[2]: _player_two_target_three,
-	}
 	_controller_buttons = {
 		Settings.CONTROLLER_TARGET_KEYS[0]: _controller_target_one,
 		Settings.CONTROLLER_TARGET_KEYS[1]: _controller_target_two,
@@ -98,6 +106,8 @@ func _ready() -> void:
 		Settings.CONTROLLER_PAUSE_KEY: _controller_pause,
 	}
 	_populate_options()
+	_resolve_game_context()
+	_build_game_tabs()
 	_connect_ui()
 	_configure_setting_help()
 	_sync_from_settings()
@@ -105,6 +115,202 @@ func _ready() -> void:
 	Settings.changed.connect(_on_setting_changed)
 	GameSession.gamepad_availability_changed.connect(_on_gamepad_availability_changed)
 	super()
+
+
+## Adopts the only game in a standalone build, so its Controls and Game tabs
+## are reachable from the main menu instead of only from a paused round.
+##
+## The catalog decides, not a game name: one game in the build means that game
+## *is* the product, and its options are the product's options. A collection
+## leaves this empty until the pause menu names the running game, because
+## configuring one of several games nobody has chosen yet would be a guess.
+func _resolve_game_context() -> void:
+	if not game_context_id.is_empty():
+		return
+	if GameCatalog.is_single_game_build():
+		game_context_id = GameCatalog.current_id()
+
+
+## Builds the two per-game tabs, or removes them when this screen was not
+## opened from inside a game. Everything here comes from the active manifest,
+## so a new game appears without this file changing.
+func _build_game_tabs() -> void:
+	var manifest := (
+		GameCatalog.get_manifest(game_context_id)
+		if not game_context_id.is_empty()
+		else null
+	)
+	var in_game := manifest != null
+	_set_tab_visible(_tab_page(_game_options), in_game)
+	_set_tab_visible(_tab_page(_keyboard_bindings), in_game)
+	if not in_game:
+		return
+
+	_build_option_rows(manifest)
+	_build_binding_rows(manifest)
+	_configure_style_rows(manifest)
+	_configure_controller_rows(manifest)
+
+
+## The tab page owning a list entry: `Tabs/<Page>/Pad/List/<node>`.
+func _tab_page(node: Node) -> Control:
+	return node.get_parent().get_parent().get_parent() as Control
+
+
+## TabContainer keeps a hidden child in the tab bar, so the tab itself has to be
+## hidden by index rather than by hiding the page.
+func _set_tab_visible(page: Node, visible_tab: bool) -> void:
+	var index := _tabs.get_tab_idx_from_control(page as Control)
+	if index >= 0:
+		_tabs.set_tab_hidden(index, not visible_tab)
+
+
+func _build_option_rows(manifest: GameManifest) -> void:
+	var heading := ""
+	for definition: Dictionary in Settings.options_for_game(manifest.id):
+		var declared := str(definition.get("heading", "")).strip_edges()
+		if not declared.is_empty() and declared != heading:
+			heading = declared
+			_game_options.add_child(_make_heading(declared, HEADING_COLOR))
+		_game_options.add_child(_make_option_row(definition))
+
+
+func _build_binding_rows(manifest: GameManifest) -> void:
+	var heading := ""
+	for definition: Dictionary in Settings.control_bindings_for_game(manifest.id):
+		var declared := str(definition.get("heading", "")).strip_edges()
+		if not declared.is_empty() and declared != heading:
+			heading = declared
+			_keyboard_bindings.add_child(
+				_make_heading(declared, _heading_color(definition))
+			)
+		_keyboard_bindings.add_child(_make_binding_row(definition))
+
+
+## Player 2's heading keeps its own colour so the two blocks stay
+## distinguishable without relying on reading the words.
+func _heading_color(definition: Dictionary) -> Color:
+	return (
+		PLAYER_TWO_HEADING_COLOR
+		if int(definition.get("player", -1)) == 1
+		else HEADING_COLOR
+	)
+
+
+func _make_heading(text: String, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text.to_upper()
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_font_size_override("font_size", HEADING_FONT_SIZE)
+	return label
+
+
+func _make_row(title: String) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", ROW_SEPARATION)
+	var label := Label.new()
+	label.text = title
+	label.custom_minimum_size = Vector2(ROW_LABEL_WIDTH, 0.0)
+	label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(label)
+	return row
+
+
+func _make_option_row(definition: Dictionary) -> HBoxContainer:
+	var key := str(definition["key"])
+	var row := _make_row(_option_title(definition))
+	match Settings.option_type(key):
+		GameManifest.OPTION_TOGGLE:
+			var toggle := CheckButton.new()
+			toggle.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			toggle.toggled.connect(_on_option_toggled.bind(key))
+			row.add_child(toggle)
+			_option_controls[key] = toggle
+		GameManifest.OPTION_CHOICE:
+			var option := OptionButton.new()
+			option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			for choice: Dictionary in Settings.option_choices(key):
+				option.add_item(
+					str(choice.get("title", choice.get("value", ""))),
+					int(choice.get("value", 0))
+				)
+			option.item_selected.connect(_on_option_choice_selected.bind(key))
+			row.add_child(option)
+			_option_controls[key] = option
+		_:
+			var slider := HSlider.new()
+			slider.custom_minimum_size = ROW_SLIDER_SIZE
+			slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			# Set before connecting: changing a Range's bounds re-emits
+			# `value_changed`, which would write the pre-sync value to disk.
+			slider.min_value = Settings.tunable_min(key)
+			slider.max_value = Settings.tunable_max(key)
+			slider.step = Settings.tunable_step(key)
+			slider.value = Settings.tunable(key)
+			slider.value_changed.connect(_on_option_slider_changed.bind(key))
+			row.add_child(slider)
+
+			var value := Label.new()
+			value.custom_minimum_size = Vector2(ROW_VALUE_WIDTH, 0.0)
+			value.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			value.add_theme_color_override("font_color", VALUE_COLOR)
+			row.add_child(value)
+			_option_controls[key] = slider
+			_option_values[key] = value
+	return row
+
+
+func _make_binding_row(definition: Dictionary) -> HBoxContainer:
+	var key := str(definition["key"])
+	var row := _make_row(str(definition.get("title", "Control")))
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(ROW_CONTROL_WIDTH, 0.0)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.pressed.connect(_on_binding_pressed.bind(key))
+	row.add_child(button)
+	_binding_buttons[key] = button
+	return row
+
+
+func _option_title(definition: Dictionary) -> String:
+	var title := str(definition.get("title", "")).strip_edges()
+	if not title.is_empty():
+		return title
+	# A key like `game/triangle_size` reads as "Triangle size" unaided.
+	var name := str(definition.get("key", "")).split("/")[-1]
+	return name.replace("_", " ").capitalize()
+
+
+## Rows outside the per-game tabs that still only make sense for one control
+## style. One-button play is about pressing target keys, so it is noise in a
+## game you steer — and in a standalone build of one, it would be the only
+## thing on screen naming another game.
+##
+## Only reached once a game is known. Without one the rows stay as authored,
+## because a collection's main menu is configuring all of them at once.
+func _configure_style_rows(manifest: GameManifest) -> void:
+	var targets := manifest.control_style == GameManifest.CONTROL_STYLE_TARGETS
+	var row := _one_button_target_rush.get_parent() as Control
+	if row != null:
+		row.visible = targets
+
+
+## Controller rows describe one control style at a time: target buttons mean
+## nothing to a game you steer, and a movement scheme means nothing to a game
+## played by pressing target keys.
+func _configure_controller_rows(manifest: GameManifest) -> void:
+	var targets := manifest.control_style == GameManifest.CONTROL_STYLE_TARGETS
+	for setting_key: String in Settings.CONTROLLER_TARGET_KEYS:
+		var row := (_controller_buttons[setting_key] as Control).get_parent() as Control
+		if row != null:
+			row.visible = targets
+	var movement_row := _controller_movement_scheme.get_parent() as Control
+	if movement_row != null:
+		movement_row.visible = not targets
 
 
 func _populate_options() -> void:
@@ -181,18 +387,6 @@ func _connect_ui() -> void:
 	)
 	_round_mode.item_selected.connect(_on_round_mode_selected)
 	_starting_lives.value_changed.connect(_on_starting_lives_changed)
-	_triangle_size.value_changed.connect(
-		_on_setting_slider_changed.bind(TargetRushOptions.SIZE_KEY)
-	)
-	_triangle_speed.value_changed.connect(
-		_on_setting_slider_changed.bind(TargetRushOptions.SPEED_KEY)
-	)
-	_triangle_speed_rush.value_changed.connect(
-		_on_setting_slider_changed.bind(TargetRushOptions.SPEED_RUSH_KEY)
-	)
-	_triangle_round_length.value_changed.connect(
-		_on_setting_slider_changed.bind(TargetRushOptions.ROUND_LENGTH_KEY)
-	)
 	_controller_speed.value_changed.connect(
 		_on_setting_slider_changed.bind(Settings.CONTROLLER_SPEED_KEY)
 	)
@@ -203,9 +397,6 @@ func _connect_ui() -> void:
 	_window_mode.item_selected.connect(_on_window_mode_selected)
 	_max_fps.item_selected.connect(_on_max_fps_selected)
 	_ui_scale.value_changed.connect(_on_ui_scale_changed)
-	for action: StringName in _binding_buttons:
-		var button := _binding_buttons[action] as Button
-		button.pressed.connect(_on_binding_pressed.bind(action))
 	for setting_key: String in _controller_buttons:
 		var option := _controller_buttons[setting_key] as OptionButton
 		option.item_selected.connect(
@@ -246,35 +437,44 @@ func _configure_setting_help() -> void:
 			+ "out of lives."
 		),
 		_starting_lives: "Lives each player gets per round in Lives mode.",
-		_triangle_size: "Sets the base Triangle Rush target size next round.",
-		_triangle_speed: "Sets how fast Triangle Rush targets drift next round.",
-		_triangle_speed_rush: (
-			"Extra target speed added as the round timer runs out."
-		),
-		_triangle_round_length: (
-			"Sets the base Triangle Rush round length before any extra time."
-		),
 		_one_button_target_rush: "Any target input activates the highlighted target.",
-		_controller_speed: "Changes controller cursor speed in Desk-Can-Saw.",
+		_controller_speed: "Changes controller cursor speed in direct-movement games.",
 		_controller_deadzone: "Sets how far a stick moves before input begins.",
 		_controller_pause: (
 			"Sets pause for all controllers; D-pad stays available for movement."
 		),
 		_controller_movement_scheme: "Chooses the stick and optional D-pad movement.",
-		_reset_controls_button: "Restores only keyboard and controller bindings.",
+		_reset_controls_button: "Restores only this game's keyboard and controller bindings.",
 		_show_instructions: "Shows controls and rules before gameplay.",
 		_reset_all_button: "Restores settings without erasing progress.",
 	}
-	for action: StringName in _binding_buttons:
-		descriptions[_binding_buttons[action]] = (
-			"Select, then press a key. Reusing a key swaps the bindings."
-		)
+	for setting_key: String in _binding_buttons:
+		descriptions[_binding_buttons[setting_key]] = _binding_help(setting_key)
+	for setting_key: String in _option_controls:
+		descriptions[_option_controls[setting_key]] = _option_help(setting_key)
 	for setting_key: String in Settings.CONTROLLER_TARGET_KEYS:
 		descriptions[_controller_buttons[setting_key]] = (
 			"Shared by all controllers. Reusing a button swaps the bindings."
 		)
 	for control: Control in descriptions:
 		_register_setting_help(control, descriptions[control])
+
+
+## Games are not obliged to describe every option, so an undescribed row still
+## gets a usable line for the hint bar and for assistive technology.
+func _option_help(setting_key: String) -> String:
+	var definition: Dictionary = Settings.tunables().get(setting_key, {})
+	var description := str(definition.get("description", "")).strip_edges()
+	return (
+		description
+		if not description.is_empty()
+		else "Changes %s for this game." % _option_title(definition).to_lower()
+	)
+
+
+func _binding_help(setting_key: String) -> String:
+	var description := Settings.binding_description(setting_key)
+	return description if not description.is_empty() else REBIND_HELP
 
 
 func _register_setting_help(control: Control, description: String) -> void:
@@ -306,40 +506,24 @@ func _restore_default_hint() -> void:
 	_hint.text = _default_hint
 
 
-## Ranges and visibility for the Game tab come from the tunables the active
-## games declare, so this screen never hardcodes a game's numbers.
+## Ranges and visibility for the Game tab come from the options the active game
+## declares, so this screen never hardcodes a game's numbers.
 ##
 ## Must run while [member _syncing] is set: changing a slider's bounds re-emits
 ## `value_changed`, which would otherwise write the pre-sync value back to disk.
-func _configure_game_tunables() -> void:
-	var rows := {
-		TargetRushOptions.SIZE_KEY: _triangle_size,
-		TargetRushOptions.SPEED_KEY: _triangle_speed,
-		TargetRushOptions.SPEED_RUSH_KEY: _triangle_speed_rush,
-		TargetRushOptions.ROUND_LENGTH_KEY: _triangle_round_length,
-	}
-	var registered := Settings.tunables()
-	var any_visible := false
-	for key: String in rows:
-		var slider: HSlider = rows[key]
-		var row := slider.get_parent() as Control
-		var is_registered: bool = registered.has(key)
-		if row != null:
-			row.visible = is_registered
-		if not is_registered:
-			continue
-		any_visible = true
-		slider.min_value = Settings.tunable_min(key)
-		slider.max_value = Settings.tunable_max(key)
-	var heading := _tunable_heading()
-	if heading != null:
-		heading.visible = any_visible
-
-
-func _tunable_heading() -> Control:
-	return get_node_or_null(
-		"Margins/Layout/Tabs/Game/Pad/List/TriangleHeading"
-	) as Control
+func _sync_game_options() -> void:
+	for key: String in _option_controls:
+		var control: Control = _option_controls[key]
+		match Settings.option_type(key):
+			GameManifest.OPTION_TOGGLE:
+				(control as CheckButton).button_pressed = Settings.tunable_bool(key)
+			GameManifest.OPTION_CHOICE:
+				_select_id(control as OptionButton, Settings.tunable_choice(key))
+			_:
+				var slider := control as HSlider
+				slider.min_value = Settings.tunable_min(key)
+				slider.max_value = Settings.tunable_max(key)
+				slider.value = Settings.tunable(key)
 
 
 ## Controller bindings and pad-only assists are meaningless without a pad, so
@@ -375,7 +559,7 @@ func _on_gamepad_availability_changed(_available: bool) -> void:
 ## Pushes the stored values into the widgets without echoing them back.
 func _sync_from_settings() -> void:
 	_syncing = true
-	_configure_game_tunables()
+	_sync_game_options()
 	_master.value = float(Settings.get_value("audio/master"))
 	_music.value = float(Settings.get_value("audio/music"))
 	_sfx.value = float(Settings.get_value("audio/sfx"))
@@ -392,12 +576,6 @@ func _sync_from_settings() -> void:
 	_extra_round_time.value = Settings.extra_round_time()
 	_starting_lives.value = Settings.starting_lives()
 	_select_id(_round_mode, Settings.round_mode())
-	_triangle_size.value = Settings.tunable(TargetRushOptions.SIZE_KEY)
-	_triangle_speed.value = Settings.tunable(TargetRushOptions.SPEED_KEY)
-	_triangle_speed_rush.value = Settings.tunable(TargetRushOptions.SPEED_RUSH_KEY)
-	_triangle_round_length.value = Settings.tunable(
-		TargetRushOptions.ROUND_LENGTH_KEY
-	)
 	_controller_speed.value = Settings.controller_movement_scale()
 	_controller_deadzone.value = Settings.controller_deadzone()
 	_show_instructions.button_pressed = bool(Settings.get_value("game/show_instructions"))
@@ -442,29 +620,24 @@ func _refresh_value_labels() -> void:
 	)
 	var lives := roundi(_starting_lives.value)
 	_starting_lives_value.text = "%d %s" % [lives, "life" if lives == 1 else "lives"]
-	_triangle_size_value.text = "%d%%" % roundi(_triangle_size.value * 100.0)
-	_triangle_speed_value.text = "%d%%" % roundi(_triangle_speed.value * 100.0)
-	_triangle_speed_rush_value.text = (
-		"Off"
-		if is_zero_approx(_triangle_speed_rush.value)
-		else "+%d%%" % roundi(_triangle_speed_rush.value * 100.0)
-	)
-	_triangle_round_length_value.text = "%d sec" % roundi(
-		_triangle_round_length.value
-	)
 	_controller_speed_value.text = "%d%%" % roundi(_controller_speed.value * 100.0)
 	_controller_deadzone_value.text = "%d%%" % roundi(
 		_controller_deadzone.value * 100.0
 	)
+	for key: String in _option_values:
+		var slider := _option_controls[key] as HSlider
+		(_option_values[key] as Label).text = Settings.format_option(
+			key, slider.value
+		)
 
 
 func _refresh_control_buttons() -> void:
-	for action: StringName in _binding_buttons:
-		var button := _binding_buttons[action] as Button
+	for setting_key: String in _binding_buttons:
+		var button := _binding_buttons[setting_key] as Button
 		button.text = (
 			"Press a key..."
-			if action == _listening_action
-			else Settings.control_key_label(action)
+			if setting_key == _listening_binding
+			else Settings.binding_key_label(setting_key)
 		)
 
 
@@ -525,6 +698,32 @@ func _on_setting_slider_changed(value: float, key: String) -> void:
 	_set_setting(key, value)
 
 
+## A game-declared slider. Whole-numbered options are stored as ints so the
+## saved type matches the declared default and survives a reload.
+func _on_option_slider_changed(value: float, key: String) -> void:
+	_refresh_value_labels()
+	if _syncing:
+		return
+	var definition: Dictionary = Settings.tunables().get(key, {})
+	_set_setting(
+		key,
+		roundi(value) if typeof(definition.get("default")) == TYPE_INT else value
+	)
+
+
+func _on_option_toggled(pressed: bool, key: String) -> void:
+	if _syncing:
+		return
+	_set_setting(key, pressed)
+
+
+func _on_option_choice_selected(index: int, key: String) -> void:
+	if _syncing:
+		return
+	var option := _option_controls[key] as OptionButton
+	_set_setting(key, option.get_item_id(index))
+
+
 func _on_controller_button_selected(index: int, setting_key: String) -> void:
 	if _syncing:
 		return
@@ -548,7 +747,7 @@ func _on_controller_movement_scheme_selected(index: int) -> void:
 		return
 	var scheme := _controller_movement_scheme.get_item_id(index)
 	_set_setting(Settings.CONTROLLER_MOVEMENT_SCHEME_KEY, scheme)
-	_binding_status.text = "Desk-Can-Saw movement uses %s." % (
+	_binding_status.text = "Movement uses %s." % (
 		Settings.controller_movement_scheme_label(scheme)
 	)
 
@@ -559,16 +758,16 @@ func _set_setting(key: String, value: Variant) -> void:
 	_writing_settings = false
 
 
-func _on_binding_pressed(action: StringName) -> void:
-	_listening_action = action
+func _on_binding_pressed(setting_key: String) -> void:
+	_listening_binding = setting_key
 	_binding_status.text = (
-		"Press a key for %s. Esc cancels." % Settings.control_action_title(action)
+		"Press a key for %s. Esc cancels." % Settings.binding_title(setting_key)
 	)
 	_refresh_control_buttons()
 
 
 func _input(event: InputEvent) -> void:
-	if _listening_action.is_empty() or not event is InputEventKey:
+	if _listening_binding.is_empty() or not event is InputEventKey:
 		return
 
 	var key_event := event as InputEventKey
@@ -588,15 +787,17 @@ func _input(event: InputEvent) -> void:
 		_binding_status.text = "Esc and F11 are reserved. Press another key."
 		return
 
-	var action := _listening_action
-	_listening_action = &""
+	var setting_key := _listening_binding
+	_listening_binding = ""
 	_writing_settings = true
-	var assigned := Settings.set_control_key(action, keycode)
+	# Scoped to the running game: a key it shares with another game is not a
+	# conflict, because only one of them is ever on screen.
+	var assigned := Settings.set_binding_key(setting_key, keycode, game_context_id)
 	_writing_settings = false
 	if assigned:
 		_binding_status.text = "%s now uses %s." % [
-			Settings.control_action_title(action),
-			Settings.control_key_label(action),
+			Settings.binding_title(setting_key),
+			Settings.binding_key_label(setting_key),
 		]
 	else:
 		_binding_status.text = "That key could not be assigned."
@@ -604,15 +805,15 @@ func _input(event: InputEvent) -> void:
 
 
 func _cancel_binding(message: String) -> void:
-	_listening_action = &""
+	_listening_binding = ""
 	_binding_status.text = message
 	_refresh_control_buttons()
 
 
 func _on_reset_controls_pressed() -> void:
-	_listening_action = &""
+	_listening_binding = ""
 	_writing_settings = true
-	Settings.reset_controls_to_defaults()
+	Settings.reset_controls_to_defaults(game_context_id)
 	_writing_settings = false
 	_binding_status.text = "Gameplay controls restored to their defaults."
 	_refresh_control_buttons()
@@ -639,7 +840,7 @@ func _controller_binding_title(setting_key: String) -> String:
 
 
 func _on_reset_pressed() -> void:
-	_listening_action = &""
+	_listening_binding = ""
 	_writing_settings = true
 	Settings.reset_to_defaults()
 	_writing_settings = false

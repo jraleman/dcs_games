@@ -1,8 +1,13 @@
 extends MenuScreen
 
-## Credits roll. The content lives in StudioInfo.CREDITS; this screen only
-## renders and scrolls it. Auto-scrolling stops the moment the player scrolls
-## by hand, so they can read at their own pace.
+## Credits roll. The content is data: the shared sections live in
+## StudioInfo.CREDITS and a game's own sections live on its GameManifest, so
+## this screen never names a game. Auto-scrolling stops the moment the player
+## scrolls by hand, so they can read at their own pace.
+##
+## A standalone build is one game's product, so that game's credits lead the
+## roll. A collection cannot pick one game's credits over another's, so it
+## lists the games it ships and points at them instead.
 
 @export var scroll_speed := 48.0
 @export var start_delay := 1.2
@@ -28,16 +33,59 @@ func _build() -> void:
 		child.queue_free()
 
 	_add_spacer(40)
+	var manifest := _credited_game()
+	if manifest != null:
+		_add_game_credits(manifest)
 	for section: Dictionary in StudioInfo.CREDITS:
-		_add_label(str(section.get("heading", "")), 34, StudioInfo.SKY, 0)
-		for line: String in section.get("lines", []):
-			_add_label(line, 27, StudioInfo.CREAM, 0)
-		_add_spacer(34)
+		_add_section(section)
+	if manifest == null:
+		_add_collection_note()
 
 	_add_label(StudioInfo.STUDIO, 30, StudioInfo.CREAM, 0)
 	_add_label(StudioInfo.copyright_line(), 24, StudioInfo.MUTED, 0)
 	_add_label(StudioInfo.WEBSITE, 24, StudioInfo.MUTED, 0)
 	_add_spacer(60)
+
+
+## The game these credits belong to, or null when the build ships more than one.
+## Same rule the settings screen uses to adopt a game context: a build with a
+## single game in the catalog is that game, whoever pinned it.
+func _credited_game() -> GameManifest:
+	if not GameCatalog.is_single_game_build():
+		return null
+	return GameCatalog.current()
+
+
+## A game's own credits, under its title so it is clear which work they cover
+## and which of the sections below belong to the studio.
+func _add_game_credits(manifest: GameManifest) -> void:
+	_add_label(manifest.title, 40, StudioInfo.CREAM, 0)
+	_add_spacer(24)
+	for section: Dictionary in manifest.credits:
+		_add_section(section)
+
+
+## Sends a collection player to the credits they actually want. The list is
+## built from the catalog, so it names exactly what this build ships and can
+## never fall out of date.
+func _add_collection_note() -> void:
+	var titles := PackedStringArray()
+	for game in GameCatalog.all():
+		titles.append(game.title)
+	if titles.is_empty():
+		return
+
+	_add_label(StudioInfo.COLLECTION_CREDITS_HEADING, 34, StudioInfo.SKY, 0)
+	_add_label(" · ".join(titles), 27, StudioInfo.CREAM, 0)
+	_add_label(StudioInfo.COLLECTION_CREDITS_NOTE, 27, StudioInfo.MUTED, 0)
+	_add_spacer(34)
+
+
+func _add_section(section: Dictionary) -> void:
+	_add_label(str(section.get("heading", "")), 34, StudioInfo.SKY, 0)
+	for line: String in section.get("lines", []):
+		_add_label(line, 27, StudioInfo.CREAM, 0)
+	_add_spacer(34)
 
 
 func _add_label(text: String, font_size: int, color: Color, top_margin: int) -> void:
