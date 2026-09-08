@@ -1,0 +1,140 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://ui/components/game_card.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+content_margin_left = 18.0
+content_margin_top = 18.0
+content_margin_right = 18.0
+content_margin_bottom = 18.0
+bg_color = Color(0.078431, 0.113725, 0.137255, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.07)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_thumbnail"]
+bg_color = Color(0.0117647, 0.0235294, 0.0313726, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+bg_color = Color(0.0352941, 0.109804, 0.176471, 0.85)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="GameCard" type="PanelContainer"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+script = ExtResource("1_script")
+
+[node name="Layout" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Frame" type="AspectRatioContainer" parent="Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 169)
+layout_mode = 2
+ratio = 1.7777778
+
+[node name="Stack" type="PanelContainer" parent="Layout/Frame"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_thumbnail")
+
+[node name="Placeholder" type="Label" parent="Layout/Frame/Stack"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.454902, 0.529412, 0.568627, 1)
+theme_override_font_sizes/font_size = 18
+text = "PREVIEW COMING SOON"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Poster" type="TextureRect" parent="Layout/Frame/Stack"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Video" type="VideoStreamPlayer" parent="Layout/Frame/Stack"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+expand = true
+
+[node name="Overlay" type="Control" parent="Layout/Frame/Stack"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Badge" type="Label" parent="Layout/Frame/Stack/Overlay"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -38.0
+offset_right = 130.0
+offset_bottom = -10.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxFlat_badge")
+text = "PREVIEW"
+
+[node name="Title" type="Label" parent="Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 30
+text = "Game"
+autowrap_mode = 3
+
+[node name="Tagline" type="Label" parent="Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 20
+text = "What this game is about."
+autowrap_mode = 2
+
+[node name="Status" type="Label" parent="Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 17
+text = "Available: Single Player."
+autowrap_mode = 2
+
+[node name="PlayButton" type="Button" parent="Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Play"

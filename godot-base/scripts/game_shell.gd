@@ -1217,7 +1217,7 @@ func _load_round_settings() -> void:
 	_active_round_duration = round_duration + Settings.extra_round_time()
 	_round_gameplay_speed = Settings.gameplay_speed_scale()
 	_round_target_size = Settings.target_size_scale()
-	_lives_mode = Settings.lives_mode_enabled()
+	_lives_mode = Settings.lives_mode_enabled(game_id())
 	_starting_lives = Settings.starting_lives()
 
 

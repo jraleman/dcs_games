@@ -6,7 +6,8 @@ extends SceneTree
 ## the whole feature is one filter in [GameCatalog] plus the branding that
 ## already reads from it. This test pins the catalog to each game in turn and
 ## asserts that the rest of the project follows without knowing a game by name:
-## the title screen takes that game's name and tagline, only its entry exists,
+## the title screen takes that game's name and tagline, Play starts that game
+## rather than opening a picker with one card on it,
 ## a gate it can never satisfy on its own does not hide it, its options reach
 ## the main-menu settings screen, and the credits roll is its own.
 ##
@@ -37,7 +38,8 @@ func _run() -> void:
 	else:
 		_test_already_pinned_build(pinned, collection)
 	_test_unknown_game_is_refused(collection)
-	_test_project_is_not_pinned_by_default()
+	_test_project_launch_default()
+	_test_explicit_collection(collection)
 	for id in collection:
 		_test_pinned_catalog(id)
 		await _test_pinned_title_screen(id)
@@ -51,7 +53,7 @@ func _run() -> void:
 	_finish()
 
 
-## The default build is the collection: every game present, studio branding.
+## An explicit collection launch keeps every game present and studio branding.
 func _test_collection_baseline(collection: PackedStringArray) -> void:
 	_expect(
 		collection.size() > 1, "The collection build must ship more than one game."
@@ -94,18 +96,53 @@ func _test_unknown_game_is_refused(collection: PackedStringArray) -> void:
 	)
 
 
-## The committed project is the collection: a standalone build is an export
-## preset or a run argument, never the checked-in default. Only runs from source
-## are inspected, because a per-game export is *supposed* to arrive here pinned
-## through its feature-tag override of the same setting.
-func _test_project_is_not_pinned_by_default() -> void:
+## Source launches default to the standalone product, while the collection
+## preset explicitly clears that pin. Exported projects resolve their own tags.
+func _test_project_launch_default() -> void:
 	if not OS.has_feature("editor"):
 		return
 	_expect(
-		str(ProjectSettings.get_setting(GameCatalog.SINGLE_GAME_SETTING, "")).is_empty(),
-		"project.godot must leave `%s` empty and pin a standalone build with a "
-		% GameCatalog.SINGLE_GAME_SETTING
-		+ "feature-tag override instead."
+		str(ProjectSettings.get_setting(GameCatalog.SINGLE_GAME_SETTING, ""))
+		== "desk_can_saw",
+		"An ordinary source launch must default to standalone Desk-Can-Saw."
+	)
+	_expect(
+		ProjectSettings.get_setting(GameCatalog.SINGLE_GAME_SETTING + ".collection", null)
+		== "",
+		"The collection export feature must explicitly clear the default game pin."
+	)
+	var presets := ConfigFile.new()
+	_expect(
+		presets.load("res://export_presets.cfg") == OK
+		and str(presets.get_value("preset.0", "custom_features", "")) == "collection",
+		"The collection export preset must activate the collection feature."
+	)
+
+
+## Requesting all games must override a standalone default without changing
+## what clearing a runtime override restores.
+func _test_explicit_collection(original: PackedStringArray) -> void:
+	var original_pin := GameCatalog.single_game_id()
+	_expect(
+		GameCatalog.restrict_to(GameCatalog.ALL_GAMES_SELECTOR),
+		"The reserved all-games selector must not be rejected as an unknown game."
+	)
+	_expect(
+		GameCatalog.single_game_id().is_empty(),
+		"An explicit collection request must not fall back to the configured game pin."
+	)
+	var available := _catalog_ids()
+	for id in original:
+		_expect(available.has(id), "The collection must still contain '%s'." % id)
+	if OS.has_feature("editor"):
+		_expect(
+			available.size() > 1 and not GameCatalog.is_single_game_build(),
+			"Requesting the collection from source must expose all the shipped games."
+		)
+	GameCatalog.clear_restriction()
+	_expect(
+		GameCatalog.single_game_id() == original_pin and _catalog_ids() == original,
+		"Clearing the collection override must restore the original launch selection."
 	)
 
 
@@ -158,7 +195,7 @@ func _test_pinned_catalog(id: String) -> void:
 
 
 ## The title screen is where a standalone build has to stop looking like a
-## collection: one game entry, and the game's own name above it.
+## collection: the game's own name above a Play button that starts it directly.
 func _test_pinned_title_screen(id: String) -> void:
 	if not GameCatalog.restrict_to(id):
 		return
@@ -169,6 +206,9 @@ func _test_pinned_title_screen(id: String) -> void:
 		GameCatalog.clear_restriction()
 		return
 
+	var previous_theme := get_root().theme
+	var presentation := GameCatalog.theme()
+	get_root().theme = presentation.restyle(ThemeDB.get_project_theme())
 	var menu := packed.instantiate()
 	get_root().add_child(menu)
 	await process_frame
@@ -180,19 +220,31 @@ func _test_pinned_title_screen(id: String) -> void:
 		"The title screen of a standalone '%s' build must show that game." % id
 	)
 
-	var slots: Array = menu.get("_game_buttons")
-	var shown := PackedStringArray()
-	for index in slots.size():
-		var button := slots[index] as Button
-		if button.visible and not button.disabled:
-			shown.append(button.name)
+	var play := menu.get_node("%PlayButton") as Button
 	_expect(
-		shown.size() == 1,
-		"A standalone '%s' build must offer one game entry, not %d." % [id, shown.size()]
+		not play.disabled and play.visible,
+		"A standalone '%s' build must offer its game behind the Play button." % id
 	)
 	_expect(
-		PackedStringArray(menu.get("_game_ids")) == PackedStringArray([id]),
-		"The title screen's only entry must start '%s'." % id
+		play.tooltip_text.contains(manifest.title),
+		"Play must name the only game a standalone '%s' build ships." % id
+	)
+	_expect(
+		not GameCatalog.offers_a_choice(),
+		(
+			"A standalone '%s' build has nothing to choose between, so Play must "
+			% id
+		)
+		+ "start the game instead of opening the picker."
+	)
+	var game_buttons := 0
+	for node in menu.find_children("*", "Button", true, false):
+		var button := node as Button
+		if button.visible and not button.disabled and button.text == manifest.title:
+			game_buttons += 1
+	_expect(
+		game_buttons == 0,
+		"The title screen must not list games beside Play in a '%s' build." % id
 	)
 
 	var logo := GameCatalog.theme().logo_texture()
@@ -211,9 +263,151 @@ func _test_pinned_title_screen(id: String) -> void:
 			"The '%s' logo must be scaled to the plaque, whatever its resolution." % id
 		)
 
+	_test_menu_presentation(menu, presentation, id)
 	menu.queue_free()
 	await process_frame
+	get_root().theme = previous_theme
 	GameCatalog.clear_restriction()
+
+
+## Exercise the real menu, not just the manifest: partial skins and materials
+## must survive the runtime copies that protect the collection's presentation.
+func _test_menu_presentation(menu: Node, presentation: GameTheme, id: String) -> void:
+	_expect(
+		_same_color((menu.get_node("%FocusAccent") as ColorRect).color, presentation.accent)
+		and _same_color((menu.get_node("%Face") as Sprite3D).modulate, presentation.logo_color),
+		"The '%s' menu must use its declared focus and logo colours." % id
+	)
+	_expect(
+		bool(menu.get("_firm_menu_motion"))
+		== (presentation.menu_motion == GameTheme.MenuMotion.FIRM),
+		"The '%s' menu must use its declared interaction feel." % id
+	)
+	if presentation.ui_theme != null:
+		_test_menu_skin(menu, presentation, id)
+	if presentation.background_material != null:
+		_test_menu_backdrop(menu.get_node("Background") as ColorRect, presentation, id)
+	if presentation.plaque_material != null:
+		var body := menu.get_node("%Body") as MeshInstance3D
+		var material := (body.mesh as PrimitiveMesh).material
+		_expect(
+			material != presentation.plaque_material,
+			"The '%s' plaque must not mutate its shared material." % id
+		)
+		var authored := presentation.plaque_material as StandardMaterial3D
+		var applied := material as StandardMaterial3D
+		if authored != null:
+			_expect(
+				applied != null and applied.albedo_texture == authored.albedo_texture
+				and _same_color(applied.albedo_color, presentation.plaque_color)
+				and is_equal_approx(applied.metallic, authored.metallic)
+				and is_equal_approx(applied.roughness, authored.roughness)
+				and applied.uv1_scale == authored.uv1_scale,
+				"The '%s' plaque must retain its texture, surface and UV scale." % id
+			)
+
+
+func _test_menu_skin(menu: Node, presentation: GameTheme, id: String) -> void:
+	var skin := presentation.ui_theme
+	var title := menu.get_node("%Title") as Label
+	if skin.has_color("font_color", "MenuHeading"):
+		_expect(
+			_same_color(
+				title.get_theme_color("font_color"), skin.get_color("font_color", "MenuHeading")
+			),
+			"The '%s' title must use the skin's heading role." % id
+		)
+	var play := menu.get_node("%PlayButton") as Button
+	var button_type := String(play.theme_type_variation)
+	if button_type.is_empty():
+		button_type = play.get_class()
+	if skin.has_stylebox("normal", button_type):
+		var authored := skin.get_stylebox("normal", button_type)
+		var applied := play.get_theme_stylebox("normal")
+		_expect(
+			applied != authored and applied.get_class() == authored.get_class()
+			and applied.get_content_margin(SIDE_LEFT) == authored.get_content_margin(SIDE_LEFT)
+			and applied.get_content_margin(SIDE_TOP) == authored.get_content_margin(SIDE_TOP),
+			"The '%s' Play button must inherit an independent skin with its padding intact." % id
+		)
+		if authored is StyleBoxFlat and applied is StyleBoxFlat:
+			_expect(
+				_same_color(applied.bg_color, authored.bg_color)
+				and _same_color(applied.border_color, authored.border_color)
+				and applied.corner_radius_top_right == authored.corner_radius_top_right,
+				"The '%s' Play button must retain the skin's colours and corner treatment." % id
+			)
+	for button: Button in menu.get("_menu_buttons"):
+		var focus := button.get_theme_stylebox("focus") as StyleBoxFlat
+		if focus != null:
+			_expect(
+				focus.border_width_left >= 2
+				and (not focus.draw_center or is_zero_approx(focus.bg_color.a)),
+				"The '%s' focus outline must stay visible without covering button states." % id
+			)
+		for pair in [
+			["normal", "font_color"], ["hover", "font_hover_color"],
+			["pressed", "font_pressed_color"], ["normal", "font_focus_color"],
+		]:
+			var box := button.get_theme_stylebox(pair[0]) as StyleBoxFlat
+			if box == null:
+				continue
+			var fill := presentation.background_top.blend(box.bg_color)
+			var foreground := button.get_theme_color(pair[1])
+			var a := fill.srgb_to_linear().get_luminance()
+			var b := foreground.srgb_to_linear().get_luminance()
+			var contrast := (maxf(a, b) + 0.05) / (minf(a, b) + 0.05)
+			_expect(
+				contrast >= 4.5,
+				"The '%s' %s text must retain 4.5:1 contrast (%s)." % [id, button.name, pair[1]]
+			)
+
+
+func _test_menu_backdrop(
+	backdrop: ColorRect, presentation: GameTheme, id: String
+) -> void:
+	var material := backdrop.material as ShaderMaterial
+	var authored := presentation.background_material
+	_expect(
+		material != null and material != authored and material.shader == authored.shader,
+		"The '%s' menu must own a copy of its custom backdrop." % id
+	)
+	if material == null:
+		return
+	for pair in [
+		["top_color", presentation.background_top],
+		["bottom_color", presentation.background_bottom],
+		["glow_color", presentation.accent],
+	]:
+		var color: Variant = material.get_shader_parameter(pair[0])
+		_expect(
+			color is Color and _same_color(color, pair[1]),
+			"The '%s' backdrop must receive its declared %s." % [id, pair[0]]
+		)
+	var previous_size := backdrop.size
+	for size in [Vector2(390, 844), Vector2(1920, 1080), Vector2(3440, 1440)]:
+		backdrop.size = size
+		var ratio: float = size.x / size.y
+		var expected := Vector2(ratio, 1.0) if ratio >= 1.0 else Vector2(1.0, 1.0 / ratio)
+		_expect(
+			material.get_shader_parameter("aspect") == expected,
+			"The '%s' backdrop must remain aspect-correct at %s." % [id, size]
+		)
+	backdrop.size = previous_size
+	var previous_speed := float(material.get_shader_parameter("speed"))
+	var authored_speed := float(authored.get_shader_parameter("speed"))
+	backdrop.call("_set_reduced_motion", true)
+	_expect(
+		is_zero_approx(float(material.get_shader_parameter("speed")))
+		and is_equal_approx(float(authored.get_shader_parameter("speed")), authored_speed),
+		"Reduced motion must freeze '%s' without changing its shared backdrop." % id
+	)
+	backdrop.call("_set_reduced_motion", false)
+	_expect(
+		is_equal_approx(float(material.get_shader_parameter("speed")), authored_speed),
+		"Turning reduced motion off must restore the '%s' backdrop's authored speed." % id
+	)
+	backdrop.call("_set_reduced_motion", is_zero_approx(previous_speed))
 
 
 ## The other place a standalone build differs: with one game in the catalog,
@@ -612,6 +806,86 @@ func _test_declared_themes(collection: PackedStringArray) -> void:
 		GameCatalog.clear_restriction()
 
 	_test_restyling(studio)
+	_test_optional_ui_skin(studio)
+
+
+func _test_optional_ui_skin(studio: GameTheme) -> void:
+	_expect(
+		studio.ui_theme == null and studio.ui_sounds == null
+		and studio.background_material == null and studio.plaque_material == null
+		and studio.menu_motion == GameTheme.MenuMotion.SPRING,
+		"The studio must not opt into a game's UI, audio, materials or motion."
+	)
+	var base := Theme.new()
+	var original := StyleBoxFlat.new()
+	original.corner_radius_top_left = 12
+	base.set_stylebox("normal", "Button", original)
+	base.set_font_size("font_size", "Button", 28)
+	var skin := Theme.new()
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = Color("123456")
+	plate.corner_radius_top_left = 2
+	skin.set_stylebox("normal", "Button", plate)
+	skin.set_stylebox("panel", "PanelContainer", plate)
+	var game := GameTheme.studio_default()
+	game.ui_theme = skin
+	var result := game.restyle(base)
+	_expect(
+		result != base and result.get_font_size("font_size", "Button") == 28
+		and (result.get_stylebox("normal", "Button") as StyleBoxFlat).corner_radius_top_left == 2,
+		"A partial skin must merge even with studio colours, retaining unspecified items."
+	)
+	(result.get_stylebox("normal", "Button") as StyleBoxFlat).bg_color = Color.BLACK
+	_expect(
+		plate.bg_color == Color("123456") and original.corner_radius_top_left == 12,
+		"Runtime skin changes must not mutate the game resource or the shared theme."
+	)
+	var panel := PanelContainer.new()
+	var authored := StyleBoxFlat.new()
+	authored.content_margin_left = 19
+	authored.content_margin_top = 23
+	panel.add_theme_stylebox_override("panel", authored)
+	game.restyle_tree(panel, true)
+	var replaced := panel.get_theme_stylebox("panel") as StyleBoxFlat
+	_expect(
+		replaced != authored and replaced.bg_color == plate.bg_color
+		and replaced.content_margin_left == 19 and replaced.content_margin_top == 23,
+		"Menu-local panels take the skin but preserve their authored padding."
+	)
+	authored.draw_center = false
+	panel.add_theme_stylebox_override("panel", authored)
+	game.restyle_tree(panel, true)
+	_expect(
+		not (panel.get_theme_stylebox("panel") as StyleBoxFlat).draw_center,
+		"A border-only frame must remain transparent over its artwork."
+	)
+	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	game.restyle_tree(panel, true)
+	_expect(
+		panel.get_theme_stylebox("panel") is StyleBoxEmpty,
+		"An intentionally empty style must not gain an opaque plate."
+	)
+	panel.free()
+	skin.set_color("font_color", "MenuSectionHeading", Color("ffc86a"))
+	var section := Label.new()
+	section.theme_type_variation = &"MenuSectionHeading"
+	section.add_theme_color_override("font_color", Color("4da3ff"))
+	game.restyle_tree(section, true)
+	_expect(
+		section.get_theme_color("font_color") == Color("ffc86a"),
+		"Only an explicitly styled UI role may override a non-accent colour."
+	)
+	section.free()
+	var hud := PanelContainer.new()
+	var semantic := StyleBoxFlat.new()
+	semantic.bg_color = Color("4da3ff")
+	hud.add_theme_stylebox_override("panel", semantic)
+	game.restyle_tree(hud)
+	_expect(
+		(hud.get_theme_stylebox("panel") as StyleBoxFlat).bg_color == semantic.bg_color,
+		"The normal gameplay tree pass must not replace semantic HUD panels."
+	)
+	hud.free()
 
 
 ## The accent swap: the shared theme comes back wearing the game's colours,

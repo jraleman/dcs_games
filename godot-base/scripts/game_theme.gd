@@ -1,17 +1,27 @@
 class_name GameTheme
 extends Resource
 
-## A game's own look: the logo on the main-menu plaque and the handful of
-## colours the shared screens tint themselves with.
+## A game's own presentation: branding, with optional menu skin and sounds.
 ##
 ## Declared on [GameManifest], like every other thing a game owns, so putting a
 ## game's identity on screen never means editing a framework screen. A screen
 ## asks [method GameCatalog.theme] what to wear and gets this back — the game's
 ## when the build ships one game, the studio's otherwise.
 ##
-## Deliberately small. These are the values that read at a glance across a
-## whole screen; per-widget restyling belongs in `ui/theme/dcs_theme.tres`,
-## which is shared by every build.
+## Unset presentation resources preserve the shared studio UI. Game-specific
+## artwork, materials and sound generation stay in the game's own folder.
+
+enum MenuMotion { SPRING, FIRM }
+
+## Partial overrides, merged over the shared theme without changing its layout.
+@export var ui_theme: Theme
+@export var ui_sounds: GameUISoundBank
+
+## Uses the shared backdrop's top_color, bottom_color, glow_color, aspect and
+## speed uniforms. Setting speed to zero must freeze all decorative motion.
+@export var background_material: ShaderMaterial
+@export var plaque_material: Material
+@export var menu_motion := MenuMotion.SPRING
 
 ## Logo shown on the rotating plaque. A single-colour silhouette works best:
 ## it is tinted with [member logo_color], so it suits any theme. A texture with
@@ -69,15 +79,17 @@ func logo_texture() -> Texture2D:
 ## studio accent it reaches for this theme's instead — button focus rings,
 ## sliders, tab underlines, separators.
 ##
-## Only those two colours are substituted, alpha intact, so the framework's
-## spacing, fonts, corner radii and every neutral shade stay exactly as
-## authored. A theme that keeps the studio accents gets [param base] back
-## untouched, which is why a collection build pays nothing for this.
+## Accent substitution keeps alpha intact; an optional game-owned skin is
+## merged last. Without either change the original theme is returned untouched.
 func restyle(base: Theme) -> Theme:
 	if base == null:
 		return null
 	var studio := studio_default()
-	if _same_rgb(accent, studio.accent) and _same_rgb(light, studio.light):
+	if (
+		ui_theme == null
+		and _same_rgb(accent, studio.accent)
+		and _same_rgb(light, studio.light)
+	):
 		return base
 
 	var result := base.duplicate() as Theme
@@ -91,6 +103,8 @@ func restyle(base: Theme) -> Theme:
 			var box := result.get_stylebox(box_name, type_name)
 			if box != null:
 				result.set_stylebox(box_name, type_name, _restyled_box(box, studio))
+	if ui_theme != null:
+		result.merge_with(ui_theme.duplicate(true) as Theme)
 	return result
 
 
@@ -118,6 +132,14 @@ func _swap(color: Color, studio: GameTheme) -> Color:
 	return result
 
 
+## Explicit UI roles can override a baked colour without recolouring unrelated
+## labels that happen to use the same colour, such as player identifiers.
+func widget_color(key: StringName, role: StringName, fallback: Color) -> Color:
+	if ui_theme != null and not role.is_empty() and ui_theme.has_color(key, role):
+		return ui_theme.get_color(key, role)
+	return fallback
+
+
 ## Compared channel by channel at 8-bit precision, because these colours are
 ## written as rounded decimals in `.tres` files rather than as exact floats.
 func _same_rgb(a: Color, b: Color) -> bool:
@@ -133,19 +155,22 @@ func _same_rgb(a: Color, b: Color) -> bool:
 ## scene-local styleboxes or a [ColorRect] — the places a [Theme] cannot reach,
 ## and where the HUD and the credits roll keep most of their colour.
 ##
-## Only the studio accents are substituted. Everything else is left alone,
-## which is what keeps the player-one and player-two colours out of a game's
-## hands: telling two players apart is an accessibility contract, not styling.
-func restyle_tree(root: Node) -> void:
+## Only studio accents are substituted by default, preserving player and note
+## colours. Menus can opt into widget skinning as well; gameplay does not.
+func restyle_tree(root: Node, skin_widgets := false) -> void:
 	if root == null:
 		return
 	var studio := studio_default()
-	if _same_rgb(accent, studio.accent) and _same_rgb(light, studio.light):
+	if (
+		not (skin_widgets and ui_theme != null)
+		and _same_rgb(accent, studio.accent)
+		and _same_rgb(light, studio.light)
+	):
 		return
-	_restyle_node(root, studio)
+	_restyle_node(root, studio, skin_widgets)
 
 
-func _restyle_node(node: Node, studio: GameTheme) -> void:
+func _restyle_node(node: Node, studio: GameTheme, skin_widgets: bool) -> void:
 	var rect := node as ColorRect
 	if rect != null:
 		rect.color = _swap(rect.color, studio)
@@ -157,14 +182,48 @@ func _restyle_node(node: Node, studio: GameTheme) -> void:
 			var key := path.substr(path.rfind("/") + 1)
 			if path.begins_with("theme_override_colors/"):
 				if control.has_theme_color_override(key):
+					var color := _swap(control.get_theme_color(key), studio)
+					if skin_widgets:
+						color = widget_color(key, control.theme_type_variation, color)
 					control.add_theme_color_override(
-						key, _swap(control.get_theme_color(key), studio)
+						key, color
 					)
 			elif path.begins_with("theme_override_styles/"):
 				if control.has_theme_stylebox_override(key):
+					var box := control.get_theme_stylebox(key)
 					control.add_theme_stylebox_override(
-						key, _restyled_box(control.get_theme_stylebox(key), studio)
+						key,
+						_widget_box(control, key, box, studio)
+						if skin_widgets else _restyled_box(box, studio)
 					)
 
 	for child in node.get_children():
-		_restyle_node(child, studio)
+		_restyle_node(child, studio, skin_widgets)
+
+
+## Menu-local panels keep their authored padding. Gameplay only receives the
+## accent pass, so semantic player/note panels are never replaced by a UI skin.
+func _widget_box(
+	control: Control, key: String, authored: StyleBox, studio: GameTheme
+) -> StyleBox:
+	if authored is StyleBoxEmpty:
+		return authored
+	var draw_center := true
+	if authored is StyleBoxFlat:
+		if is_zero_approx(authored.bg_color.a):
+			return _restyled_box(authored, studio)
+		draw_center = authored.draw_center
+	elif authored is StyleBoxTexture:
+		draw_center = authored.draw_center
+	if ui_theme != null:
+		var types := [control.theme_type_variation, StringName(control.get_class())]
+		for type_name: StringName in types:
+			if not type_name.is_empty() and ui_theme.has_stylebox(key, type_name):
+				var box := ui_theme.get_stylebox(key, type_name).duplicate() as StyleBox
+				# Border-only overlays must not become opaque over videos or artwork.
+				if box is StyleBoxFlat or box is StyleBoxTexture:
+					box.draw_center = draw_center
+				for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+					box.set_content_margin(side, authored.get_content_margin(side))
+				return box
+	return _restyled_box(authored, studio)

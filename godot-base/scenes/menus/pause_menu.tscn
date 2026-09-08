@@ -40,6 +40,7 @@ layout_mode = 2
 theme_override_constants/separation = 16
 
 [node name="Title" type="Label" parent="Center/Panel/Layout"]
+theme_type_variation = &"MenuHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
 theme_override_font_sizes/font_size = 48
@@ -53,6 +54,7 @@ mouse_filter = 2
 color = Color(0.686275, 0.866667, 0.917647, 0.35)
 
 [node name="ResumeButton" type="Button" parent="Center/Panel/Layout"]
+metadata/ui_sound_handled = true
 layout_mode = 2
 text = "Resume"
 

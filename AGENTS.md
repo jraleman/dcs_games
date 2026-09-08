@@ -40,9 +40,11 @@ godot-base/
                            #   GameTheme, GameShell, ShareQrCode
                            #   (class_name globals, not autoloads)
   ui/                      # MenuScreen, Responsive, theme, reusable components
+                          #   (incl. GameCard, the picker's video thumbnail)
   scenes/boot/             # studio_logo, intro
   scenes/game/             # game_shell.tscn — the round/HUD scene games inherit
-  scenes/menus/            # main_menu, mode_select, instructions, settings, credits, pause
+  scenes/menus/           # main_menu, game_select, mode_select, instructions,
+                          #   settings, credits, pause
   games/<id>/              # one folder per game: game.gd manifest, scenes, actors, tests
   tests/                   # framework-wide headless SceneTree regression scripts
   tools/                   # dev-only tutorial recorder (exclude from export presets)
@@ -56,37 +58,39 @@ Run everything from `godot-base/`. Godot is **not** installed in every dev
 environment — check before assuming a command will run.
 
 ```bash
-godot --path .                       # run the game (or open project.godot)
+godot --path .                       # default: standalone Desk-Can-Saw with lives
 godot --path . -- --game=dead_metal_jam   # run one game as a standalone build
+godot --path . -- --game=all          # run the collection
 godot --headless --path . --import   # reimport assets and refresh the class cache
 ```
 
-Tests are standalone headless `SceneTree` scripts, run one at a time. All eleven
+Tests are standalone headless `SceneTree` scripts, run one at a time. All twelve
 must exit 0:
 
 ```bash
-godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_test.gd
-godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_scene_test.gd
-godot --headless --path . --script res://tests/visual_effects_test.gd
-godot --headless --path . --script res://tests/accessibility_test.gd
-godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd
-godot --headless --path . --script res://tests/share_card_test.gd
-godot --headless --path . --script res://tests/instructions_video_test.gd
-godot --headless --path . --script res://tests/game_shell_test.gd
-godot --headless --path . --script res://tests/lives_mode_test.gd
-godot --headless --path . --script res://tests/game_options_test.gd
-godot --headless --path . --script res://tests/single_game_test.gd
+godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_test.gd -- --game=all
+godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_scene_test.gd -- --game=all
+godot --headless --path . --script res://tests/visual_effects_test.gd -- --game=all
+godot --headless --path . --script res://tests/accessibility_test.gd -- --game=all
+godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd -- --game=all
+godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
+godot --headless --path . --script res://tests/instructions_video_test.gd -- --game=all
+godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
+godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
+godot --headless --path . --script res://tests/game_options_test.gd -- --game=all
+godot --headless --path . --script res://tests/game_select_test.gd -- --game=all
+godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
 ```
 
 Dead Metal Jam adds six of its own:
 
 ```bash
-godot --headless --path . --script res://games/dead_metal_jam/tests/pitch_detector_test.gd
-godot --headless --path . --script res://games/dead_metal_jam/tests/note_router_test.gd
-godot --headless --path . --script res://games/dead_metal_jam/tests/playing_techniques_test.gd
-godot --headless --path . --script res://games/dead_metal_jam/tests/latency_calibration_test.gd
-godot --headless --path . --script res://games/dead_metal_jam/tests/encounter_test.gd
-godot --headless --path . --script res://games/dead_metal_jam/tests/intro_test.gd
+godot --headless --path . --script res://games/dead_metal_jam/tests/pitch_detector_test.gd -- --game=all
+godot --headless --path . --script res://games/dead_metal_jam/tests/note_router_test.gd -- --game=all
+godot --headless --path . --script res://games/dead_metal_jam/tests/playing_techniques_test.gd -- --game=all
+godot --headless --path . --script res://games/dead_metal_jam/tests/latency_calibration_test.gd -- --game=all
+godot --headless --path . --script res://games/dead_metal_jam/tests/encounter_test.gd -- --game=all
+godot --headless --path . --script res://games/dead_metal_jam/tests/intro_test.gd -- --game=all
 ```
 
 `tests/game_shell_test.gd` iterates `GameCatalog.all()`, so every game is
@@ -97,10 +101,12 @@ standalone path, including that every `intro_scene_path` a manifest declares
 loads and leads somewhere, that the main-menu settings screen exposes that
 game's Controls and Game tabs, that the credits roll is that game's own
 while a collection build points at each game instead, and that a declared
-`GameTheme` reaches the plaque and the shared theme. Run the suite unpinned:
-several tests assert
-values that a specific game declares, so only `single_game_test.gd` passes under
-`--game`.
+`GameTheme` reaches the plaque and the shared theme, plus that the title screen
+keeps its single Play button. `tests/game_select_test.gd` covers the picker
+itself: a card per available game, previews running, reduced motion parking
+them, the responsive grid and the back targets. Run the suite with
+`--game=all`: several tests assert values that a specific game declares, so
+only `single_game_test.gd` supports a standalone launch.
 
 There is no linter, formatter or CI configured. Match the existing style by hand.
 
@@ -134,6 +140,7 @@ add data to `GameManifest` instead.
 | `tunables` | Player-facing options (slider/toggle/choice) stored and clamped by `Settings`, rendered as rows on the in-game Game tab |
 | `control_bindings` | Rebindable keys, rendered on the in-game Controls tab; empty means "inherit my `control_style`'s built-ins" |
 | `control_style` | `targets` or `direct_movement` — menus branch on this *trait*, never on a game name |
+| `default_lives_mode` | Default round rule when no choice is saved; true for Desk-Can-Saw and Dead Metal Jam, false for Triangle Rush |
 | `unlock_rule`, `hidden_until_unlocked` | Gate the game behind progress elsewhere |
 | `share_art_style`, `stats_url` | Share-card art variant and QR link |
 | `tutorial_video_path`, `tutorial_poster_path` | Instructions-screen media |
@@ -156,13 +163,17 @@ manifest, so **a new game's options need no scene edit**.
 
 **Key APIs**
 
-- `GameCatalog.current()` / `.select(id)` / `.all()` / `.available()` —
-  which game is active. Never ask "is this Desk-Can-Saw?".
+- `GameCatalog.current()` / `.select(id)` / `.all()` / `.available()` /
+  `.offers_a_choice()` — which game is active, and whether there is more than
+  one to pick from. Never ask "is this Desk-Can-Saw?".
 - `GameCatalog.single_game_id()` / `.restrict_to(id)` / `.is_single_game_build()`
   — standalone builds. A catalog holding one game *is* the standalone product,
   so the pin lives in one place: the project setting `dcs/build/single_game_id`
   (feature-overridable per export preset), `--game=<id>` after `--`, or
-  `DCS_GAME`. Never add a second way to hide a game.
+  `DCS_GAME`. The source default is `desk_can_saw`; the reserved selector
+  `all` explicitly requests the collection through the same API. The collection
+  export uses `build/single_game_id.collection=""`. `clear_restriction()`
+  restores the configured launch selection. Never add a second way to hide a game.
 - `GameCatalog.intro_scene_path(fallback)` — the opening `studio_logo.gd` hands
   over to. Returns a game's `intro_scene_path` only when the catalog holds one
   game; a collection has not chosen a game yet, so it gets the framework intro.
@@ -188,6 +199,28 @@ manifest, so **a new game's options need no scene edit**.
   `.control_bindings_for_game(id)` / `.movement_summary_for_game(id, sep, fallback)`
   — a game's own keys. Conflicts are scoped to one game; two games may share a key.
 - `manifest.text(key, fallback)` — screen copy with a neutral default.
+- `Router.start_selected_game(mode_scene, instructions_scene)` — the one
+  definition of "begin the selected game", so the title screen and the picker
+  cannot drift on which setup screen still has a question worth asking.
+
+## The main menu and the game picker
+
+`main_menu.tscn` carries a single **Play** button; it names no game. Where it
+leads is decided by `GameCatalog.offers_a_choice()`: more than one available
+game opens `scenes/menus/game_select.tscn`, otherwise the only game is selected
+and `Router.start_selected_game()` runs — the same "never ask a question with
+one answer" rule that already skips mode select for a solo-only game. A
+standalone build therefore never shows the picker.
+
+`game_select.gd` builds one `ui/components/game_card.tscn` per
+`GameCatalog.available()` entry, in `menu_order`, so **a new game needs no
+scene edit here either**. The card's moving thumbnail is the manifest's
+`tutorial_video_path`, falling back to `tutorial_poster_path` and then a
+labelled placeholder. `GameCard` is deliberately a dumb view that touches **no
+autoload instance** — it is a `class_name` script, so a headless test that
+imports it would otherwise fail to compile. The screen, not the card, decides
+whether a clip may run: reduced motion parks every card on its poster, and past
+`MAX_LIVE_PREVIEWS` only the focused card decodes.
 
 ## `GameShell` — the shared round loop
 

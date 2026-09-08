@@ -187,6 +187,8 @@ func _ready() -> void:
 	add_child(_save_timer)
 
 	_values = DEFAULTS.duplicate(true)
+	# Absence means "use this game's default", not a saved Timer preference.
+	_values.erase(ROUND_MODE_KEY)
 	_register_games()
 	load_settings()
 	var repaired_controls := _repair_control_values()
@@ -206,6 +208,8 @@ func get_value(key: String, default: Variant = null) -> Variant:
 		return _values[key]
 	if default != null:
 		return default
+	if key == ROUND_MODE_KEY:
+		return _default_round_mode()
 	return DEFAULTS.get(key)
 
 
@@ -260,17 +264,26 @@ func extra_round_time() -> float:
 ## reads them when a round starts; games only report their own mistakes.
 
 
-## The stored [enum RoundMode], falling back to the countdown when a save file
-## carries a value this build no longer knows.
-func round_mode() -> int:
-	var mode := int(get_value(ROUND_MODE_KEY, RoundMode.TIMER))
+## The saved choice wins; otherwise the manifest supplies the default.
+## Pass a game id when running a scene directly, before catalog selection.
+func round_mode(game_id := "") -> int:
+	var fallback := _default_round_mode(game_id)
+	var mode := int(get_value(ROUND_MODE_KEY, fallback))
 	if mode != RoundMode.TIMER and mode != RoundMode.LIVES:
-		return RoundMode.TIMER
+		return fallback
 	return mode
 
 
-func lives_mode_enabled() -> bool:
-	return round_mode() == RoundMode.LIVES
+func lives_mode_enabled(game_id := "") -> bool:
+	return round_mode(game_id) == RoundMode.LIVES
+
+
+func _default_round_mode(game_id := "") -> int:
+	var game := (
+		GameCatalog.current() if game_id.is_empty()
+		else GameCatalog.get_manifest(game_id)
+	)
+	return RoundMode.LIVES if game != null and game.default_lives_mode else RoundMode.TIMER
 
 
 ## Lives each player starts a round with when [method lives_mode_enabled].
@@ -539,8 +552,12 @@ func set_value(key: String, value: Variant) -> void:
 ## Restores every framework setting and every game-declared option. Progress
 ## and achievements are stored elsewhere and are never touched.
 func reset_to_defaults() -> void:
+	_values.erase(ROUND_MODE_KEY)
+	changed.emit(ROUND_MODE_KEY, round_mode())
+	_save_timer.start()
 	for key: String in DEFAULTS:
-		set_value(key, DEFAULTS[key])
+		if key != ROUND_MODE_KEY:
+			set_value(key, DEFAULTS[key])
 	for key: String in tunables():
 		var definition: Dictionary = _tunables[key]
 		set_value(key, definition.get("default", 0.0))
@@ -881,11 +898,14 @@ func set_controller_button(setting_key: String, button: int) -> bool:
 ## not just the framework's own, so game-declared options and bindings survive
 ## a restart. A value whose type drifted from its default is ignored, which is
 ## how settings written by an older build are discarded safely.
-func load_settings() -> void:
+func load_settings(path := SAVE_PATH) -> void:
 	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) != OK:
+	if config.load(path) != OK:
 		return
-	for key: String in _values.keys():
+	var keys := _values.keys()
+	if not keys.has(ROUND_MODE_KEY):
+		keys.append(ROUND_MODE_KEY)
+	for key: String in keys:
 		var parts := key.split("/", false, 1)
 		if parts.size() < 2:
 			continue
@@ -894,7 +914,7 @@ func load_settings() -> void:
 		if not config.has_section_key(section, name):
 			continue
 		var stored: Variant = config.get_value(section, name)
-		var expected: Variant = _values[key]
+		var expected: Variant = _values.get(key, DEFAULTS.get(key))
 		if typeof(stored) == typeof(expected):
 			_values[key] = stored
 		elif typeof(expected) == TYPE_FLOAT and typeof(stored) == TYPE_INT:
@@ -902,19 +922,21 @@ func load_settings() -> void:
 			_values[key] = float(stored)
 
 
-func save() -> void:
+func save(path := SAVE_PATH) -> void:
 	var config := ConfigFile.new()
 	# Start from what is on disk rather than from an empty file: a build that
 	# ships one game registers one game's option and binding keys, and rewriting
 	# the file from those alone would delete another build's saved values out of
 	# a shared `user://`.
-	config.load(SAVE_PATH)
+	config.load(path)
+	if not _values.has(ROUND_MODE_KEY) and config.has_section_key("game", "round_mode"):
+		config.erase_section_key("game", "round_mode")
 	for key: String in _values:
 		var parts := key.split("/", false, 1)
 		config.set_value(parts[0], parts[1], _values[key])
-	var err := config.save(SAVE_PATH)
+	var err := config.save(path)
 	if err != OK:
-		push_warning("Could not save settings to %s (error %d)" % [SAVE_PATH, err])
+		push_warning("Could not save settings to %s (error %d)" % [path, err])
 
 
 func _migrate_legacy_user_data() -> void:

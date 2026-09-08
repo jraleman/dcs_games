@@ -12,22 +12,38 @@ mobile without changes).
 ## Running it
 
 ```bash
-godot --path .            # or open project.godot in the editor
-godot --path . -- --game=dead_metal_jam   # run one game as if it shipped alone
+godot --path .                         # standalone Desk-Can-Saw, also the editor default
+godot --path . -- --game=triangle_rush  # launch a different standalone game
+godot --path . -- --game=dead_metal_jam
+godot --path . -- --game=all            # launch the full collection
 ```
+
+Ordinary launches show only Desk-Can-Saw and default to three lives. A saved
+round-mode choice or starting-lives preference still wins. The collection's
+Triangle Rush unlock path remains unchanged; standalone Desk-Can-Saw is always
+playable.
 
 The first scene is `scenes/boot/studio_logo.tscn`; from there the flow is:
 
 ```
-studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_select  ──►  instructions
- (skippable)   (skippable)                 │                         (optional)
-                                           │                              │
-                                           │                    ┌─────────┴─────────┐
-                                           │                    ▼                   ▼
-                                           │                gameplay       desk_can_saw
+studio_logo  ──►  intro  ──►  main_menu  ──┬──►  game_select  ──►  mode_select  ──►  instructions
+ (skippable)   (skippable)                 │    (>1 game only)                        (optional)
+                                           │                                               │
+                                           │                                     ┌─────────┴─────────┐
+                                           │                                     ▼                   ▼
+                                           │                                 gameplay        game's own scene
                                            ├──►  settings_menu
                                            └──►  credits
 ```
+
+The title screen offers a single **Play** button. Where it lands depends on
+what the build actually has to offer, and the rule is the same one the rest of
+the framework follows: never ask a question with one answer. With more than one
+game available it opens `scenes/menus/game_select.tscn`, which shows a card per
+game with that game's walkthrough clip running as a moving thumbnail. A
+standalone build — or a collection in which everything else is still locked —
+has nothing to pick, so **Play** selects that game and goes straight on to mode
+select or instructions.
 
 ## What's in the box
 
@@ -44,19 +60,21 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  mode_se
 | `autoload/audio_manager.gd` | Music crossfades, an 8-voice SFX pool, bus volumes, UI/gameplay sound cues and semantic audio-caption requests. |
 | `autoload/achievement_manager.gd` | Persistent achievement registry, per-game unlock progression and queued global achievement toasts. |
 | `autoload/share_manager.gd` | Renders reusable 1200×630 session cards, downloads them on web and saves them for desktop sharing. |
-| `autoload/router.gd` | `Router.goto(path)` — scene changes with a fade. Owns the top overlay layer (fade + FPS counter). |
+| `autoload/router.gd` | `Router.goto(path)` — scene changes with a fade. Owns the top overlay layer (fade + FPS counter). `start_selected_game()` is the single definition of "begin the selected game", shared by the title screen and the picker. |
+| `scenes/menus/game_select.tscn` | The picker the **Play** button opens: one card per available game, built from `GameCatalog.available()`. Reached only when there is more than one game to choose from. |
 | `ui/menu_screen.gd` | `MenuScreen` base class: UI sounds, focus handling, `ui_cancel` to go back, responsive margins. |
 | `ui/responsive.gd` | Helpers for margins, portrait detection and content width. |
-| `ui/theme/dcs_theme.tres` | The whole look: buttons, panels, sliders, tabs. A standalone build restyles its accent from the game's `GameTheme`. |
+| `ui/theme/dcs_theme.tres` | Base buttons, panels, sliders and tabs. A standalone `GameTheme` can recolour it and merge a game-owned partial skin. |
 | `ui/components/background.tscn` | Animated gradient backdrop (shader), aspect-corrected and tinted by the current `GameTheme`. |
 | `ui/components/achievement_toast.tscn` | Small reusable unlock notification used by `AchievementManager`. |
 | `ui/components/audio_caption.tscn` | Reusable gameplay caption panel for important sound-only events. |
+| `ui/components/game_card.tscn` | One game on the picker: looping muted walkthrough clip as a thumbnail, poster fallback, name, tagline and Play button. A view only — it reads no autoload. |
 | `ui/components/player_avatar.gd` | Drawn placeholder for per-player portrait art; set `portrait` to swap in a real texture. |
 | `ui/components/share_card.tscn` | Default score/achievement image; swap it or pass another scene to `ShareManager`. |
 | `ui/components/share_preview.tscn` | Modal generated-image preview with close and open-original actions. |
 | `ui/components/splash_motion.gd` | Lightweight animated geometry for logo stings and splash screens. |
-| `games/triangle_rush/` | Triangle Rush: manifest, gameplay scene, targets, options and its own tests. |
-| `games/desk_can_saw/` | Desk-Can-Saw: manifest, gameplay scene, cans, chainsaw cursor, unlock rule and its own tests. |
+| `games/triangle_rush/` | Triangle Rush: manifest, gameplay scene, targets, options, arcade theme and its own tests. |
+| `games/desk_can_saw/` | Desk-Can-Saw: manifest, gameplay scene, cans, chainsaw cursor, unlock rule, workshop theme and its own tests. |
 | `games/dead_metal_jam/` | Dead Metal Jam: manifest, pitch-detection instrument input, encounters, its own intro and theme, and its own tests. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
 | `tools/record_tutorials.ps1` | Records both tutorial clips through Godot's Movie Maker and encodes them to `assets/video/*.ogv` plus poster frames. |
@@ -74,8 +92,9 @@ space on the other. Layouts are written in those units and adapt at runtime:
   flashes and screen shake during gameplay while preserving other animation
   and visual feedback.
 - **Reduced motion** freezes ambient and decorative movement, removes pulses,
-  trails, particles, shake and spatial UI animation, and keeps opacity-only
-  fades. Essential target, can and player-controlled chainsaw movement remains
+  trails, particles, shake and spatial UI animation, parks the game picker's
+  video thumbnails on their poster frames, and keeps opacity-only fades.
+  Essential target, can and player-controlled chainsaw movement remains
   active.
 - **Audio captions** identify correct and wrong targets, countdown cues,
   Desk-Can-Saw power-up and unlock sounds, sliced cans and missed cans.
@@ -144,14 +163,18 @@ edit at all — see *Adding your own game* below.
 **Change how a round ends** — *Settings → Game → Round mode* picks between the
 two shapes every game shares:
 
-- **Timer** (default) — the round runs for its configured duration and mistakes
-  only cost points.
+- **Timer** (Triangle Rush's default) — the round runs for its configured
+  duration and mistakes only cost points.
 - **Lives** — the countdown is replaced by a pool of lives (3 by default,
   1–9 via the *Starting lives* slider). Each mistake spends one; the round ends
   when the pool is empty. In two-player and CPU rounds each side gets its own
   pool, a side that runs out is eliminated, and the round ends once nobody is
   left. The TimerCard becomes a `LIVES LEFT` readout and reddens on the last
   life exactly as the clock reddens in its final seconds.
+
+Desk-Can-Saw and Dead Metal Jam default to **Lives** through their manifests'
+`default_lives_mode` flag. An existing saved round-mode choice takes precedence;
+resetting settings restores the selected game's default.
 
 `GameShell` owns all of it — `Settings.round_mode()`, `.lives_mode_enabled()`
 and `.starting_lives()` are read once per round in `_load_round_settings()`, so
@@ -287,6 +310,8 @@ that directory at startup, so **no framework file needs to change** to add one.
      game, so two games may use the same key.
    - `control_style` — `targets` or `direct_movement`; the shared menus adapt
      their control explanations instead of branching on a game name.
+   - `default_lives_mode` — defaults new rounds to lives when no round-mode
+     preference has been saved; omitted means Timer.
    - `unlock_rule` + `hidden_until_unlocked` — gate the game behind progress in
      another one. Subclass `GameUnlockRule`; every finished round is offered to
      every rule, so "playing A unlocks B" needs no framework change.
@@ -299,17 +324,21 @@ that directory at startup, so **no framework file needs to change** to add one.
    - `credits` — your game's own credits sections, in the same
      `{"heading": …, "lines": […]}` shape as `StudioInfo.CREDITS`. They lead
      the credits roll when the build ships this game alone.
-   - `theme` — a `GameTheme` with your logo and a handful of colours. Like the
-     intro, it only dresses the shared screens when the build ships this game
-     alone. See *Shipping one game on its own*.
+   - `theme` — a `GameTheme` with your logo, colours and optional UI skin,
+     materials and menu sounds. Like the intro, it only dresses the shared
+     screens when the build ships this game alone. See *Shipping one game on its own*.
 5. Put the game's own tests in `res://games/<id>/tests/`. The framework-level
    `tests/game_shell_test.gd` picks your game up from the catalog
    automatically and drives it through a full round, results, stats, share and
    replay cycle — no edit needed.
 
-The main menu needs no edit either. It builds one button per game from
-`GameCatalog.available()`, in `menu_order`, so a new game appears as soon as
-its manifest does — and disappears again behind an `unlock_rule` until earned.
+The menus need no edit either. The title screen has a single **Play** button,
+and the picker behind it builds one card from `GameCatalog.available()`, in
+`menu_order`, so a new game appears as soon as its manifest does — and
+disappears again behind an `unlock_rule` until earned. The card's moving
+thumbnail is the same `tutorial_video_path` clip the instructions screen uses,
+falling back to `tutorial_poster_path` and then to a labelled placeholder, so a
+game with no recording yet still gets a card of the right shape.
 
 ## Shipping one game on its own
 
@@ -331,7 +360,14 @@ godot --path . -- --game=dead_metal_jam    # one run, one game
 godot --path . -- --game=triangle_rush
 godot --path . -- --game=desk_can_saw
 DCS_GAME=dead_metal_jam godot --path .     # same, for launchers that cannot pass args
+godot --path . -- --game=all              # override the default pin with the collection
 ```
+
+The checked-in `dcs/build/single_game_id` defaults to `desk_can_saw`.
+The reserved `all` selector works with `--game`, `DCS_GAME`, and
+`GameCatalog.restrict_to()`; it explicitly clears a lower-priority pin rather
+than falling back to it. `clear_restriction()` restores the configured launch
+selection, not necessarily the collection.
 
 An id the build does not contain is refused with a warning and the full catalog
 is kept, so a typo never produces a build with nothing to play.
@@ -417,24 +453,73 @@ theme.background_bottom = Color("0b0806")
 game.theme = theme
 ```
 
-Four things read it, and none of them names a game:
+The shared presentation reads it without naming a game:
 
-- `background.gd` — every screen instances it, so the menu gradient and glow
-  are the game's on every screen in the build.
+- `background.gd` — shared screens instance it, so their gradient and glow
+  follow the game. An optional `background_material` replaces the shader while
+  retaining aspect correction and reduced motion. A gameplay scene can override
+  its inherited backdrop with its own art instead.
 - `main_menu.gd` — the rotating plaque takes `logo_texture_path`, tinted with
   `logo_color`, and its lights and slab take `light` and `plaque_color`. The
-  logo is scaled to span the plaque, so any resolution or aspect fits.
+  logo is scaled to span the plaque, so any resolution or aspect fits. Optional
+  `plaque_material` and `menu_motion` customize the surface and interaction feel.
 - `router.gd` — at boot it hands `ThemeDB.get_project_theme()` to
   `GameTheme.restyle()` and puts the result on the root window, which every
   Control inherits. That swaps the studio accent for the game's wherever
   `dcs_theme.tres` uses it — focus rings, sliders, tab underlines — while
-  leaving spacing, fonts and every neutral shade alone.
+  leaving spacing, fonts and every neutral shade alone unless the game supplies
+  a partial `ui_theme`, which is merged last into an independent runtime copy.
 - `menu_screen.gd` and `game_shell.gd` — both call `GameTheme.restyle_tree()`
   on themselves in `_ready()`. A `Theme` only reaches what a scene left
   unstyled, and the HUD and the credits roll bake the accent into per-node
   `theme_override_*` entries, scene-local styleboxes and `ColorRect`s. The
   repaint walks the tree and substitutes exactly the studio accents, so the
-  round timer, mode title, callouts and credit headings follow the game.
+  round timer, mode title, callouts and credit headings follow the game. Menus
+  additionally opt into skinning scene-local widget styles while preserving
+  authored padding; gameplay retains its semantic panel styles.
+- `audio_manager.gd` — optional `ui_sounds` supplies focus, confirm and back
+  streams. Omitted cues retain the original audio, and gameplay/achievement
+  sounds are not replaced.
+
+The optional presentation fields are:
+
+| Field | Contract |
+| --- | --- |
+| `ui_theme: Theme` | Partial widget overrides. `MenuHeading` and `MenuSectionHeading` Label variations distinguish UI typography/colour from body text and player identity. Empty styles and border-only overlays retain their transparency. |
+| `ui_sounds: GameUISoundBank` | `focus`, `click`, `back`, their dB gains, and `focus_cooldown_ms`. A focus `AudioStreamRandomizer` can provide non-repeating variants. All cues use the existing SFX bus. |
+| `background_material: ShaderMaterial` | Supports `top_color`, `bottom_color`, `glow_color`, `aspect`, and `speed`; zero speed must freeze all decorative motion. Materials are duplicated per screen. |
+| `plaque_material: Material` | Duplicated onto the title plaque; a `StandardMaterial3D` also receives `plaque_color`. |
+| `menu_motion: GameTheme.MenuMotion` | `SPRING` retains the studio animation; `FIRM` uses non-overshooting button transitions and restrained plaque feedback. |
+
+Keep these resources in the game's folder. Dead Metal Jam provides an example
+with original SVG plates, a condensed variation of Godot's built-in font and
+in-engine synthesized menu cues. No external fonts or sound downloads are needed.
+
+All three games declare their own standalone look, selected automatically by
+`--game=<id>` or the corresponding standalone export preset:
+
+| Game | Standalone presentation |
+| --- | --- |
+| Triangle Rush | Mint neon over midnight blue, a rushing-triangle logo, chamfered buttons and panels, triangular toggles, a geometric backdrop and an etched plaque. Keeps the springy arcade menu motion. |
+| Desk-Can-Saw | Safety yellow over warm wood and dark steel, a saw-and-can logo, raised workbench controls, mechanical toggles, pegboard and wood-grain scenery, and a timber plaque. Uses firm menu motion. |
+| Dead Metal Jam | Amber stage lights over cold steel, textured metal plates, condensed headings and mechanical menu cues. Uses firm menu motion. |
+
+Triangle Rush and Desk-Can-Saw keep their visual resources under their own
+`assets/` and `ui/` folders, with partial widget skins in `ui/menu_skin.tres`.
+They retain the shared readable fonts and menu audio. Their low-contrast
+backdrops remain aspect-correct from portrait to ultrawide, and reduced motion
+freezes their decorative animation. No framework screen branches on a game ID,
+and selecting either game inside the collection still uses the studio theme.
+
+Triangle Rush's gameplay scene overrides the inherited background with a plain,
+opaque navy `ColorRect`, leaving its faint player halos and target silhouettes
+readable without the menu's geometric grid. Its menu theme is unchanged, and
+the plain backdrop fills every viewport without taking input.
+
+Focus audio stays on `focus_entered`, including mouse hover that moves focus,
+and initial screen focus stays silent. Buttons whose navigation handler already
+plays a cue use `metadata/ui_sound_handled = true` to avoid an extra confirm
+when a custom bank is active.
 
 A logo is best authored as a single-colour silhouette so `logo_color` can tint
 it; the Dead Metal Jam icon is imported with its RGB channels remapped from
@@ -453,7 +538,7 @@ with, so nothing moves.
 That makes a standalone release **export configuration only**. All three games
 already have a preset — *Windows — Triangle Rush / Desk-Can-Saw / Dead Metal Jam
 (standalone)* — each pinned by its own feature tag, spelled as the initials of
-the game's id (`tr`, `scs`, `dmj`). A preset carries the tag and drops the other
+the game's id (`tr`, `dcs`, `dmj`). A preset carries the tag and drops the other
 games:
 
 ```ini
@@ -473,12 +558,16 @@ config/custom_user_dir_name.dmj="DeskCanSaw Games/Dead Metal Jam"
 the other games' assets out of the package. Setting both means the build is
 correct even if one of them is edited later.
 
+The *Windows — DCS Collection* preset carries `custom_features="collection"`;
+`build/single_game_id.collection=""` clears the source project's Desk-Can-Saw
+default so that export still ships the full collection experience.
+
 The user-dir override is **not optional**. Without it the standalone build
 shares `user://` with the collection, so saves, settings and achievements
-collide. Running from source with `--game` cannot change the user dir — the
-engine fixes it at startup — so a pinned dev run still reads and writes the
-collection's save files. That is fine for playtesting, and the reason the
-override belongs in the preset.
+collide. Source runs, including the default Desk-Can-Saw launch and `--game`
+overrides, keep the existing development user directory. The engine fixes it at
+startup, so these runs still share the collection's save files. That is fine for
+playtesting, and the reason the override belongs in the preset.
 
 `export_presets.cfg` is tracked deliberately — an untracked preset file means
 nobody else can reproduce a release. Keep credentials out of it; when mobile
@@ -610,11 +699,14 @@ scene through Godot's Movie Maker, encodes the result to Ogg Theora with ffmpeg
 and extracts the still poster frame shown before playback starts. Nothing
 outside `tools/` references either file — add `tools/*` to your export preset's
 exclude filter to keep the recorder out of shipped builds.
+The two score-chase walkthroughs demonstrate Timer rounds regardless of saved
+preferences or a game's launch default; Dead Metal Jam's take uses three lives.
+Recording overrides never persist to the player's settings.
 
 The sample unlocks **Solo Starter** after the first completed single-player
 round and **First Win** after Player 1's first multiplayer victory.
-Desk-Can-Saw is completely hidden until the player either scores at least 25
-in a solo Triangle Rush round or wins a multiplayer Triangle Rush round as Player 1
+In the collection, Desk-Can-Saw is completely hidden until the player either
+scores at least 25 in a solo Triangle Rush round or wins a multiplayer round as Player 1
 with at least 25 points (Medium difficulty when the opponent is the CPU). Its
 first unlock triggers a dedicated fanfare and visual celebration. The
 Desk-Can-Saw's mode selector only shows the matching unlocked route: solo,
@@ -630,23 +722,26 @@ and must not delete another build's saved options or unlocks out of a shared
 Focused regression checks can be run headlessly:
 
 ```bash
-godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_test.gd
-godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_scene_test.gd
-godot --headless --path . --script res://tests/visual_effects_test.gd
-godot --headless --path . --script res://tests/accessibility_test.gd
-godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd
-godot --headless --path . --script res://tests/share_card_test.gd
-godot --headless --path . --script res://tests/instructions_video_test.gd
-godot --headless --path . --script res://tests/game_shell_test.gd
-godot --headless --path . --script res://tests/lives_mode_test.gd
-godot --headless --path . --script res://tests/game_options_test.gd
-godot --headless --path . --script res://tests/single_game_test.gd
+godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_test.gd -- --game=all
+godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_scene_test.gd -- --game=all
+godot --headless --path . --script res://tests/visual_effects_test.gd -- --game=all
+godot --headless --path . --script res://tests/accessibility_test.gd -- --game=all
+godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd -- --game=all
+godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
+godot --headless --path . --script res://tests/instructions_video_test.gd -- --game=all
+godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
+godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
+godot --headless --path . --script res://tests/game_options_test.gd -- --game=all
+godot --headless --path . --script res://tests/game_select_test.gd -- --game=all
+godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
 ```
 
-Run the suite against the full collection: several checks assert values that
-Triangle Rush and Desk-Can-Saw declare, so they cannot pass in a run pinned with
-`--game`. `single_game_test.gd` is the exception — it passes in both, so a
-standalone build can still verify its own path.
+Run the suite against the full collection with `--game=all`: several checks
+assert values that specific games declare, so they cannot pass in a standalone
+run. `single_game_test.gd` is the exception — it passes in both, so a
+standalone build can still verify its own path. It also exercises each declared
+theme on the real title screen: logo tint, widget skin, flat-button text contrast,
+plaque materials, backdrop aspect correction and the reduced-motion switch.
 
 The FPS counter is available under **Settings → Display** and is drawn by
 `Router`, so it stays visible across scenes without each game implementing its

@@ -178,6 +178,20 @@ func _test_triangle_rush(session: Node, settings: Node) -> void:
 	await process_frame
 	await process_frame
 
+	var background := game.get_node_or_null("BackgroundLayer/Background") as ColorRect
+	_expect(
+		background != null and background.material == null
+		and background.get_script() == null
+		and background.color.is_equal_approx(Color("0b1220")),
+		"Triangle Rush must use its own opaque, plain backdrop rather than the menu shader."
+	)
+	if background != null:
+		_expect(
+			background.size == background.get_viewport_rect().size
+			and background.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+			"The plain gameplay backdrop must fill the viewport without consuming input."
+		)
+
 	(game.get_node("%RoundTimer") as Timer).stop()
 	game.set("_round_active", true)
 	await _clear_children(game.get_node("%WorldFX"))

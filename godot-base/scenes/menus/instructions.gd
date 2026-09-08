@@ -10,6 +10,7 @@ extends MenuScreen
 ## The screen a solo-only game came from, since it reaches this screen without
 ## passing through mode select.
 @export_file("*.tscn") var main_menu_scene := "res://scenes/menus/main_menu.tscn"
+@export_file("*.tscn") var game_select_scene := "res://scenes/menus/game_select.tscn"
 
 ## Smallest usable clip width; also stops the grid squeezing the video column.
 const VIDEO_MIN_WIDTH := 420.0
@@ -69,9 +70,13 @@ func _ready() -> void:
 	_multiplayer = GameSession.player_two_enabled()
 	# Back has to undo however the player got here. A solo-only game skips mode
 	# select entirely (see `main_menu.gd`), so returning to it would bounce
-	# straight back and trap the player in a loop.
+	# straight back and trap the player in a loop. What is left depends on
+	# whether the build stopped to ask which game: the picker if it did, the
+	# title screen if there was nothing to pick.
 	if not GameSession.multiplayer_offered():
-		back_scene = main_menu_scene
+		back_scene = (
+			game_select_scene if GameCatalog.offers_a_choice() else main_menu_scene
+		)
 	_populate_instructions()
 	_setup_video()
 	_show_again.button_pressed = bool(Settings.get_value("game/show_instructions", true))

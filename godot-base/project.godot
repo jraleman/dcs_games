@@ -42,7 +42,8 @@ ShareManager="*res://autoload/share_manager.gd"
 
 [dcs]
 
-build/single_game_id=""
+build/single_game_id="desk_can_saw"
+build/single_game_id.collection=""
 build/single_game_id.dmj="dead_metal_jam"
 build/single_game_id.tr="triangle_rush"
 build/single_game_id.dcs="desk_can_saw"

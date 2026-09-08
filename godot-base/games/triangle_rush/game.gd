@@ -1,6 +1,6 @@
 extends RefCounted
 
-## Triangle Rush manifest — the default game shipped with the base project.
+## Triangle Rush manifest — the first game offered by the collection.
 ##
 ## [GameCatalog] discovers this file automatically; nothing in the framework
 ## refers to Triangle Rush by name.
@@ -27,6 +27,7 @@ static func manifest() -> GameManifest:
 	game.share_art_style = ShareCardArt.STYLE_TRIANGLE_RUSH
 	game.tutorial_video_path = "res://assets/video/tutorial_triangle_rush.ogv"
 	game.tutorial_poster_path = "res://assets/video/tutorial_triangle_rush_poster.webp"
+	game.theme = _theme()
 	game.credits = [
 		{
 			"heading": "Game Design & Code",
@@ -57,3 +58,20 @@ static func manifest() -> GameManifest:
 		},
 	}
 	return game
+
+
+## Neon targets and chamfered arcade controls, worn only by the standalone game.
+static func _theme() -> GameTheme:
+	var theme := GameTheme.new()
+	theme.logo_texture_path = "res://games/triangle_rush/assets/game-icon.svg"
+	theme.logo_color = Color("66efd5")
+	theme.plaque_color = Color("273958")
+	theme.accent = Color("66efd5")
+	theme.light = Color("c9fff2")
+	theme.background_top = Color("171f38")
+	theme.background_bottom = Color("080d1b")
+	theme.ui_theme = preload("res://games/triangle_rush/ui/menu_skin.tres")
+	theme.background_material = preload("res://games/triangle_rush/ui/menu_background.tres")
+	theme.plaque_material = preload("res://games/triangle_rush/ui/menu_plaque.tres")
+	theme.menu_motion = GameTheme.MenuMotion.SPRING
+	return theme

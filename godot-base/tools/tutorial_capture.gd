@@ -46,6 +46,7 @@ const SETTING_OVERRIDES := {
 	"accessibility/gameplay_speed": 1.0,
 	"accessibility/target_size": 1.0,
 	"accessibility/extra_round_time": 0.0,
+	"game/round_mode": Settings.RoundMode.TIMER,
 	"game/triangle_size": 1.0,
 	"game/triangle_speed": 1.0,
 	"game/triangle_speed_rush": 0.35,
@@ -127,23 +128,23 @@ const DESK_CAN_SAW_STEPS: Array[Dictionary] = [
 const DEAD_METAL_JAM_STEPS: Array[Dictionary] = [
 	{
 		"time": 0.0,
-		"title": "Every robot calls a note",
-		"body": "The letter on its chest is the note it wants. Read it while it is still far away.",
+		"title": "Match the note and its color",
+		"body": "Every pitch has a color, shared by its plate and the HUD. Shoot before the attack bar fills.",
 	},
 	{
 		"time": 5.6,
-		"title": "Play that note to drop it",
-		"body": "Guitar, bass, keys or voice into your microphone. Any octave counts.",
+		"title": "Your instrument is the trigger",
+		"body": "The correct note fires a matching-colored shot. Guitar, bass, keys or voice: any octave counts.",
 	},
 	{
 		"time": 11.6,
-		"title": "Land it on the beat",
-		"body": "Notes are scored against the song. The closer to the beat, the more it is worth.",
+		"title": "Beat timing earns a bonus",
+		"body": "Shoot any time before the robot fires. Use the closing target ring to land higher-scoring hits.",
 	},
 	{
 		"time": 17.4,
-		"title": "Do not let one reach you",
-		"body": "A robot that gets to the front charges up and fires. Answer it before the bar fills.",
+		"title": "Enemy shots burn a life tube",
+		"body": "When the attack bar fills, the arm cannon shoots at your amp. Answer before it fires.",
 	},
 	{
 		"time": 25.0,
@@ -170,11 +171,8 @@ const DEAD_METAL_JAM_ACCURACY := 0.018
 ## is long enough that one press cannot be counted twice across frames.
 const DEAD_METAL_JAM_REPRESS := 0.2
 
-## While this step is on screen the scripted player stops answering, so a robot
-## reaches the front, charges, and fires — the thing step four is describing.
-## The window has to outlast a full wind-up or the lesson is a robot that gets
-## close and is then quietly shot anyway.
-const DEAD_METAL_JAM_IDLE_WINDOW := Vector2(17.6, 23.2)
+## Show one incoming shot during step four, then resume before the take can end.
+const DEAD_METAL_JAM_IDLE_WINDOW := Vector2(17.6, 24.6)
 
 var _game := TRIANGLE_RUSH
 var _steps: Array[Dictionary] = TRIANGLE_RUSH_STEPS
@@ -279,8 +277,12 @@ func _apply_setting_overrides() -> void:
 	var values: Variant = Settings.get("_values")
 	if not values is Dictionary:
 		return
+	(Settings.get("_save_timer") as Timer).process_mode = Node.PROCESS_MODE_DISABLED
 	for key: String in SETTING_OVERRIDES:
 		(values as Dictionary)[key] = SETTING_OVERRIDES[key]
+	if _game == DEAD_METAL_JAM:
+		(values as Dictionary)[Settings.ROUND_MODE_KEY] = Settings.RoundMode.LIVES
+		(values as Dictionary)[Settings.STARTING_LIVES_KEY] = 3
 
 
 func _configure_session() -> void:
@@ -530,8 +532,7 @@ func _action_for_target(target: TriangleTarget) -> StringName:
 	return &""
 
 
-## Plays Dead Metal Jam by reading the encounter and answering the front robot
-## on its beat.
+## Show free-timing shots during the instrument lesson, then beat-timed bonuses.
 ##
 ## It reaches into the gameplay scene for the director and synthesises key
 ## events into [KeyboardNoteSource] rather than calling the scoring code, so
@@ -539,7 +540,13 @@ func _action_for_target(target: TriangleTarget) -> StringName:
 ## input path — the same reason the other two drivers press keys and move a
 ## mouse instead of adding points directly.
 func _drive_dead_metal_jam() -> void:
-	if _elapsed >= DEAD_METAL_JAM_IDLE_WINDOW.x and _elapsed <= DEAD_METAL_JAM_IDLE_WINDOW.y:
+	if not bool(_scene.get("_round_active")):
+		return
+	var lives: Array = _scene.get("_lives")
+	if (
+		_elapsed >= DEAD_METAL_JAM_IDLE_WINDOW.x and _elapsed <= DEAD_METAL_JAM_IDLE_WINDOW.y
+		and int(lives[0]) == 3
+	):
 		return
 	if _elapsed < _note_ready_at:
 		return
@@ -552,9 +559,10 @@ func _drive_dead_metal_jam() -> void:
 		var drone: JamBot = entry
 		if drone == null or drone.required_note < 0:
 			continue
-		# `time_to_beat` is negative before the beat and positive after it, so
-		# this fires on the last frame before the beat rather than after it.
-		if drone.time_to_beat() < -DEAD_METAL_JAM_ACCURACY:
+		if _step_index == 1:
+			if drone.approach_progress() < 0.4:
+				continue
+		elif drone.time_to_beat() < -DEAD_METAL_JAM_ACCURACY:
 			continue
 		_play_note(drone.required_note)
 		return

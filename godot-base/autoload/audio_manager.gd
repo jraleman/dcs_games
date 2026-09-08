@@ -31,6 +31,8 @@ var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_index := 0
 var _music_tween: Tween
 var _procedural_streams: Dictionary = {}
+var _focus_bank: GameUISoundBank
+var _last_focus_msec := -1
 
 
 func _ready() -> void:
@@ -114,15 +116,34 @@ func play_sfx(stream: AudioStream, volume_db := 0.0, pitch_scale := 1.0) -> void
 
 
 func play_click() -> void:
-	play_sfx(SFX_CLICK)
+	var bank := GameCatalog.theme().ui_sounds
+	if bank != null and bank.click != null:
+		play_sfx(bank.click, bank.click_volume_db)
+	else:
+		play_sfx(SFX_CLICK)
 
 
 func play_focus() -> void:
-	play_sfx(SFX_FOCUS, -4.0)
+	var bank := GameCatalog.theme().ui_sounds
+	if bank != _focus_bank:
+		_focus_bank = bank
+		_last_focus_msec = -1
+	if bank == null or bank.focus == null:
+		play_sfx(SFX_FOCUS, -4.0)
+		return
+	var now := Time.get_ticks_msec()
+	if _last_focus_msec >= 0 and now - _last_focus_msec < bank.focus_cooldown_ms:
+		return
+	_last_focus_msec = now
+	play_sfx(bank.focus, bank.focus_volume_db)
 
 
 func play_back() -> void:
-	play_sfx(SFX_BACK)
+	var bank := GameCatalog.theme().ui_sounds
+	if bank != null and bank.back != null:
+		play_sfx(bank.back, bank.back_volume_db)
+	else:
+		play_sfx(SFX_BACK)
 
 
 func play_game_hit(streak := 1) -> void:
@@ -290,12 +311,16 @@ func _procedural_noise(sample_index: int) -> float:
 ## Wires click/focus sounds into every button under [param root], and makes
 ## hovering move the focus so mouse and gamepad highlight the same control.
 func attach_ui_sounds(root: Node) -> void:
+	var custom_bank := GameCatalog.theme().ui_sounds != null
 	for node in root.find_children("*", "BaseButton", true, false):
 		var button := node as BaseButton
 		if button.has_meta("ui_sounds"):
 			continue
 		button.set_meta("ui_sounds", true)
-		button.pressed.connect(play_click)
+		# Custom cues must not layer a confirm over a handler-owned back cue.
+		# Unskinned games retain their existing sound wiring.
+		if not (custom_bank and bool(button.get_meta("ui_sound_handled", false))):
+			button.pressed.connect(play_click)
 		button.focus_entered.connect(play_focus)
 		button.mouse_entered.connect(_on_button_hovered.bind(button))
 

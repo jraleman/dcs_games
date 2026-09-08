@@ -14,13 +14,6 @@ extends SceneTree
 var _failures := PackedStringArray()
 var _original_values: Dictionary = {}
 
-const TOUCHED_KEYS := [
-	Settings.ROUND_MODE_KEY,
-	Settings.STARTING_LIVES_KEY,
-	Settings.EXTRA_ROUND_TIME_KEY,
-]
-
-
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -33,19 +26,26 @@ func _run() -> void:
 		quit(1)
 		return
 
-	for key: String in TOUCHED_KEYS:
-		_original_values[key] = settings.call("get_value", key)
+	var values: Dictionary = settings.get("_values")
+	_original_values = values.duplicate(true)
+	var save_timer: Timer = settings.get("_save_timer")
+	var save_process_mode := save_timer.process_mode
+	save_timer.process_mode = Node.PROCESS_MODE_DISABLED
+	var original_game := GameCatalog.current_id()
 
 	_test_defaults()
+	_test_game_defaults(settings)
 	_test_settings_helpers(settings)
 	await _test_settings_menu(settings)
 	await _test_instructions(settings, session)
 	await _test_rounds(settings, session)
 	await _test_wrong_key_costs_a_life(settings, session)
 
-	for key: String in TOUCHED_KEYS:
-		settings.call("set_value", key, _original_values[key])
-	settings.call("save")
+	values.clear()
+	values.merge(_original_values, true)
+	save_timer.stop()
+	save_timer.process_mode = save_process_mode
+	GameCatalog.select(original_game)
 
 	if _failures.is_empty():
 		print("Lives mode tests passed.")
@@ -69,13 +69,44 @@ func _expect(condition: bool, message: String) -> void:
 func _test_defaults() -> void:
 	_expect(
 		int(Settings.DEFAULTS[Settings.ROUND_MODE_KEY]) == Settings.RoundMode.TIMER,
-		"The countdown must stay the default round mode."
+		"The framework must keep Timer as the fallback for games without an override."
 	)
 	_expect(
 		int(Settings.DEFAULTS[Settings.STARTING_LIVES_KEY]) == 3
 		and Settings.DEFAULT_STARTING_LIVES == 3,
 		"Lives mode must start a player on three lives."
 	)
+	var desk_can_saw := GameCatalog.get_manifest("desk_can_saw")
+	_expect(
+		desk_can_saw != null and desk_can_saw.default_lives_mode,
+		"Desk-Can-Saw must declare lives as its new-player default."
+	)
+
+
+## An absent preference follows the selected game, but an explicit saved
+## choice must never be overwritten just because a game's default changes.
+func _test_game_defaults(settings: Node) -> void:
+	var original_game := GameCatalog.current_id()
+	var values: Dictionary = settings.get("_values")
+	for manifest in GameCatalog.all():
+		GameCatalog.select(manifest.id)
+		values.erase(Settings.ROUND_MODE_KEY)
+		var expected := (
+			Settings.RoundMode.LIVES if manifest.default_lives_mode
+			else Settings.RoundMode.TIMER
+		)
+		_expect(
+			int(settings.call("round_mode")) == expected
+			and int(settings.call("get_value", Settings.ROUND_MODE_KEY)) == expected,
+			"An unset round mode must follow the '%s' manifest." % manifest.id
+		)
+		for mode in [Settings.RoundMode.TIMER, Settings.RoundMode.LIVES]:
+			settings.call("set_value", Settings.ROUND_MODE_KEY, mode)
+			_expect(
+				int(settings.call("round_mode")) == mode,
+				"A saved round-mode choice must win over the '%s' default." % manifest.id
+			)
+	GameCatalog.select(original_game)
 
 
 func _test_settings_helpers(settings: Node) -> void:
@@ -95,9 +126,13 @@ func _test_settings_helpers(settings: Node) -> void:
 	# A save file from another build must never strand the player in a mode
 	# this one cannot run.
 	settings.call("set_value", Settings.ROUND_MODE_KEY, 47)
+	var fallback := (
+		Settings.RoundMode.LIVES if GameCatalog.current().default_lives_mode
+		else Settings.RoundMode.TIMER
+	)
 	_expect(
-		int(settings.call("round_mode")) == Settings.RoundMode.TIMER,
-		"An unknown stored round mode must fall back to the countdown."
+		int(settings.call("round_mode")) == fallback,
+		"An unknown stored round mode must fall back to the game's default."
 	)
 
 	settings.call("set_value", Settings.STARTING_LIVES_KEY, 99)
@@ -260,7 +295,7 @@ func _instructions_copy() -> Dictionary:
 
 
 func _test_rounds(settings: Node, session: Node) -> void:
-	settings.call("set_value", Settings.ROUND_MODE_KEY, Settings.RoundMode.LIVES)
+	var values: Dictionary = settings.get("_values")
 	settings.call("set_value", Settings.STARTING_LIVES_KEY, 3)
 	settings.call("set_value", Settings.EXTRA_ROUND_TIME_KEY, 0.0)
 
@@ -268,6 +303,9 @@ func _test_rounds(settings: Node, session: Node) -> void:
 	_expect(not manifests.is_empty(), "GameCatalog must discover at least one game.")
 	for manifest in manifests:
 		GameCatalog.select(manifest.id)
+		values.erase(Settings.ROUND_MODE_KEY)
+		if not manifest.default_lives_mode:
+			settings.call("set_value", Settings.ROUND_MODE_KEY, Settings.RoundMode.LIVES)
 		session.call("configure_single_player")
 		await _drive_lives_round(manifest)
 

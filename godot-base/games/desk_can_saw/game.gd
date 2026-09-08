@@ -18,6 +18,7 @@ static func manifest() -> GameManifest:
 	game.supports_multiplayer = true
 	# Desk-Can-Saw is a direct-movement game with no CPU driver.
 	game.supports_cpu_opponent = false
+	game.default_lives_mode = true
 	game.control_style = GameManifest.CONTROL_STYLE_DIRECT_MOVEMENT
 	game.copy = {
 		"mode_select_intro": (
@@ -39,7 +40,8 @@ static func manifest() -> GameManifest:
 		"solo_confirm_title": "Ready to fire up the saw?",
 		"solo_confirm_description": (
 			"Guide one electric chainsaw across the workshop desk and tear through "
-			+ "as many falling cans as possible before time runs out."
+			+ "as many falling cans as possible. Keep them off the desk to protect "
+			+ "your streak."
 		),
 		"versus_confirm_title": "Two saws, one workbench",
 		"versus_confirm_description": (
@@ -71,6 +73,7 @@ static func manifest() -> GameManifest:
 	game.tutorial_poster_path = (
 		"res://assets/video/tutorial_desk_can_saw_poster.webp"
 	)
+	game.theme = _theme()
 	game.credits = [
 		{
 			"heading": "Game Design & Code",
@@ -98,3 +101,20 @@ static func manifest() -> GameManifest:
 		},
 	}
 	return game
+
+
+## A timber workbench under a warm task lamp, with safety-yellow controls.
+static func _theme() -> GameTheme:
+	var theme := GameTheme.new()
+	theme.logo_texture_path = "res://games/desk_can_saw/assets/game-icon.svg"
+	theme.logo_color = Color("ffcf66")
+	theme.plaque_color = Color("3b2a1c")
+	theme.accent = Color("ffcf66")
+	theme.light = Color("ffedc7")
+	theme.background_top = Color("2b2923")
+	theme.background_bottom = Color("120f0c")
+	theme.ui_theme = preload("res://games/desk_can_saw/ui/menu_skin.tres")
+	theme.background_material = preload("res://games/desk_can_saw/ui/menu_background.tres")
+	theme.plaque_material = preload("res://games/desk_can_saw/ui/menu_plaque.tres")
+	theme.menu_motion = GameTheme.MenuMotion.FIRM
+	return theme

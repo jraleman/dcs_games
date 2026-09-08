@@ -84,6 +84,7 @@ layout_mode = 2
 theme_override_constants/separation = 24
 
 [node name="Title" type="Label" parent="Margins/Layout/Header"]
+theme_type_variation = &"MenuHeading"
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
@@ -91,6 +92,7 @@ theme_override_font_sizes/font_size = 56
 text = "How to Play"
 
 [node name="BackButton" type="Button" parent="Margins/Layout/Header"]
+metadata/ui_sound_handled = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Back"
@@ -119,6 +121,7 @@ size_flags_vertical = 3
 theme_override_constants/separation = 14
 
 [node name="Headline" type="Label" parent="Margins/Layout/Card/Scroll/Layout"]
+theme_type_variation = &"MenuHeading"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 38

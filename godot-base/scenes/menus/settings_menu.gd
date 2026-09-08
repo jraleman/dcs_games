@@ -182,7 +182,10 @@ func _build_binding_rows(manifest: GameManifest) -> void:
 		if not declared.is_empty() and declared != heading:
 			heading = declared
 			_keyboard_bindings.add_child(
-				_make_heading(declared, _heading_color(definition))
+				_make_heading(
+					declared, _heading_color(definition),
+					int(definition.get("player", -1)) < 0
+				)
 			)
 		_keyboard_bindings.add_child(_make_binding_row(definition))
 
@@ -197,10 +200,14 @@ func _heading_color(definition: Dictionary) -> Color:
 	)
 
 
-func _make_heading(text: String, color: Color) -> Label:
+func _make_heading(text: String, color: Color, section := true) -> Label:
 	var label := Label.new()
 	label.text = text.to_upper()
-	label.add_theme_color_override("font_color", color)
+	if section:
+		label.theme_type_variation = &"MenuSectionHeading"
+	label.add_theme_color_override(
+		"font_color", GameCatalog.theme().widget_color("font_color", label.theme_type_variation, color)
+	)
 	label.add_theme_font_size_override("font_size", HEADING_FONT_SIZE)
 	return label
 
@@ -575,7 +582,7 @@ func _sync_from_settings() -> void:
 	_target_size.value = Settings.target_size_scale()
 	_extra_round_time.value = Settings.extra_round_time()
 	_starting_lives.value = Settings.starting_lives()
-	_select_id(_round_mode, Settings.round_mode())
+	_select_id(_round_mode, Settings.round_mode(game_context_id))
 	_controller_speed.value = Settings.controller_movement_scale()
 	_controller_deadzone.value = Settings.controller_deadzone()
 	_show_instructions.button_pressed = bool(Settings.get_value("game/show_instructions"))
@@ -598,7 +605,7 @@ func _sync_from_settings() -> void:
 ## The lives pool only means anything in lives mode, so the slider greys out
 ## under the countdown instead of the row disappearing and shifting the tab.
 func _refresh_round_mode_controls() -> void:
-	_starting_lives.editable = Settings.lives_mode_enabled()
+	_starting_lives.editable = Settings.lives_mode_enabled(game_context_id)
 
 
 func _select_id(option: OptionButton, id: int) -> void:

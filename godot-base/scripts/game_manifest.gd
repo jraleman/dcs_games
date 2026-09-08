@@ -63,6 +63,10 @@ var hidden_until_unlocked := false
 var supports_multiplayer := true
 var supports_cpu_opponent := true
 
+## Initial round mode when the player has not saved a shared preference.
+## An explicit Timer or Lives choice still takes precedence in every game.
+var default_lives_mode := false
+
 ## How the player acts, which decides the control cards and instructions the
 ## shared menus render. Games pick an existing style rather than being named
 ## individually by the framework.

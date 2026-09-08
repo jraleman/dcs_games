@@ -37,6 +37,7 @@ layout_mode = 2
 theme_override_constants/separation = 24
 
 [node name="Title" type="Label" parent="Margins/Layout/Header"]
+theme_type_variation = &"MenuHeading"
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
@@ -46,6 +47,7 @@ text = "Settings"
 vertical_alignment = 1
 
 [node name="BackButton" type="Button" parent="Margins/Layout/Header"]
+metadata/ui_sound_handled = true
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -73,6 +75,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 22
 
 [node name="VolumeHeading" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -172,6 +175,7 @@ horizontal_alignment = 2
 vertical_alignment = 1
 
 [node name="MuteHeading" type="Label" parent="Margins/Layout/Tabs/Audio/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -210,6 +214,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 22
 
 [node name="WindowHeading" type="Label" parent="Margins/Layout/Tabs/Display/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -264,6 +269,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="InterfaceHeading" type="Label" parent="Margins/Layout/Tabs/Display/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -334,6 +340,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 22
 
 [node name="VisualHeading" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -405,6 +412,7 @@ layout_mode = 2
 size_flags_horizontal = 0
 
 [node name="InputHeading" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -507,6 +515,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 22
 
 [node name="GameplayHeading" type="Label" parent="Margins/Layout/Tabs/Gameplay/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -607,6 +616,7 @@ horizontal_alignment = 2
 vertical_alignment = 1
 
 [node name="GuidanceHeading" type="Label" parent="Margins/Layout/Tabs/Gameplay/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -629,6 +639,7 @@ layout_mode = 2
 size_flags_horizontal = 0
 
 [node name="DefaultsHeading" type="Label" parent="Margins/Layout/Tabs/Gameplay/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -781,6 +792,7 @@ text = "Controller 1 controls Player 1 and Controller 2 controls Player 2."
 autowrap_mode = 2
 
 [node name="RestoreHeading" type="Label" parent="Margins/Layout/Tabs/Controls/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
@@ -820,6 +832,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 22
 
 [node name="RoundHeading" type="Label" parent="Margins/Layout/Tabs/Game/Pad/List"]
+theme_type_variation = &"MenuSectionHeading"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22

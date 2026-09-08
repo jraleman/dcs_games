@@ -21,14 +21,18 @@ const MANIFEST_FILE := "game.gd"
 
 ## Project setting that pins the build to a single game id. It is
 ## feature-overridable, so a per-game export preset selects its game with
-## `build/single_game_id.<custom_feature>` and the collection build leaves the
-## base value empty.
+## `build/single_game_id.<custom_feature>` and a collection preset overrides
+## the value with an empty string.
 const SINGLE_GAME_SETTING := "dcs/build/single_game_id"
 
 ## Command-line switch that pins one *run* to a single game, so a standalone
 ## build can be played and tested from source without exporting it:
 ## `godot --path . -- --game=<id>`.
 const SINGLE_GAME_ARGUMENT := "--game"
+
+## Reserved selector for the full collection, even when the project defaults
+## to one game. Uses the same precedence as a game id: `--game=all`.
+const ALL_GAMES_SELECTOR := "all"
 
 ## Environment variable equivalent of [constant SINGLE_GAME_ARGUMENT], for
 ## launchers and scripts that cannot pass engine arguments through.
@@ -114,15 +118,14 @@ static func _apply_single_game_filter() -> void:
 ## [method restrict_to], then the command line, then the environment, then the
 ## project setting an export preset overrides.
 static func single_game_id() -> String:
-	if not _forced_single_id.is_empty():
-		return _forced_single_id
-	var from_command_line := _single_game_from_command_line()
-	if not from_command_line.is_empty():
-		return from_command_line
-	var from_environment := OS.get_environment(SINGLE_GAME_ENVIRONMENT).strip_edges()
-	if not from_environment.is_empty():
-		return from_environment
-	return _single_game_from_settings()
+	var wanted := _forced_single_id
+	if wanted.is_empty():
+		wanted = _single_game_from_command_line()
+	if wanted.is_empty():
+		wanted = OS.get_environment(SINGLE_GAME_ENVIRONMENT).strip_edges()
+	if wanted.is_empty():
+		wanted = _single_game_from_settings()
+	return "" if wanted == ALL_GAMES_SELECTOR else wanted
 
 
 ## Accepts `--game=<id>` and `--game <id>`, after `--` (where the engine puts
@@ -151,21 +154,25 @@ static func _single_game_from_settings() -> String:
 
 
 ## Pins the catalog to [param id] at runtime, rescanning so the change is
-## complete. Pass "" to restore the full collection. Returns false — and leaves
-## the catalog untouched — for a game this build does not contain.
+## complete. Pass "all" for the collection, or "" to restore the configured
+## launch default. Returns false — and leaves the catalog untouched — for a
+## game this build does not contain.
 static func restrict_to(id: String) -> bool:
 	var wanted := id.strip_edges()
 	var previous := _forced_single_id
 	_forced_single_id = wanted
 	_rediscover()
-	if not wanted.is_empty() and not _by_id.has(wanted):
+	if (
+		not wanted.is_empty() and wanted != ALL_GAMES_SELECTOR
+		and not _by_id.has(wanted)
+	):
 		_forced_single_id = previous
 		_rediscover()
 		return false
 	return true
 
 
-## Restores the full collection after [method restrict_to].
+## Restores the command-line, environment or project default after a runtime pin.
 static func clear_restriction() -> void:
 	if _forced_single_id.is_empty():
 		return
@@ -302,6 +309,17 @@ static func available() -> Array[GameManifest]:
 				continue
 		result.append(manifest)
 	return result
+
+
+## True when the player actually has a game to choose between.
+##
+## A standalone build, or a collection whose other games are still locked, has
+## nothing to pick, so the framework skips its game picker rather than showing a
+## screen with a single card on it — the same reason `main_menu.gd` skips mode
+## select for a game that cannot be played by two people.
+static func offers_a_choice() -> bool:
+	return available().size() > 1
+
 
 
 ## Resolved from the tree because the catalog must not depend on autoload

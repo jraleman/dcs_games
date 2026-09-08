@@ -124,6 +124,28 @@ func is_transitioning() -> bool:
 	return _busy
 
 
+## Starts the game [GameCatalog] currently has selected, stopping at whichever
+## setup screen still has a question to ask: the mode picker while more than one
+## seat arrangement is possible, then the instructions while the player still
+## wants them, and otherwise the game itself.
+##
+## It lives here rather than on a menu because more than one screen starts a
+## game — the main menu does it directly in a build with only one game to
+## offer, and the game picker does it in every other build — and they must not
+## drift into two different ideas of what "start" means. Both pass their own
+## exported scene paths, so neither the router nor a game hardcodes the flow.
+func start_selected_game(mode_scene: String, instructions_scene: String) -> void:
+	if GameSession.multiplayer_offered():
+		goto(mode_scene)
+		return
+	GameSession.configure_single_player()
+	if bool(Settings.get_value("game/show_instructions", true)):
+		goto(instructions_scene)
+		return
+	goto(GameCatalog.current_gameplay_scene_path())
+
+
+
 func quit_game() -> void:
 	if OS.has_feature("web"):
 		return

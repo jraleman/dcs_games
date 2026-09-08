@@ -7,3 +7,8 @@
 [node name="TriangleRush" instance=ExtResource("1_shell")]
 script = ExtResource("2_script")
 target_scene = ExtResource("3_target")
+
+[node name="Background" parent="BackgroundLayer" index="0"]
+material = null
+color = Color(0.043137, 0.070588, 0.12549, 1)
+script = null

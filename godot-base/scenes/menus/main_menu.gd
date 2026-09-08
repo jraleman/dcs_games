@@ -4,6 +4,7 @@ extends MenuScreen
 ## from GameCatalog, so neither rebranding the project nor adding a game
 ## requires editing this screen.
 
+@export_file("*.tscn") var game_select_scene := "res://scenes/menus/game_select.tscn"
 @export_file("*.tscn") var play_scene := "res://scenes/menus/mode_select.tscn"
 @export_file("*.tscn") var instructions_scene := "res://scenes/menus/instructions.tscn"
 @export_file("*.tscn") var settings_scene := "res://scenes/menus/settings_menu.tscn"
@@ -32,8 +33,6 @@ const LOGO_FACE_SPAN := 3.04
 @onready var _button_row: HBoxContainer = %ButtonRow
 @onready var _buttons: VBoxContainer = %Buttons
 @onready var _play_button: Button = %PlayButton
-@onready var _secondary_game_button: Button = %SecondaryGameButton
-@onready var _secondary_game_requirement: Label = %SecondaryGameRequirement
 @onready var _quit_button: Button = %QuitButton
 @onready var _footer_left: Label = %FooterLeft
 @onready var _footer_right: Label = %FooterRight
@@ -47,13 +46,6 @@ const LOGO_FACE_SPAN := 3.04
 
 var _menu_buttons: Array[Button] = []
 
-## One slot per catalogued game, parallel arrays indexed together.
-## [member _game_requirements] holds null for the Play button, which has no
-## unlock caption in the scene.
-var _game_buttons: Array[Button] = []
-var _game_requirements: Array[Label] = []
-var _game_ids := PackedStringArray()
-
 var _focus_tween: Tween
 var _focused_button_index := -1
 var _logo_time := 0.0
@@ -64,15 +56,18 @@ var _logo_kick_velocity := 0.0
 var _logo_scale_pulse := 0.0
 var _launching_game := false
 var _reduced_motion := false
+var _firm_menu_motion := false
+var _logo_intro_tween: Tween
 
 func _ready() -> void:
 	_reduced_motion = Settings.reduced_motion_enabled()
+	_firm_menu_motion = GameCatalog.theme().menu_motion == GameTheme.MenuMotion.FIRM
+	Settings.changed.connect(_on_setting_changed)
 	_title.text = GameCatalog.product_title()
 	_tagline.text = GameCatalog.product_tagline()
 	_footer_left.text = "%s  ·  %s" % [StudioInfo.STUDIO, StudioInfo.copyright_line()]
 	_footer_right.text = "v%s" % StudioInfo.version()
-	_build_game_entries()
-	_refresh_game_entries()
+	_refresh_play_button()
 	AchievementManager.progression_changed.connect(_on_progression_changed)
 	# Quitting is meaningless in a browser tab and unusual on mobile.
 	_quit_button.visible = not (OS.has_feature("web") or OS.has_feature("mobile"))
@@ -187,7 +182,9 @@ func _setup_button_motion() -> void:
 
 
 func _on_button_focused(button: Button, index: int) -> void:
-	_animate_button(button, BUTTON_FOCUS_SCALE, Color(1.04, 1.08, 1.1, 1.0), 0.16)
+	_animate_button(
+		button, _button_focus_scale(), _button_focus_tint(), 0.11 if _firm_menu_motion else 0.16
+	)
 	_move_focus_accent(button)
 	if _reduced_motion:
 		_focused_button_index = index
@@ -198,12 +195,13 @@ func _on_button_focused(button: Button, index: int) -> void:
 		direction = signf(float(index - _focused_button_index))
 		if is_zero_approx(direction):
 			direction = 1.0
-	_logo_kick_velocity += direction * 1.35
-	_logo_scale_pulse = 0.045
+	_logo_kick_velocity += direction * (0.22 if _firm_menu_motion else 1.35)
+	_logo_scale_pulse = 0.006 if _firm_menu_motion else 0.045
 	_focused_button_index = index
 
 	var last_index := maxi(_menu_buttons.size() - 1, 1)
-	_logo_focus_target = deg_to_rad(lerpf(-3.0, 3.0, float(index) / float(last_index)))
+	var tilt := 1.0 if _firm_menu_motion else 3.0
+	_logo_focus_target = deg_to_rad(lerpf(-tilt, tilt, float(index) / float(last_index)))
 
 
 func _on_button_focus_exited(button: Button) -> void:
@@ -211,13 +209,26 @@ func _on_button_focus_exited(button: Button) -> void:
 
 
 func _on_button_down(button: Button) -> void:
-	_animate_button(button, BUTTON_PRESS_SCALE, Color(0.9, 0.98, 1.0, 1.0), 0.08)
+	_animate_button(
+		button,
+		Vector2(0.992, 0.992) if _firm_menu_motion else BUTTON_PRESS_SCALE,
+		Color(0.92, 0.92, 0.92) if _firm_menu_motion else Color(0.9, 0.98, 1.0, 1.0),
+		0.08
+	)
 
 
 func _on_button_up(button: Button) -> void:
-	var target_scale := BUTTON_FOCUS_SCALE if button.has_focus() else Vector2.ONE
-	var target_tint := Color(1.04, 1.08, 1.1, 1.0) if button.has_focus() else Color.WHITE
+	var target_scale := _button_focus_scale() if button.has_focus() else Vector2.ONE
+	var target_tint := _button_focus_tint() if button.has_focus() else Color.WHITE
 	_animate_button(button, target_scale, target_tint, 0.12)
+
+
+func _button_focus_scale() -> Vector2:
+	return Vector2.ONE if _firm_menu_motion else BUTTON_FOCUS_SCALE
+
+
+func _button_focus_tint() -> Color:
+	return Color.WHITE if _firm_menu_motion else Color(1.04, 1.08, 1.1, 1.0)
 
 
 func _animate_button(
@@ -238,7 +249,9 @@ func _animate_button(
 		return
 
 	var tween := button.create_tween().set_parallel(true)
-	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.set_trans(
+		Tween.TRANS_CUBIC if _firm_menu_motion else Tween.TRANS_BACK
+	).set_ease(Tween.EASE_OUT)
 	tween.tween_property(button, "scale", target_scale, duration)
 	tween.tween_property(button, "self_modulate", target_tint, duration)
 	button.set_meta("motion_tween", tween)
@@ -265,8 +278,9 @@ func _move_focus_accent(button: Button) -> void:
 
 	_focus_tween = create_tween().set_parallel(true)
 	_focus_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	_focus_tween.tween_property(_focus_accent, "global_position", target_position, 0.2)
-	_focus_tween.tween_property(_focus_accent, "size", target_size, 0.2)
+	var duration := 0.1 if _firm_menu_motion else 0.2
+	_focus_tween.tween_property(_focus_accent, "global_position", target_position, duration)
+	_focus_tween.tween_property(_focus_accent, "size", target_size, duration)
 	_focus_tween.tween_property(_focus_accent, "modulate:a", 1.0, 0.12)
 
 
@@ -287,8 +301,7 @@ func _center_logo_pivot() -> void:
 
 
 ## Dresses the plaque, its lights and the focus bar in the current game's
-## colours. The rig, its motion and its lighting setup are the framework's; a
-## game only supplies what it looks like.
+## colours and optional material, without modifying the authored scene.
 ##
 ## The mesh is duplicated first: it is a sub-resource shared by every instance
 ## of this scene, and tinting it in place would outlive the screen.
@@ -298,10 +311,12 @@ func _apply_theme() -> void:
 	var mesh := _logo_body.mesh
 	if mesh != null:
 		var tinted := mesh.duplicate(true) as PrimitiveMesh
+		if theme.plaque_material != null:
+			tinted.material = theme.plaque_material.duplicate(true) as Material
 		var material := tinted.material as StandardMaterial3D
 		if material != null:
 			material.albedo_color = theme.plaque_color
-			_logo_body.mesh = tinted
+		_logo_body.mesh = tinted
 
 	var logo := theme.logo_texture()
 	if logo != null:
@@ -342,47 +357,60 @@ func _play_logo_intro() -> void:
 		_logo_showcase.modulate.a = 1.0
 		_logo_showcase.scale = Vector2.ONE
 		return
-	var tween := create_tween().set_parallel(true)
-	tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_logo_showcase, "modulate:a", 1.0, 0.7).set_delay(0.08)
-	tween.tween_property(_logo_showcase, "scale", Vector2.ONE, 0.9).set_delay(0.04)
+	_logo_intro_tween = create_tween().set_parallel(true)
+	_logo_intro_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	_logo_intro_tween.tween_property(_logo_showcase, "modulate:a", 1.0, 0.7).set_delay(0.08)
+	_logo_intro_tween.tween_property(_logo_showcase, "scale", Vector2.ONE, 0.9).set_delay(0.04)
 
 
+func _on_setting_changed(key: String, value: Variant) -> void:
+	if key != "accessibility/reduced_motion":
+		return
+	_reduced_motion = bool(value)
+	set_process(not _reduced_motion)
+	if _reduced_motion:
+		if _logo_intro_tween and _logo_intro_tween.is_valid():
+			_logo_intro_tween.kill()
+		_logo_showcase.modulate.a = 1.0
+		_logo_showcase.scale = Vector2.ONE
+		_logo_rig.rotation = Vector3(deg_to_rad(-4.0), 0.0, 0.0)
+		_logo_rig.scale = Vector3.ONE
+		_logo_kick = 0.0
+		_logo_kick_velocity = 0.0
+		_logo_scale_pulse = 0.0
+	for button in _menu_buttons:
+		_animate_button(
+			button,
+			_button_focus_scale() if button.has_focus() else Vector2.ONE,
+			_button_focus_tint() if button.has_focus() else Color.WHITE,
+			0.12
+		)
+	_sync_focus_accent()
+
+
+## Play is the screen's only route into a game.
+##
+## With a choice to make it opens the picker, where every game is shown with a
+## preview of how it plays. With one game available — a standalone build, or a
+## collection whose other games are still locked — a picker would be a screen
+## with a single card on it, so the game starts directly instead. Same reasoning
+## as [method Router.start_selected_game] skipping mode select: do not ask a
+## question that has only one answer.
 func _on_play_pressed() -> void:
-	_launch_game_at(0)
-
-
-func _on_secondary_game_pressed() -> void:
-	_launch_game_at(1)
-
-
-func _on_game_pressed(index: int) -> void:
-	_launch_game_at(index)
-
-
-## Slots map one-to-one onto [method GameCatalog.available], so the menu starts
-## a game without ever naming one.
-func _launch_game_at(index: int) -> void:
-	if _launching_game or index < 0 or index >= _game_ids.size():
+	if _launching_game:
+		return
+	var games := GameCatalog.available()
+	if games.is_empty():
 		return
 	_launching_game = true
 	for button in _menu_buttons:
 		button.disabled = true
-	GameCatalog.select(_game_ids[index])
-	Router.goto(_launch_scene())
 
-
-## Mode select exists to ask a question. A game that declares
-## `supports_multiplayer = false` has only one possible answer, so the screen is
-## skipped rather than shown with a single card on it — the player goes straight
-## to the instructions, exactly where confirming solo would have sent them.
-func _launch_scene() -> String:
-	if GameSession.multiplayer_offered():
-		return play_scene
-	GameSession.configure_single_player()
-	if bool(Settings.get_value("game/show_instructions", true)):
-		return instructions_scene
-	return GameCatalog.current_gameplay_scene_path()
+	if GameCatalog.offers_a_choice():
+		Router.goto(game_select_scene)
+		return
+	GameCatalog.select(games[0].id)
+	Router.start_selected_game(play_scene, instructions_scene)
 
 
 func _on_settings_pressed() -> void:
@@ -397,83 +425,24 @@ func _on_quit_pressed() -> void:
 	Router.quit_game()
 
 
-## The scene ships two game slots: the Play button and one secondary entry.
-## Every further catalogued game gets a slot cloned from that secondary pair, so
-## a three-game collection and a one-game standalone build run identical code
-## and neither requires the framework to know a game by name.
-##
-## Slots are built once, from [method GameCatalog.all] rather than
-## [method GameCatalog.available], because unlocking a game later must only
-## reveal a node — never create one after button motion has been wired up.
-func _build_game_entries() -> void:
-	_game_buttons.clear()
-	_game_requirements.clear()
-	_game_buttons.append(_play_button)
-	_game_buttons.append(_secondary_game_button)
-	_game_requirements.append(null)
-	_game_requirements.append(_secondary_game_requirement)
-
-	var extra := GameCatalog.all().size() - _game_buttons.size()
-	var anchor := _secondary_game_requirement.get_index()
-	for _i in maxi(extra, 0):
-		# Signals are deliberately not duplicated: the scene wires the secondary
-		# button to its own handler, and a clone must not fire that handler.
-		var flags := Node.DUPLICATE_GROUPS | Node.DUPLICATE_SCRIPTS
-		var button := _secondary_game_button.duplicate(flags) as Button
-		var requirement := _secondary_game_requirement.duplicate(flags) as Label
-		# A cloned scene-unique node would collide on its unique name.
-		button.unique_name_in_owner = false
-		requirement.unique_name_in_owner = false
-
-		_buttons.add_child(button)
-		_buttons.add_child(requirement)
-		anchor += 1
-		_buttons.move_child(button, anchor)
-		anchor += 1
-		_buttons.move_child(requirement, anchor)
-
-		button.pressed.connect(_on_game_pressed.bind(_game_buttons.size()))
-		_game_buttons.append(button)
-		_game_requirements.append(requirement)
-
-
-## Maps the available games onto the slots. Re-run whenever progression changes,
-## so unlocking a game reveals its entry without a scene reload.
-func _refresh_game_entries() -> void:
+## Play stays the screen's focus anchor even in the degenerate case of a build
+## with no games at all, so it is disabled rather than hidden. The label stays
+## "Play" either way — both routes end in a round — and the tooltip carries the
+## difference, so the button never promises a picker a standalone build will not
+## show, nor names a game a collection has not chosen yet.
+func _refresh_play_button() -> void:
 	var games := GameCatalog.available()
-	_game_ids = PackedStringArray()
-	for manifest in games:
-		_game_ids.append(manifest.id)
-
-	for index in _game_buttons.size():
-		var button := _game_buttons[index]
-		var requirement := _game_requirements[index]
-		var manifest: GameManifest = games[index] if index < games.size() else null
-
-		if index == 0:
-			# The Play button is the screen's focus anchor, so it stays visible
-			# even in the degenerate case of a build with no games at all.
-			button.disabled = manifest == null
-			continue
-
-		var shown := manifest != null
-		button.visible = shown
-		button.disabled = not shown
-		requirement.visible = shown
-		if not shown:
-			continue
-
-		button.text = manifest.title
-		var modes := AchievementManager.game_unlocked_modes(manifest.id)
-		if modes.is_empty():
-			button.tooltip_text = manifest.tagline
-			requirement.text = "UNLOCKED"
-		else:
-			var mode_summary := " + ".join(modes)
-			button.tooltip_text = "Available: %s." % mode_summary
-			requirement.text = "UNLOCKED  |  %s" % mode_summary
-		requirement.add_theme_color_override("font_color", StudioInfo.SKY)
+	_play_button.disabled = games.is_empty()
+	if games.is_empty():
+		_play_button.tooltip_text = "This build ships no games yet."
+	elif GameCatalog.offers_a_choice():
+		_play_button.tooltip_text = "Choose from %d games." % games.size()
+	else:
+		_play_button.tooltip_text = "Play %s." % games[0].title
+	_play_button.accessibility_description = _play_button.tooltip_text
 
 
+## Unlocking a game turns a direct launch into a choice, so the button's promise
+## has to be rewritten without a scene reload.
 func _on_progression_changed(_key: String, _value: bool) -> void:
-	_refresh_game_entries()
+	_refresh_play_button()

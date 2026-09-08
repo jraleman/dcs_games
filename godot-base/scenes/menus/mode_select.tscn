@@ -72,6 +72,7 @@ layout_mode = 2
 theme_override_constants/separation = 24
 
 [node name="Title" type="Label" parent="Margins/Layout/Header"]
+theme_type_variation = &"MenuHeading"
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
@@ -79,6 +80,7 @@ theme_override_font_sizes/font_size = 56
 text = "Set Up Your Game"
 
 [node name="BackButton" type="Button" parent="Margins/Layout/Header"]
+metadata/ui_sound_handled = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Back"
@@ -167,6 +169,7 @@ theme_override_font_sizes/font_size = 18
 text = "ONE PLAYER"
 
 [node name="Title" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout"]
+theme_type_variation = &"MenuHeading"
 layout_mode = 2
 theme_override_font_sizes/font_size = 38
 text = "Single Player"
@@ -243,6 +246,7 @@ theme_override_font_sizes/font_size = 18
 text = "TWO SIDES"
 
 [node name="Title" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout"]
+theme_type_variation = &"MenuHeading"
 layout_mode = 2
 theme_override_font_sizes/font_size = 38
 text = "Multiplayer"

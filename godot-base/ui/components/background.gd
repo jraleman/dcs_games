@@ -15,6 +15,9 @@ var _motion_speed := 0.0
 
 func _ready() -> void:
 	resized.connect(_update_aspect)
+	var backdrop := GameCatalog.theme().background_material
+	if backdrop != null:
+		material = backdrop
 	if material != null:
 		material = material.duplicate()
 	_apply_theme()
@@ -28,9 +31,7 @@ func _ready() -> void:
 		settings.connect("changed", _on_setting_changed)
 
 
-## Only the three colours change; the glow strength, vignette, speed and grain
-## stay as authored, because they are the framework's feel rather than a
-## game's identity.
+## Custom backdrops share this small uniform contract and the same motion switch.
 func _apply_theme() -> void:
 	var mat := material as ShaderMaterial
 	if mat == null:

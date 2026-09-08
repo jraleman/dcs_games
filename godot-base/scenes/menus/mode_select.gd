@@ -5,6 +5,11 @@ extends MenuScreen
 
 @export_file("*.tscn") var instructions_scene := "res://scenes/menus/instructions.tscn"
 
+## Where Back returns to when the build stopped to ask which game to play. The
+## scene's authored `back_scene` covers the other case, where the player came
+## straight from the title screen because there was nothing to pick.
+@export_file("*.tscn") var game_select_scene := "res://scenes/menus/game_select.tscn"
+
 enum Step { PLAYER_COUNT, CONFIRM }
 
 ## Mode names an unlock rule may gate, matching
@@ -88,6 +93,8 @@ func _ready() -> void:
 	_reduced_motion = Settings.reduced_motion_enabled()
 	first_focus = _single_player_button
 	margins = _margins
+	if GameCatalog.offers_a_choice():
+		back_scene = game_select_scene
 	_select_default_opponent()
 	_populate_cpu_difficulties()
 	_cpu_difficulty.item_selected.connect(_on_cpu_difficulty_selected)
@@ -692,6 +699,8 @@ func _next_scene() -> String:
 
 func go_back() -> void:
 	if _step == Step.CONFIRM:
+		if GameCatalog.theme().ui_sounds != null:
+			AudioManager.play_back()
 		_show_step(Step.PLAYER_COUNT)
 	else:
 		super()

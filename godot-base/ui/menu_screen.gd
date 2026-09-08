@@ -29,7 +29,7 @@ var _closing := false
 
 
 func _ready() -> void:
-	GameCatalog.theme().restyle_tree(self)
+	GameCatalog.theme().restyle_tree(self, true)
 	get_viewport().size_changed.connect(refresh_layout)
 	refresh_layout()
 	# Focus first, then attach sounds, so opening a screen is silent.
