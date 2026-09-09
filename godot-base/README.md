@@ -15,6 +15,7 @@ mobile without changes).
 godot --path .                         # standalone Desk-Can-Saw, also the editor default
 godot --path . -- --game=triangle_rush  # launch a different standalone game
 godot --path . -- --game=dead_metal_jam
+godot --path . -- --game=chicken_pit
 godot --path . -- --game=all            # launch the full collection
 ```
 
@@ -76,8 +77,10 @@ select or instructions.
 | `games/triangle_rush/` | Triangle Rush: manifest, gameplay scene, targets, options, arcade theme and its own tests. |
 | `games/desk_can_saw/` | Desk-Can-Saw: manifest, gameplay scene, cans, chainsaw cursor, unlock rule, workshop theme and its own tests. |
 | `games/dead_metal_jam/` | Dead Metal Jam: manifest, pitch-detection instrument input, encounters, its own intro and theme, and its own tests. |
+| `games/chicken_pit/` | Chicken Pit: a real 3D toy-farm tug-of-war inside the 2D shell, with deterministic pulling, three CPU birds, Timer/Lives rules, original models/audio, and its own regression coverage. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
 | `tools/record_tutorials.ps1` | Records both tutorial clips through Godot's Movie Maker and encodes them to `assets/video/*.ogv` plus poster frames. |
+| `tools/measure_intro_cues.py` | Development-only: finds the pauses in a narration recording and prints the `cue_times` array a card-based intro needs. |
 
 ## Looking right on every screen
 
@@ -112,8 +115,10 @@ space on the other. Layouts are written in those units and adapt at runtime:
   manifest, so they show Triangle Rush's size, speed, final-stretch rush and
   round length in Triangle Rush; the round length, can fall speed, spawn rate,
   desk capacity, chainsaw speed and four rebindable movement keys in
-  Desk-Can-Saw; and the waves per track, timing leniency, wrong-note penalty,
-  note input and the octave and self-test keys in Dead Metal Jam. Options apply
+  Desk-Can-Saw; the waves per track, timing leniency, wrong-note penalty,
+  note input and the octave and self-test keys in Dead Metal Jam; and the round
+  length, rope length, pull power, strength decay, CPU opponent and six
+  rebindable pull keys in Chicken Pit. Options apply
   from the next round and stack with the Gameplay assists (size and speed
   multiply, extra time is added on top), so they can make a game harder as well
   as easier.
@@ -302,14 +307,36 @@ that directory at startup, so **no framework file needs to change** to add one.
      round being played.
    - `control_bindings` — rebindable keyboard controls, rendered on the in-game
      *Controls* tab. Give each one a unique `controls/name` key, a `default`
-     keycode, an `action` the framework keeps in sync with the `InputMap`, and
-     a `title`. Mark the ones that steer the player with `"movement": true` so
-     menus can name them through `Settings.movement_summary_for_game()` instead
-     of assuming arrow keys. A game that declares none inherits the built-in
-     bindings for its `control_style`. Conflicts are only conflicts inside one
-     game, so two games may use the same key.
-   - `control_style` — `targets` or `direct_movement`; the shared menus adapt
-     their control explanations instead of branching on a game name.
+     keycode and a `title`; an optional `action` is kept in sync with the
+     `InputMap`. Set `"player": 0` for P1, `1` for P2, or `-1` (the default)
+     for a shared action. Mark the ones that steer the player with
+     `"movement": true` so menus can name them through
+     `Settings.movement_summary_for_game()` instead of assuming arrow keys.
+     A game that declares none inherits the built-in bindings, if any, for its
+     `control_style`. Conflicts are only conflicts inside one game, so two games
+     may use the same key.
+   - `control_style` — `CONTROL_STYLE_TARGETS` (`targets`) for highlighted-target
+     inputs, `CONTROL_STYLE_DIRECT_MOVEMENT` (`direct_movement`) for cursor
+     steering, or `CONTROL_STYLE_CUSTOM_KEYS` (`custom_keys`) for a game's own
+     declared action keys. These are `GameManifest` constants, not game names.
+     Custom-key games declare `control_bindings`; there are no inherited target,
+     mouse or gamepad gameplay actions. Both players' menu hints use their
+     current keys, including shared actions and bindings without a `movement` flag.
+     Supply `instructions_player_one_controls` and
+     `instructions_player_two_controls` in `copy` for action explanations, not
+     literal default keys: the instructions append each action title and its
+     live binding in solo and versus. Missing control copy falls back to
+     `player_one_control_description` / `player_two_control_description`.
+   - `supports_multiplayer`, `supports_cpu_opponent` — whether a second seat
+     and a CPU opponent are offered. Direct movement keeps its two-human setup;
+     custom keys can offer either a human or the CPU. A custom-key game's CPU
+     tuning belongs in its own `tunables`, read by the game from `Settings`;
+     the shared target-game difficulty picker is hidden. Use
+     `cpu_opponent_description`, `instructions_cpu_summary` and
+     `instructions_cpu_controls` in `copy` to explain that opponent. CPU
+     instructions otherwise use the solo summary and generic automatic-play
+     wording. A CPU is a multiplayer session with an automatic second seat,
+     not `GameSession.is_single_player()`.
    - `default_lives_mode` — defaults new rounds to lives when no round-mode
      preference has been saved; omitted means Timer.
    - `unlock_rule` + `hidden_until_unlocked` — gate the game behind progress in
@@ -340,6 +367,67 @@ thumbnail is the same `tutorial_video_path` clip the instructions screen uses,
 falling back to `tutorial_poster_path` and then to a labelled placeholder, so a
 game with no recording yet still gets a card of the right shape.
 
+### Chicken Pit — 3D inside the shared shell
+
+`games/chicken_pit/` hosts a bright, vertex-painted toy farm in an isolated
+`SubViewportContainer` under `%Playfield`. The HUD, pause, results, stats and
+share flow remain the ordinary 2D `GameShell`; the framework does not need
+a 3D-specific shell or a different renderer.
+
+`pit/pit_state.gd` is a node-free model: alternating pull actions build
+strength, exponential decay drains it, and analytically integrated strength
+differences move the knot. Timer matches bank ground held; Lives matches
+re-centre after each pin and finish when either coop loses its last life.
+The game specializes the shell's active-seat and elimination hooks for that
+duel rule instead of changing the shared life pool. CPU birds use the same
+pull path as humans, including its hard rate ceiling.
+
+`pit/pit_view.gd` reads that state to animate twelve rigid-part chickens,
+the rope, camera, crowd and pooled particles. Original mesh sources and
+offline-authored WAV audio live with the game. Reduced motion parks the camera
+and straightens the rope; the view is inert-safe headless. The menus retain
+their warm dusk theme while the pit is deliberately sunny.
+
+The manifest uses `CONTROL_STYLE_CUSTOM_KEYS`: its own rebindable action
+clusters, a selectable CPU, and live keyboard instructions instead of
+mouse/target prompts. See the game's `DESIGN.md`, `AGENTS.md` and regression
+scripts for the model/view contract and authoring commands. Its earlier
+React/Three.js prototype is no longer kept in a `web` folder.
+
+The opening preserves the old prototype's `IntroScene`: the same recording
+(`assets/intro-narration.mp3`) and the same words. The web build crawled them
+past in one block; here they are cards that fade from one to the next, like
+`scenes/boot/intro.tscn` and Dead Metal Jam's opening, so all three openings in
+the project read as the same product.
+
+The cards are timed **to the recording, not to a guess**. Each entry in
+`cue_times` is an offset into the clip taken from the middle of one of its own
+pauses, so a card never turns over mid-word, and no card is up for less than
+`MIN_CARD_SECONDS`. `tools/measure_intro_cues.py` is what produced them:
+
+```bash
+python tools/measure_intro_cues.py games/chicken_pit/assets/intro-narration.mp3 cards.txt
+```
+
+It decodes the audio with ffmpeg, finds every pause, and fits one card per line
+of `cards.txt` to them — merging the shortest neighbours when the recording
+leaves no room to read them, which is why eleven cards carry twelve sentences.
+The cues belong to *that* recording: replace the clip and re-run the tool, which
+is what `chicken_pit_intro_test.gd` is checking when it asserts every cue still
+fits inside the stream. If `cards` and `cue_times` ever fall out of step,
+`_build_cues()` warns and spaces the cards evenly rather than dropping any — a
+transcript that skips a line is worse than one that is slightly out of time.
+
+The web build also looped a 45-second clip under a 50-second animation, so the
+narration restarted over its own last lines; the total runtime here is read
+from `narration.get_length()`. And the browser needed a *Start Game!* button to
+satisfy its autoplay policy, which Godot does not.
+
+The cards are the narration's transcript, which is what makes a 45-second
+voice-over acceptable: the story is never sound-only, and it survives the music
+bus being turned down. The transition is a cross-fade, so reduced motion keeps
+every card and every cue and only drops the small scale-in.
+
 ## Shipping one game on its own
 
 The same project produces the collection build *and* a standalone build of any
@@ -359,6 +447,7 @@ the project setting:
 godot --path . -- --game=dead_metal_jam    # one run, one game
 godot --path . -- --game=triangle_rush
 godot --path . -- --game=desk_can_saw
+godot --path . -- --game=chicken_pit
 DCS_GAME=dead_metal_jam godot --path .     # same, for launchers that cannot pass args
 godot --path . -- --game=all              # override the default pin with the collection
 ```
@@ -408,6 +497,23 @@ and *Game* tabs, credits, the pause overlay, achievements and share cards.
 
 An intro is a plain `Control` scene. It must stay skippable (`skip` and
 `ui_cancel`) and hand over with `Router.goto(next_scene)` when it ends.
+
+Two games declare one, and they are worth reading as a pair. Dead Metal Jam's
+is a **staged demonstration** — the game's own actors walk out and are shot
+with notes, so the opening teaches the verb before the menu appears. Chicken
+Pit's is **narrated** — a recording plays while its transcript turns over in
+cards timed to the recording's own pauses, so the opening tells the player
+where the name came from. Both run their cards off a cue list stepped in
+`_process` rather than a chained tween, which is what lets a headless test
+drive the timeline; both keep a progress bar so the player can see the end
+coming; both respect reduced motion; and both clear their own music in
+`_finish()` (`AudioManager.stop_music()`), because the main menu's track is
+optional and an opening that does not tidy up runs on underneath it.
+
+If an opening carries speech, put the words on screen as well. Chicken Pit's
+cards *are* the narration's transcript, which is what keeps a 45-second
+voice-over from being sound-only — and it means the story still lands with the
+music bus at zero.
 Dead Metal Jam's — `games/dead_metal_jam/intro.gd` — is worth copying: it walks
 the game's real `RustyClanky` actors across a stage so the opening cannot drift
 away from the game, synthesises its own audio rather than adding sounds to
@@ -495,7 +601,7 @@ Keep these resources in the game's folder. Dead Metal Jam provides an example
 with original SVG plates, a condensed variation of Godot's built-in font and
 in-engine synthesized menu cues. No external fonts or sound downloads are needed.
 
-All three games declare their own standalone look, selected automatically by
+All four games declare their own standalone look, selected automatically by
 `--game=<id>` or the corresponding standalone export preset:
 
 | Game | Standalone presentation |
@@ -503,6 +609,7 @@ All three games declare their own standalone look, selected automatically by
 | Triangle Rush | Mint neon over midnight blue, a rushing-triangle logo, chamfered buttons and panels, triangular toggles, a geometric backdrop and an etched plaque. Keeps the springy arcade menu motion. |
 | Desk-Can-Saw | Safety yellow over warm wood and dark steel, a saw-and-can logo, raised workbench controls, mechanical toggles, pegboard and wood-grain scenery, and a timber plaque. Uses firm menu motion. |
 | Dead Metal Jam | Amber stage lights over cold steel, textured metal plates, condensed headings and mechanical menu cues. Uses firm menu motion. |
+| Chicken Pit | Straw and evening barn light over churned dirt, with a barn-red highlight and a chicken silhouette. Colours only so far — no menu skin or materials yet. Keeps the springy menu motion. |
 
 Triangle Rush and Desk-Can-Saw keep their visual resources under their own
 `assets/` and `ui/` folders, with partial widget skins in `ui/menu_skin.tres`.
@@ -535,11 +642,11 @@ A game that declares no theme, and every collection build, gets
 `GameTheme.studio_default()`: the exact values the shared scenes are authored
 with, so nothing moves.
 
-That makes a standalone release **export configuration only**. All three games
+That makes a standalone release **export configuration only**. All four games
 already have a preset — *Windows — Triangle Rush / Desk-Can-Saw / Dead Metal Jam
-(standalone)* — each pinned by its own feature tag, spelled as the initials of
-the game's id (`tr`, `dcs`, `dmj`). A preset carries the tag and drops the other
-games:
+/ Chicken Pit (standalone)* — each pinned by its own feature tag, spelled as the
+initials of the game's id (`tr`, `dcs`, `dmj`, `cp`). A preset carries the tag
+and drops the other games:
 
 ```ini
 custom_features="dmj"
@@ -586,6 +693,8 @@ per-machine settings.
 | `slice_move_up/down/left/right` | Remappable; defaults to the arrow keys |
 | `dmj_octave_down` / `dmj_octave_up` | Remappable; defaults to Z and X |
 | `dmj_self_test` | Remappable; defaults to F2 |
+| `pit_pull_one_a/b/c` | Remappable; defaults to Q, W and E |
+| `pit_pull_two_a/b/c` | Remappable; defaults to I, O and P |
 | `ui_accept` / `ui_cancel` | Godot defaults (menu navigation and back) |
 
 Gameplay keys can be changed under **Settings → Controls** — which only exists
@@ -595,7 +704,8 @@ bindings within that game. Two different games may use the same key, since only
 one of them is ever running. A game with no `control_bindings` of its own
 inherits the built-in set for its `control_style`, which is where Triangle Rush's
 six target keys come from. Desk-Can-Saw declares four movement keys (the arrow
-keys by default) and Dead Metal Jam declares its octave and self-test keys.
+keys by default), Dead Metal Jam declares its octave and self-test keys, and
+Chicken Pit declares three pull keys per coop.
 Controller 1 controls Player 1 and Controller 2 controls Player 2. In Target
 Rush they share three remappable target buttons (A, B and X by default).
 Controller pause is remappable too; target and pause buttons remain unique, so
@@ -642,13 +752,17 @@ seats with a `PlayerAvatar` portrait placeholder plus a **HUMAN**/**CPU** role.
 The Player 2 seat is picked with an explicit two-option control —
 **A Second Player** or **The CPU** — rather than an unlabelled switch. The armed
 option carries a tick in its own label so the answer survives a greyscale screen,
-a sentence underneath restates the choice in plain words, and the CPU difficulty
-row lives inside the same card because it only applies to one of the two answers.
-Multiplayer defaults to the CPU so a lone player can start without finding a
-second person first. CPU opponents offer Easy
+a sentence underneath restates the choice in plain words, and the target-game
+CPU difficulty row lives inside the same card because it only applies to one
+of the two answers. Multiplayer defaults to the CPU when the manifest offers
+one, so a lone player can start without finding a second person first.
+Target-game CPU opponents offer Easy
 (Baby seed), Medium (Hard seed) and Hard (Impossible seed) profiles, which adjust
-reaction time and accuracy. Games steered directly rather than by target keys
-share one screen between two humans, so they hide the selector entirely. The
+reaction time and accuracy. Custom-key games retain the human/CPU selector but
+describe their own opponent and configure it through their declared Game
+settings, without implying those target presets apply. Direct-movement games
+share one screen between two humans; they and games with
+`supports_cpu_opponent = false` hide the selector entirely. The
 confirmation body scrolls, so the step survives portrait phones and the taller
 CPU layout. Android and iOS builds expose single-player mode
 only.
@@ -727,8 +841,11 @@ godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_s
 godot --headless --path . --script res://tests/visual_effects_test.gd -- --game=all
 godot --headless --path . --script res://tests/accessibility_test.gd -- --game=all
 godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd -- --game=all
+godot --headless --path . --script res://games/chicken_pit/tests/chicken_pit_options_test.gd -- --game=all
+godot --headless --path . --script res://games/chicken_pit/tests/chicken_pit_intro_test.gd -- --game=all
 godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
 godot --headless --path . --script res://tests/instructions_video_test.gd -- --game=all
+godot --headless --path . --script res://tests/custom_keys_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
 godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_options_test.gd -- --game=all
@@ -738,8 +855,10 @@ godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
 
 Run the suite against the full collection with `--game=all`: several checks
 assert values that specific games declare, so they cannot pass in a standalone
-run. `single_game_test.gd` is the exception — it passes in both, so a
-standalone build can still verify its own path. It also exercises each declared
+run. `custom_keys_test.gd` uses an in-memory manifest to check CPU selection,
+rebound action hints and style-specific controller rows without saving settings;
+it also supports standalone launches. `single_game_test.gd` passes in both,
+so a standalone build can still verify its own path. It exercises each declared
 theme on the real title screen: logo tint, widget skin, flat-button text contrast,
 plaque materials, backdrop aspect correction and the reduced-motion switch.
 

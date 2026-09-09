@@ -82,6 +82,7 @@ func _ready() -> void:
 	_show_again.button_pressed = bool(Settings.get_value("game/show_instructions", true))
 	_show_again.toggled.connect(_on_show_again_toggled)
 	GameSession.gamepad_availability_changed.connect(_on_gamepad_availability_changed)
+	Settings.changed.connect(_on_setting_changed)
 	_play_entrance.call_deferred()
 	super()
 
@@ -89,6 +90,15 @@ func _ready() -> void:
 ## The control cards only list pad bindings while a pad is attached.
 func _on_gamepad_availability_changed(_available: bool) -> void:
 	_populate_instructions()
+
+
+func _on_setting_changed(key: String, _value: Variant) -> void:
+	if not _uses_custom_keys():
+		return
+	for binding: Dictionary in Settings.control_bindings_for_game(GameCatalog.current_id()):
+		if str(binding["key"]) == key:
+			_populate_instructions()
+			return
 
 
 func _process(_delta: float) -> void:
@@ -116,6 +126,10 @@ func _on_layout_changed(size: Vector2) -> void:
 
 func _populate_instructions() -> void:
 	_configure_avatars()
+	if _uses_custom_keys():
+		_populate_custom_keys_instructions()
+		_append_round_mode_note()
+		return
 	if _uses_direct_movement():
 		_populate_direct_movement_instructions()
 		_append_round_mode_note()
@@ -257,6 +271,68 @@ func _populate_direct_movement_instructions() -> void:
 		)
 
 
+## Action descriptions come from the game; key names always come from the
+## current bindings. A custom-key style implies no mouse or controller actions.
+func _populate_custom_keys_instructions() -> void:
+	var single_player := GameSession.is_single_player()
+	var cpu := GameSession.player_two_is_cpu()
+	var mode := (
+		"Single Player" if single_player
+		else "Multiplayer vs CPU" if cpu
+		else "Local Multiplayer"
+	)
+	_mode_label.text = "%s · %s" % [_current_game_title().to_upper(), mode.to_upper()]
+	_headline.text = _game_text("instructions_headline", "Play using your action keys")
+	_rules.text = _game_text(
+		"instructions_rules", "Rebind action keys in Settings → Controls  ·  Esc pauses"
+	)
+	_demo_prompt.text = _game_text("instructions_demo_prompt", "USE YOUR ACTION KEYS")
+	_player_one_controls.text = _custom_key_controls(0)
+	_opponent_card.visible = not single_player
+	if single_player:
+		_summary.text = _game_text(
+			"instructions_solo_summary", "Play using Player 1's action keys."
+		)
+	elif cpu:
+		_summary.text = _game_text(
+			"instructions_cpu_summary",
+			_game_text(
+				"instructions_solo_summary",
+				"You control Player 1. The CPU plays as Player 2."
+			)
+		)
+		_opponent_title.text = "CPU OPPONENT"
+		_opponent_controls.text = _game_text(
+			"instructions_cpu_controls",
+			_game_text(
+				"cpu_opponent_description",
+				"Player 2 plays automatically using this game's CPU opponent."
+			)
+		)
+	else:
+		_summary.text = _game_text(
+			"instructions_versus_summary",
+			"Both players share this device using their own action keys."
+		)
+		_opponent_title.text = "PLAYER 2"
+		_opponent_controls.text = _custom_key_controls(1)
+
+
+func _custom_key_controls(player_index: int) -> String:
+	var player := "one" if player_index == 0 else "two"
+	var lines := PackedStringArray([_game_text(
+		"instructions_player_%s_controls" % player,
+		_game_text("player_%s_control_description" % player, "Use the action keys below.")
+	)])
+	for binding: Dictionary in Settings.control_bindings_for_game(GameCatalog.current_id()):
+		var binding_player := int(binding.get("player", -1))
+		if binding_player >= 0 and binding_player != player_index:
+			continue
+		var key := str(binding["key"])
+		lines.append("%s: %s" % [Settings.binding_title(key), Settings.binding_key_label(key)])
+	return "\n".join(lines)
+
+
 ## One control card for a direct-movement game: the keyboard/mouse line, plus
 ## a pad line only while a pad is actually connected.
 func _direct_movement_controls(keyboard_line: String, controller_number: int) -> String:
@@ -328,6 +404,14 @@ func _uses_direct_movement() -> bool:
 	return (
 		manifest != null
 		and manifest.control_style == GameManifest.CONTROL_STYLE_DIRECT_MOVEMENT
+	)
+
+
+func _uses_custom_keys() -> bool:
+	var manifest := GameCatalog.current()
+	return (
+		manifest != null
+		and manifest.control_style == GameManifest.CONTROL_STYLE_CUSTOM_KEYS
 	)
 
 

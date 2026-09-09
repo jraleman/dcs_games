@@ -105,6 +105,7 @@ func _ready() -> void:
 	_update_confirmation()
 	_update_selection_state()
 	GameSession.gamepad_availability_changed.connect(_on_gamepad_availability_changed)
+	Settings.changed.connect(_on_setting_changed)
 	super()
 
 
@@ -112,6 +113,15 @@ func _ready() -> void:
 func _on_gamepad_availability_changed(_available: bool) -> void:
 	_update_control_copy()
 	_update_confirmation()
+
+
+func _on_setting_changed(key: String, _value: Variant) -> void:
+	if not _uses_custom_keys():
+		return
+	for binding: Dictionary in Settings.control_bindings_for_game(GameCatalog.current_id()):
+		if str(binding["key"]) == key:
+			_update_confirmation()
+			return
 
 
 func _on_layout_changed(size: Vector2) -> void:
@@ -149,17 +159,24 @@ func _on_multiplayer_pressed() -> void:
 	_show_step(Step.CONFIRM)
 
 
-## Games steered directly share one screen between two humans, so they have no
-## CPU rival to offer; everything else defaults to the CPU so a lone player can
-## start a match without finding a second person first.
+## Direct movement keeps its two-human setup. Other styles offer a CPU only
+## when the game declares one, defaulting to it so a lone player can start.
 func _select_default_opponent() -> void:
-	var cpu_default := not _uses_direct_movement()
+	var cpu_default := _cpu_opponent_offered()
 	_cpu_option_button.set_pressed_no_signal(cpu_default)
 	_human_option_button.set_pressed_no_signal(not cpu_default)
 
 
+func _cpu_opponent_offered() -> bool:
+	return (
+		not _uses_direct_movement()
+		and GameSession.multiplayer_offered()
+		and GameSession.cpu_opponent_available()
+	)
+
+
 func _cpu_selected() -> bool:
-	return _cpu_option_button.button_pressed and not _uses_direct_movement()
+	return _cpu_option_button.button_pressed and _cpu_opponent_offered()
 
 
 func _on_opponent_option_pressed() -> void:
@@ -194,9 +211,9 @@ func _update_selection_state() -> void:
 
 	_single_player_roster.text = "Player 1 plays alone"
 	_multiplayer_roster.text = (
-		"Player 1 vs Player 2"
-		if _uses_direct_movement()
-		else "Player 2 is a human or the CPU"
+		"Player 2 is a human or the CPU"
+		if _cpu_opponent_offered()
+		else "Player 1 vs Player 2"
 	)
 	_multiplayer_player_two_chip.text = _player_two_short_name()
 	_selection_summary.visible = _mode_chosen
@@ -222,6 +239,8 @@ func _player_two_short_name() -> String:
 
 
 func _player_two_long_name() -> String:
+	if _cpu_selected() and _uses_custom_keys():
+		return "the CPU"
 	return (
 		"a %s CPU" % GameSession.cpu_difficulty_title(_selected_cpu_difficulty()).to_lower()
 		if _cpu_selected()
@@ -254,13 +273,10 @@ func _update_confirmation() -> void:
 	var direct_movement := _uses_direct_movement()
 	_update_control_copy()
 	_opponent_control.visible = not single_player
-	_opponent_selector.visible = not single_player and not direct_movement
-	var cpu_selected := (
-		not single_player
-		and not direct_movement
-		and _cpu_option_button.button_pressed
-	)
-	_cpu_difficulty_panel.visible = cpu_selected
+	_opponent_selector.visible = not single_player and _cpu_opponent_offered()
+	_cpu_option_button.disabled = not _cpu_opponent_offered()
+	var cpu_selected := not single_player and _cpu_selected()
+	_cpu_difficulty_panel.visible = cpu_selected and not _uses_custom_keys()
 	# Both seats are named and labelled, so the roster never depends on colour.
 	_player_one_role.text = "HUMAN"
 	_player_one_avatar.configure(
@@ -279,6 +295,8 @@ func _update_confirmation() -> void:
 
 	if direct_movement:
 		_update_direct_movement_confirmation(single_player)
+	elif _uses_custom_keys():
+		_update_custom_keys_confirmation(single_player)
 	elif single_player:
 		_mode_eyebrow.text = "SINGLE PLAYER"
 		_confirm_title.text = "Ready for a solo run?"
@@ -300,10 +318,16 @@ func _update_confirmation() -> void:
 		var profile := GameSession.cpu_profile(difficulty)
 		var gamepad := GameSession.gamepad_connected()
 		_mode_eyebrow.text = "MULTIPLAYER"
-		_confirm_title.text = "Choose Player 2"
+		_confirm_title.text = (
+			"Choose Player 2" if _cpu_opponent_offered() else "Two players, one screen"
+		)
 		_confirm_description.text = (
-			"Race the CPU by default, or switch to a human player using the keyboard"
-			+ (" or a second controller." if gamepad else ".")
+			(
+				"Race the CPU by default, or switch to a human player using the keyboard"
+				+ (" or a second controller." if gamepad else ".")
+			)
+			if _cpu_opponent_offered()
+			else "Both players play together using their own bindings."
 		)
 		_opponent_control_title.text = (
 			"CPU OPPONENT · %s" % GameSession.cpu_difficulty_title(difficulty).to_upper()
@@ -344,6 +368,49 @@ func _update_confirmation() -> void:
 	if not direct_movement:
 		_update_opponent_options()
 	_on_layout_changed(viewport_size())
+
+
+func _update_custom_keys_confirmation(single_player: bool) -> void:
+	var cpu := not single_player and _cpu_selected()
+	var mode := (
+		"SINGLE PLAYER" if single_player
+		else "MULTIPLAYER VS CPU" if cpu
+		else "LOCAL MULTIPLAYER"
+	)
+	_mode_eyebrow.text = "%s · %s" % [GameCatalog.current_title().to_upper(), mode]
+	_confirm_title.text = _game_text(
+		"solo_confirm_title" if single_player or cpu else "versus_confirm_title",
+		"Ready to play?" if single_player or cpu else "Two players, one screen"
+	)
+	_confirm_description.text = _game_text(
+		"solo_confirm_description" if single_player or cpu else "versus_confirm_description",
+		"Use your action keys to play. Each player has their own bindings."
+	)
+	_confirm_hint.text = "Player 1: %s" % _custom_key_summary(0)
+	if single_player:
+		_confirm_button.text = "Start Single Player"
+		return
+
+	_opponent_control_title.text = "CPU OPPONENT" if cpu else "PLAYER 2"
+	_opponent_control_keys.text = (
+		"AUTOMATIC" if cpu else "KEYS %s" % _custom_key_summary(1)
+	)
+	_opponent_control_description.text = (
+		_custom_cpu_description()
+		if cpu
+		else _game_text("player_two_control_description", "Use Player 2's action keys.")
+	)
+	_confirm_hint.text += (
+		"  |  Player 2: automatic" if cpu else "  |  Player 2: %s" % _custom_key_summary(1)
+	)
+	_confirm_button.text = "Start vs CPU" if cpu else "Start Local Multiplayer"
+
+
+func _custom_cpu_description() -> String:
+	return _game_text(
+		"cpu_opponent_description",
+		"Player 2 plays automatically using this game's CPU opponent."
+	)
 
 
 func _update_direct_movement_confirmation(single_player: bool) -> void:
@@ -401,6 +468,8 @@ func _game_text(key: String, fallback: String) -> String:
 
 func _populate_cpu_difficulties() -> void:
 	_cpu_difficulty.clear()
+	if _uses_custom_keys():
+		return
 	for difficulty: int in GameSession.CPU_DIFFICULTIES:
 		_cpu_difficulty.add_item(GameSession.cpu_option_title(difficulty), difficulty)
 	var selected_index := _cpu_difficulty.get_item_index(GameSession.cpu_difficulty)
@@ -440,6 +509,9 @@ func _configure_platform_options() -> void:
 	if platform_multiplayer_available:
 		return
 	_selection_intro.text = "Mobile play is available in single-player mode."
+	if _uses_custom_keys():
+		_selection_hint.text = "Use your action keys. Rebind them in Settings → Controls."
+		return
 	_selection_hint.text = (
 		"Use touch, your remapped keys or a connected controller."
 		if GameSession.gamepad_connected()
@@ -453,6 +525,14 @@ func _uses_direct_movement() -> bool:
 	return (
 		manifest != null
 		and manifest.control_style == GameManifest.CONTROL_STYLE_DIRECT_MOVEMENT
+	)
+
+
+func _uses_custom_keys() -> bool:
+	var manifest := GameCatalog.current()
+	return (
+		manifest != null
+		and manifest.control_style == GameManifest.CONTROL_STYLE_CUSTOM_KEYS
 	)
 
 
@@ -505,6 +585,20 @@ func _configure_game_copy() -> void:
 	if manifest == null:
 		return
 	_screen_title.text = manifest.title
+	if _uses_custom_keys():
+		_selection_intro.text = manifest.text("mode_select_intro", _selection_intro.text)
+		_single_player_description.text = "Play using Player 1's action keys."
+		_multiplayer_description.text = (
+			"Face the CPU or share this device using each player's action keys."
+			if _cpu_opponent_offered()
+			else "Share this device using each player's action keys."
+		)
+		_player_one_control_description.text = "Use Player 1's action keys."
+		_selection_hint.text = manifest.text(
+			"mode_select_hint", "You will confirm each player's action keys next."
+		)
+	elif not _uses_direct_movement() and not _cpu_opponent_offered():
+		_multiplayer_description.text = "Share this device with Player 2."
 	_single_player_description.text = manifest.text(
 		"single_player_description", _single_player_description.text
 	)
@@ -518,6 +612,15 @@ func _configure_game_copy() -> void:
 
 func _update_control_copy() -> void:
 	var gamepad := GameSession.gamepad_connected()
+	if _uses_custom_keys():
+		var custom_one_keys := _custom_key_summary(0, "  ")
+		var custom_two_keys := _custom_key_summary(1, "  ")
+		_single_player_controls.text = "PLAYER 1 · KEYS %s" % custom_one_keys
+		_multiplayer_controls.text = "P1 · %s     P2 · %s" % [
+			custom_one_keys, custom_two_keys,
+		]
+		_player_one_control_keys.text = "KEYS %s" % _custom_key_summary(0)
+		return
 	if _uses_direct_movement():
 		var movement_copy := Settings.controller_movement_scheme_label().to_upper()
 		# Truthful after a rebind: the game's own movement keys when it has
@@ -573,6 +676,18 @@ func _update_control_copy() -> void:
 	)
 
 
+## Includes shared bindings on both cards, without assuming an InputMap action
+## or a movement flag: custom games can declare any kind of keyboard action.
+func _custom_key_summary(player_index: int, separator := " · ") -> String:
+	var labels := PackedStringArray()
+	for binding: Dictionary in Settings.control_bindings_for_game(GameCatalog.current_id()):
+		var player := int(binding.get("player", -1))
+		if player >= 0 and player != player_index:
+			continue
+		labels.append(Settings.binding_key_label(str(binding["key"])))
+	return separator.join(labels) if not labels.is_empty() else "No action keys declared"
+
+
 func _target_pad_copy() -> String:
 	return (
 		"any mapped button (%s)" % Settings.controller_target_summary(", ")
@@ -582,13 +697,16 @@ func _target_pad_copy() -> String:
 
 
 func _selected_cpu_difficulty() -> int:
+	# This style's opponent belongs to the game, not the shared target presets.
+	if _uses_custom_keys():
+		return GameSession.cpu_difficulty
 	return _cpu_difficulty.get_selected_id()
 
 
 ## Marks the armed opponent with a tick and spells the choice out underneath, so
 ## the selection never rests on the pressed-button styling alone.
 func _update_opponent_options() -> void:
-	var cpu_selected := _cpu_option_button.button_pressed
+	var cpu_selected := _cpu_selected()
 	_human_option_button.text = (
 		"A Second Player" if cpu_selected else "✔  A Second Player"
 	)
@@ -597,12 +715,18 @@ func _update_opponent_options() -> void:
 		"Player 2 shares this device and plays with the Player 2 bindings."
 	)
 	_cpu_option_button.tooltip_text = (
-		"Player 2 is played automatically at the difficulty chosen below."
+		_custom_cpu_description()
+		if _uses_custom_keys()
+		else "Player 2 is played automatically at the difficulty chosen below."
 	)
 	_human_option_button.accessibility_description = _human_option_button.tooltip_text
 	_cpu_option_button.accessibility_description = _cpu_option_button.tooltip_text
 	_opponent_choice_hint.text = (
-		"Player 2 is driven by the CPU. Pick its difficulty below."
+		(
+			_custom_cpu_description()
+			if _uses_custom_keys()
+			else "Player 2 is driven by the CPU. Pick its difficulty below."
+		)
 		if cpu_selected
 		else "Player 2 is a person sharing this device with you."
 	)
@@ -659,7 +783,7 @@ func _focus_current_step() -> void:
 			first_focus.grab_focus()
 	elif (
 		_pending_mode == GameSession.GameMode.MULTIPLAYER
-		and not _uses_direct_movement()
+		and _cpu_opponent_offered()
 	):
 		# Land on the armed option so the current answer is obvious before the
 		# player starts arrowing between them.

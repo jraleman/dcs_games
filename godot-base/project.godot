@@ -26,6 +26,8 @@ config/name.tr="Triangle Rush"
 config/custom_user_dir_name.tr="DeskCanSaw Games/Target Rush"
 config/name.dcs="Desk-Can-Saw"
 config/custom_user_dir_name.dcs="DeskCanSaw Games/Desk-Can-Saw"
+config/name.cp="Chicken Pit"
+config/custom_user_dir_name.cp="DeskCanSaw Games/Chicken Pit"
 
 [audio]
 
@@ -47,6 +49,7 @@ build/single_game_id.collection=""
 build/single_game_id.dmj="dead_metal_jam"
 build/single_game_id.tr="triangle_rush"
 build/single_game_id.dcs="desk_can_saw"
+build/single_game_id.cp="chicken_pit"
 
 [display]
 
@@ -128,3 +131,4 @@ environment/defaults/default_clear_color=Color(0.054902, 0.082353, 0.098039, 1)
 
 stats_urls/triangle_rush="https://deskcansaw.com/stats/tr"
 stats_urls/desk_can_saw="https://deskcansaw.com/stats/dcs"
+stats_urls/chicken_pit="https://deskcansaw.com/stats/cp"

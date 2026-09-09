@@ -111,7 +111,7 @@ func _ready() -> void:
 	_connect_ui()
 	_configure_setting_help()
 	_sync_from_settings()
-	_configure_gamepad_rows()
+	_configure_gamepad_rows(GameSession.gamepad_connected())
 	Settings.changed.connect(_on_setting_changed)
 	GameSession.gamepad_availability_changed.connect(_on_gamepad_availability_changed)
 	super()
@@ -149,7 +149,6 @@ func _build_game_tabs() -> void:
 	_build_option_rows(manifest)
 	_build_binding_rows(manifest)
 	_configure_style_rows(manifest)
-	_configure_controller_rows(manifest)
 
 
 ## The tab page owning a list entry: `Tabs/<Page>/Pad/List/<node>`.
@@ -308,16 +307,21 @@ func _configure_style_rows(manifest: GameManifest) -> void:
 
 ## Controller rows describe one control style at a time: target buttons mean
 ## nothing to a game you steer, and a movement scheme means nothing to a game
-## played by pressing target keys.
-func _configure_controller_rows(manifest: GameManifest) -> void:
+## played by pressing target keys. Custom action keys imply neither.
+func _configure_controller_rows(manifest: GameManifest, connected: bool) -> void:
 	var targets := manifest.control_style == GameManifest.CONTROL_STYLE_TARGETS
 	for setting_key: String in Settings.CONTROLLER_TARGET_KEYS:
 		var row := (_controller_buttons[setting_key] as Control).get_parent() as Control
 		if row != null:
-			row.visible = targets
+			row.visible = connected and targets
 	var movement_row := _controller_movement_scheme.get_parent() as Control
 	if movement_row != null:
-		movement_row.visible = not targets
+		movement_row.visible = (
+			connected and manifest.control_style == GameManifest.CONTROL_STYLE_DIRECT_MOVEMENT
+		)
+	if manifest.control_style == GameManifest.CONTROL_STYLE_CUSTOM_KEYS:
+		(_controller_speed.get_parent() as Control).hide()
+		(_controller_deadzone.get_parent() as Control).hide()
 
 
 func _populate_options() -> void:
@@ -537,8 +541,7 @@ func _sync_game_options() -> void:
 ## the whole section collapses to a single note until one is connected. This
 ## re-runs on hot-plug, so a controller can be attached without leaving the
 ## screen.
-func _configure_gamepad_rows() -> void:
-	var connected := GameSession.gamepad_connected()
+func _configure_gamepad_rows(connected: bool) -> void:
 	var pad_controls: Array[Control] = [
 		_controller_movement_scheme,
 		_controller_speed,
@@ -551,16 +554,27 @@ func _configure_gamepad_rows() -> void:
 		if row != null:
 			row.visible = connected
 
+	var manifest := (
+		GameCatalog.get_manifest(game_context_id)
+		if not game_context_id.is_empty()
+		else null
+	)
+	if manifest != null:
+		_configure_controller_rows(manifest, connected)
+	var custom_keys := (
+		manifest != null
+		and manifest.control_style == GameManifest.CONTROL_STYLE_CUSTOM_KEYS
+	)
 	_controller_hint.visible = not connected
 	_binding_status.text = (
 		"Controller 1 controls Player 1 and Controller 2 controls Player 2."
-		if connected
+		if connected and not custom_keys
 		else "Rebind a key by selecting it and pressing the new key."
 	)
 
 
-func _on_gamepad_availability_changed(_available: bool) -> void:
-	_configure_gamepad_rows()
+func _on_gamepad_availability_changed(available: bool) -> void:
+	_configure_gamepad_rows(available)
 
 
 ## Pushes the stored values into the widgets without echoing them back.

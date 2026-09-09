@@ -9,13 +9,23 @@ plus the games built on it. The base ships everything a game needs *before* it
 is a game: studio sting, intro, main menu, persistent settings, credits, pause
 overlay, achievements, responsive UI, share-image generation and audio.
 
-Three games currently live in it:
+Four games currently live in it:
 
 | Game | ID | Folder |
 | --- | --- | --- |
 | Triangle Rush | `triangle_rush` | `godot-base/games/triangle_rush/` |
 | Desk-Can-Saw | `desk_can_saw` | `godot-base/games/desk_can_saw/` |
 | Dead Metal Jam | `dead_metal_jam` | `godot-base/games/dead_metal_jam/` |
+| Chicken Pit | `chicken_pit` | `godot-base/games/chicken_pit/` |
+
+> Chicken Pit is a real 3D toy-farm tug-of-war, mounted in an isolated
+> `SubViewport` under the 2D shell. Its node-free model drives two coops,
+> named CPU birds, held-ground scoring and first-to-N-pins Lives matches.
+> Original meshes, audio and focused tests live in its game folder; read
+> that folder's `AGENTS.md` and `DESIGN.md` before changing the rules.
+> The old web prototype is no longer present. Its generic
+> `CONTROL_STYLE_CUSTOM_KEYS` trait supports declared action keys and a CPU
+> without adding game-name branches to the shared framework.
 
 > Triangle Rush and Desk-Can-Saw were previously `target_rush` and
 > `slice_and_slash`. Those ids are gone — no alias, no migration — so a
@@ -47,7 +57,8 @@ godot-base/
                           #   settings, credits, pause
   games/<id>/              # one folder per game: game.gd manifest, scenes, actors, tests
   tests/                   # framework-wide headless SceneTree regression scripts
-  tools/                   # dev-only tutorial recorder (exclude from export presets)
+  tools/                   # dev-only tutorial recorder + intro cue measurer
+                           #   (exclude from export presets)
   third_party/greaby_qrcode/  # vendored MIT QR encoder — keep LICENSE intact
   assets/                  # audio, images, tutorial videos
 ```
@@ -64,8 +75,8 @@ godot --path . -- --game=all          # run the collection
 godot --headless --path . --import   # reimport assets and refresh the class cache
 ```
 
-Tests are standalone headless `SceneTree` scripts, run one at a time. All twelve
-must exit 0:
+Tests are standalone headless `SceneTree` scripts, run one at a time. All
+fourteen must exit 0:
 
 ```bash
 godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_test.gd -- --game=all
@@ -73,6 +84,8 @@ godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_s
 godot --headless --path . --script res://tests/visual_effects_test.gd -- --game=all
 godot --headless --path . --script res://tests/accessibility_test.gd -- --game=all
 godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd -- --game=all
+godot --headless --path . --script res://games/chicken_pit/tests/chicken_pit_options_test.gd -- --game=all
+godot --headless --path . --script res://games/chicken_pit/tests/chicken_pit_intro_test.gd -- --game=all
 godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
 godot --headless --path . --script res://tests/instructions_video_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
@@ -116,6 +129,13 @@ Re-record tutorial clips only when gameplay visuals or captions change:
 pwsh tools/record_tutorials.ps1 -Godot /path/to/godot
 ```
 
+Re-measure a narrated intro's card cues only when its recording changes
+(needs ffmpeg; one card per line in the transcript file):
+
+```bash
+python tools/measure_intro_cues.py games/chicken_pit/assets/intro-narration.mp3 cards.txt
+```
+
 ## The framework / game boundary (read before adding a game)
 
 This is the most important rule in the repository. Games are **self-contained
@@ -139,8 +159,8 @@ add data to `GameManifest` instead.
 | `copy` | Overrides menu/instructions wording; omitted keys fall back to neutral text |
 | `tunables` | Player-facing options (slider/toggle/choice) stored and clamped by `Settings`, rendered as rows on the in-game Game tab |
 | `control_bindings` | Rebindable keys, rendered on the in-game Controls tab; empty means "inherit my `control_style`'s built-ins" |
-| `control_style` | `targets` or `direct_movement` — menus branch on this *trait*, never on a game name |
-| `default_lives_mode` | Default round rule when no choice is saved; true for Desk-Can-Saw and Dead Metal Jam, false for Triangle Rush |
+| `control_style` | `targets`, `direct_movement` or `custom_keys` — menus branch on this *trait*, never on a game name |
+| `default_lives_mode` | Default round rule when no choice is saved; true for Desk-Can-Saw and Dead Metal Jam, false for Triangle Rush and Chicken Pit |
 | `unlock_rule`, `hidden_until_unlocked` | Gate the game behind progress elsewhere |
 | `share_art_style`, `stats_url` | Share-card art variant and QR link |
 | `tutorial_video_path`, `tutorial_poster_path` | Instructions-screen media |
@@ -148,7 +168,7 @@ add data to `GameManifest` instead.
 
 `tunables` and `control_bindings` are declared in a constants-only
 `games/<id>/<prefix>_options.gd` (`TriangleRushOptions`, `DeskCanSawOptions`,
-`DmjOptions`) so headless tests can import the keys without touching an
+`DmjOptions`, `ChickenPitOptions`) so headless tests can import the keys without touching an
 autoload. The game's scenes read the same constants back through `Settings`.
 
 **Settings tabs**: Audio · Display · Accessibility · Gameplay · **Controls** ·
@@ -261,8 +281,11 @@ Shell notes:
   (*Settings → Game → Round mode*, stored as `game/round_mode` +
   `game/starting_lives`). The shell owns the whole pool; a game only reports
   its own mistakes with `_lose_life(player_index)` and skips eliminated players
-  with `_player_is_out(player_index)`. Both no-op in timer mode, so **a game
-  must never branch on the round mode**. Use `_lives_rule_note()` for HUD copy
+  with `_player_is_out(player_index)`. Both no-op in timer mode, so ordinary
+  mistake-reporting games do not need mode branches. A duel such as Chicken
+  Pit specializes the active-seat and elimination hooks: either exhausted coop
+  ends its match, while the default shell waits for all players. Use
+  `_lives_rule_note()` for HUD copy
   and `_round_length_phrase()` instead of hardcoding "in 60 seconds".
 - The playfield node is `%Playfield` (it was `%Targets` before the extraction);
   tests reference it by that unique name.
@@ -347,7 +370,8 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   Resolve it from the tree instead: `get_root().get_node_or_null("Settings")`,
   then use `.call("method", ...)`. Any `class_name` script a test imports must
   likewise avoid autoload instances — that is why every `<prefix>_options.gd`
-  (`triangle_rush_options.gd`, `desk_can_saw_options.gd`, `dmj_options.gd`) is
+  (`triangle_rush_options.gd`, `desk_can_saw_options.gd`, `dmj_options.gd`,
+  `chicken_pit_options.gd`) is
   constants-only. `GameShell` is
   the other side of this rule: it *does* use autoload instances, so a test must
   never name `GameShell` (no `is GameShell`, no typed parameter). Load the

@@ -12,6 +12,7 @@ extends Resource
 ## Control styles the shared menus know how to describe.
 const CONTROL_STYLE_TARGETS := "targets"
 const CONTROL_STYLE_DIRECT_MOVEMENT := "direct_movement"
+const CONTROL_STYLE_CUSTOM_KEYS := "custom_keys"
 
 ## Stable identifier. Used for save keys, share payloads and `[share]` project
 ## settings, so it must never change once a game has shipped.
@@ -72,6 +73,7 @@ var default_lives_mode := false
 ## individually by the framework.
 ##   [code]targets[/code]          — press a bound key/button for a highlighted target
 ##   [code]direct_movement[/code]  — steer a cursor around the playfield
+##   [code]custom_keys[/code]      — use the game's own declared action keys
 var control_style := CONTROL_STYLE_TARGETS
 
 ## Walkthrough media for the instructions screen. Missing files are tolerated:
@@ -103,7 +105,13 @@ var menu_order := 0
 ## `solo_confirm_title`, `solo_confirm_description`, `versus_confirm_title`,
 ## `versus_confirm_description`, `instructions_headline`, `instructions_rules`,
 ## `instructions_demo_prompt`, `instructions_solo_summary`,
-## `instructions_versus_summary`.
+## `instructions_versus_summary`, `instructions_player_one_controls`,
+## `instructions_player_two_controls`, `cpu_opponent_description`,
+## `instructions_cpu_summary`, `instructions_cpu_controls`.
+##
+## Custom-key games supply action descriptions, not literal key names: the
+## menus append each player's live bindings. CPU copy describes the game's own
+## opponent; the shared target-game difficulty picker is not used by this style.
 var copy := {}
 
 ## Player-facing options this game adds to the in-game Settings → Game tab. The
@@ -154,6 +162,8 @@ const FORMAT_MILLISECONDS := "milliseconds"
 ## its [member control_style], so a `targets` game gets the six target keys for
 ## free. Declare bindings when the game is driven by something else — movement
 ## keys, instrument keys — rather than living with controls it does not use.
+## A [constant CONTROL_STYLE_CUSTOM_KEYS] game always declares its own bindings;
+## there are no built-in keys or implied mouse/gamepad actions for that style.
 ##
 ## [codeblock]
 ## {
