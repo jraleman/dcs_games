@@ -84,29 +84,60 @@ func _assert_slice_mode_access(
 		"Mode selection must match multiplayer access for %s." % context
 	)
 
-	var expected_focus := (
-		menu.get_node("%SinglePlayerButton")
+	# One unlocked mode is not a choice, so the screen skips its own first step
+	# rather than showing a grid holding a single card.
+	var both_unlocked := single_player_unlocked and multiplayer_unlocked
+	var confirm_step := menu.get_node("%ConfirmStep") as Control
+	var stepper := menu.get_node("Margins/Layout/Stepper") as Control
+	var unlocked_mode: int = (
+		GAME_SESSION_SCRIPT.GameMode.SINGLE_PLAYER
 		if single_player_unlocked
-		else menu.get_node("%MultiplayerButton")
+		else GAME_SESSION_SCRIPT.GameMode.MULTIPLAYER
 	)
 	_expect(
-		menu.get("first_focus") == expected_focus,
-		"Mode selection must focus an available choice for %s." % context
+		bool(menu.get("_player_count_offered")) == both_unlocked,
+		"The player-count step is only a question when both modes are open for %s." % context
+	)
+	_expect(
+		stepper.visible == both_unlocked,
+		"The stepper is shown only while the player-count step is for %s." % context
+	)
+	_expect(
+		confirm_step.visible != both_unlocked,
+		"A lone unlocked mode opens straight on its confirmation for %s." % context
 	)
 
-	var confirm_step := menu.get_node("%ConfirmStep") as Control
+	if both_unlocked:
+		_expect(
+			menu.get("first_focus") == menu.get_node("%SinglePlayerButton"),
+			"Mode selection must focus an available choice for %s." % context
+		)
+	else:
+		_expect(
+			int(menu.get("_pending_mode")) == unlocked_mode,
+			"The collapsed step must pend the unlocked mode for %s." % context
+		)
+		var focus_target := menu.get("first_focus") as Control
+		_expect(
+			focus_target != null and confirm_step.is_ancestor_of(focus_target),
+			"The collapsed step must focus a usable confirmation control for %s." % context
+		)
+
+	# Skipping ahead to a confirmation must not become a way in through the
+	# back: a locked mode's handler still has to refuse, so the pending mode
+	# is what proves the refusal once the confirmation is already on screen.
 	if not single_player_unlocked:
 		menu.call("_on_single_player_pressed")
 		await process_frame
 		_expect(
-			not confirm_step.visible,
+			int(menu.get("_pending_mode")) == unlocked_mode,
 			"A hidden single-player mode must not be activatable for %s." % context
 		)
 	if not multiplayer_unlocked:
 		menu.call("_on_multiplayer_pressed")
 		await process_frame
 		_expect(
-			not confirm_step.visible,
+			int(menu.get("_pending_mode")) == unlocked_mode,
 			"A hidden multiplayer mode must not be activatable for %s." % context
 		)
 

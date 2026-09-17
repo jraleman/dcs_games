@@ -26,6 +26,7 @@ func _run() -> void:
 	settings.set("_values", _with_reduced_motion(settings, false))
 
 	await _test_clip_per_game(session)
+	await _test_local_clips(session)
 	await _test_playback_controls(session)
 	await _test_responsive_body(session)
 	await _test_player_avatars(session)
@@ -103,6 +104,41 @@ func _all_unique(values: PackedStringArray) -> bool:
 			return false
 		seen[value] = true
 	return not seen.is_empty()
+
+
+func _test_local_clips(session: Node) -> void:
+	for manifest in GameCatalog.all():
+		if manifest.local_tutorial_video_path.is_empty():
+			continue
+		GameCatalog.select(manifest.id)
+		session.call("configure_multiplayer", 0)
+		var screen := await _open_screen()
+		if screen == null:
+			return
+		var video := screen.get_node("%Video") as VideoStreamPlayer
+		var poster := screen.get_node("%PosterImage") as TextureRect
+		_expect(video.stream != null
+			and video.stream.resource_path == manifest.local_tutorial_video_path,
+			"%s local humans must get their local walkthrough." % manifest.id)
+		var expected_poster := (
+			manifest.local_tutorial_poster_path
+			if not manifest.local_tutorial_poster_path.is_empty()
+			else manifest.tutorial_poster_path
+		)
+		_expect(poster.texture != null and poster.texture.resource_path == expected_poster,
+			"%s local instructions must use a matching idle poster." % manifest.id)
+		await _close_screen(screen)
+		var cpu_offered := manifest.supports_cpu_opponent
+		manifest.supports_cpu_opponent = true
+		session.call("configure_multiplayer", 1)
+		screen = await _open_screen()
+		manifest.supports_cpu_opponent = cpu_offered
+		if screen == null:
+			return
+		video = screen.get_node("%Video") as VideoStreamPlayer
+		_expect(video.stream != null and video.stream.resource_path == manifest.tutorial_video_path,
+			"An automatic second seat must not use a human-only local tutorial.")
+		await _close_screen(screen)
 
 
 func _test_playback_controls(session: Node) -> void:

@@ -69,9 +69,9 @@ static func manifest() -> GameManifest:
 	game.control_bindings = DeskCanSawOptions.CONTROL_BINDINGS
 	game.stats_url = "https://deskcansaw.com/stats/dcs"
 	game.share_art_style = ShareCardArt.STYLE_DESK_CAN_SAW
-	game.tutorial_video_path = "res://assets/video/tutorial_desk_can_saw.ogv"
+	game.tutorial_video_path = "res://games/desk_can_saw/assets/video/tutorial.ogv"
 	game.tutorial_poster_path = (
-		"res://assets/video/tutorial_desk_can_saw_poster.webp"
+		"res://games/desk_can_saw/assets/video/tutorial_poster.webp"
 	)
 	game.theme = _theme()
 	game.credits = [

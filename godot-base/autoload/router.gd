@@ -125,9 +125,8 @@ func is_transitioning() -> bool:
 
 
 ## Starts the game [GameCatalog] currently has selected, stopping at whichever
-## setup screen still has a question to ask: the mode picker while more than one
-## seat arrangement is possible, then the instructions while the player still
-## wants them, and otherwise the game itself.
+## setup screen still has a question to ask: player seats or declared solo choices,
+## then the instructions while the player still wants them, and otherwise the game.
 ##
 ## It lives here rather than on a menu because more than one screen starts a
 ## game — the main menu does it directly in a build with only one game to
@@ -135,7 +134,12 @@ func is_transitioning() -> bool:
 ## drift into two different ideas of what "start" means. Both pass their own
 ## exported scene paths, so neither the router nor a game hardcodes the flow.
 func start_selected_game(mode_scene: String, instructions_scene: String) -> void:
-	if GameSession.multiplayer_offered():
+	var manifest := GameCatalog.current()
+	var solo_setup := (
+		manifest != null and GameSession.single_player_offered()
+		and not manifest.solo_setup_choices.is_empty()
+	)
+	if GameSession.multiplayer_offered() or solo_setup:
 		goto(mode_scene)
 		return
 	GameSession.configure_single_player()

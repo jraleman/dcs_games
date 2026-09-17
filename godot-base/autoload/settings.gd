@@ -370,6 +370,36 @@ func option_choices(key: String) -> Array[Dictionary]:
 	return result
 
 
+## Setup and instructions use the same selected-choice wording, without game branches.
+func solo_setup_text(game_id: String, text: String) -> String:
+	var manifest := GameCatalog.get_manifest(game_id)
+	if manifest == null or manifest.solo_setup_choices.is_empty() or not text.contains("%s"):
+		return text
+	var labels := PackedStringArray()
+	for key: String in manifest.solo_setup_choices:
+		var definition: Dictionary = {}
+		for candidate: Dictionary in manifest.tunables:
+			if str(candidate.get("key", "")) == key:
+				definition = candidate
+				break
+		if definition.is_empty() or str(definition.get("type", "")) != GameManifest.OPTION_CHOICE:
+			push_warning("Settings: %s cannot format undeclared solo choice '%s'." % [game_id, key])
+			continue
+		var value := tunable_choice(key)
+		var title := str(value)
+		for choice: Dictionary in option_choices(key):
+			if int(choice.get("value", 0)) == value:
+				title = str(choice.get("summary_title", choice.get("title", value))).strip_edges()
+				break
+		if title.is_empty():
+			title = str(value)
+		labels.append(
+			"%s: %s" % [str(definition.get("title", key)), title]
+			if manifest.solo_setup_choices.size() > 1 else title
+		)
+	return text.replace("%s", " · ".join(labels)) if not labels.is_empty() else text
+
+
 ## `Vector2` would truncate to 32-bit, so the bounds are exposed separately.
 func tunable_min(key: String) -> float:
 	var definition: Dictionary = tunables().get(key, {})

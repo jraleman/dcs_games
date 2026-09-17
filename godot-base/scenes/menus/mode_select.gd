@@ -1,7 +1,7 @@
 extends MenuScreen
 
-## Two-step setup shared by every game: pick a player count, then confirm the
-## controls. All game-specific wording comes from the active [GameManifest].
+## Pick a player count, then confirm controls and any declared solo choices.
+## All game-specific wording comes from the active [GameManifest].
 
 @export_file("*.tscn") var instructions_scene := "res://scenes/menus/instructions.tscn"
 
@@ -21,10 +21,12 @@ const MODE_MULTIPLAYER := "Local Multiplayer"
 ## instructions screen already use, so a seat looks the same at every step.
 const PLAYER_ONE_COLOR := Color("4da3ff")
 const PLAYER_TWO_COLOR := Color("ff5c6c")
+const SOLO_SETUP_BUTTON_MIN_WIDTH := 220.0
 
 @onready var _margins: MarginContainer = %Margins
 @onready var _screen_title: Label = $Margins/Layout/Header/Title
 @onready var _back_button: Button = $Margins/Layout/Header/BackButton
+@onready var _stepper: HBoxContainer = $Margins/Layout/Stepper
 @onready var _mode_grid: GridContainer = %ModeGrid
 @onready var _controller_grid: GridContainer = %ControllerGrid
 @onready var _selection_step: Control = %SelectionStep
@@ -57,6 +59,7 @@ const PLAYER_TWO_COLOR := Color("ff5c6c")
 @onready var _mode_eyebrow: Label = %ModeEyebrow
 @onready var _confirm_title: Label = %ConfirmTitle
 @onready var _confirm_description: Label = %ConfirmDescription
+@onready var _solo_setup_choices_box: VBoxContainer = %SoloSetupChoices
 @onready var _opponent_control: PanelContainer = %OpponentControl
 @onready var _player_one_control_keys: Label = %PlayerOneControlKeys
 @onready var _player_one_role: Label = %PlayerOneRole
@@ -76,6 +79,7 @@ const PLAYER_TWO_COLOR := Color("ff5c6c")
 @onready var _cpu_difficulty_panel: HBoxContainer = %CpuDifficultyPanel
 @onready var _cpu_difficulty: OptionButton = %CpuDifficulty
 @onready var _confirm_hint: Label = %ConfirmHint
+@onready var _previous_button: Button = %PreviousButton
 @onready var _confirm_button: Button = %ConfirmButton
 
 var _step := Step.PLAYER_COUNT
@@ -86,7 +90,14 @@ var _mode_chosen := false
 var _page_tween: Tween
 var _single_player_available := true
 var _multiplayer_available := true
+## False when the player count is not a question this game can answer two ways,
+## which turns the screen into the control confirmation on its own.
+var _player_count_offered := true
 var _reduced_motion := false
+var _solo_setup_options: Array[Dictionary] = []
+var _setup_font_sizes: Dictionary[Control, int] = {}
+var _setup_button_sizes: Dictionary[Control, Vector2] = {}
+var _setup_readability_ready := false
 
 
 func _ready() -> void:
@@ -98,6 +109,7 @@ func _ready() -> void:
 	_select_default_opponent()
 	_populate_cpu_difficulties()
 	_cpu_difficulty.item_selected.connect(_on_cpu_difficulty_selected)
+	_configure_solo_setup_choices()
 	_configure_game_copy()
 	_configure_platform_options()
 	_update_control_copy()
@@ -107,6 +119,10 @@ func _ready() -> void:
 	GameSession.gamepad_availability_changed.connect(_on_gamepad_availability_changed)
 	Settings.changed.connect(_on_setting_changed)
 	super()
+	_setup_readability_ready = true
+	var setup_scroll := _solo_setup_choices_box.get_parent().get_parent() as ScrollContainer
+	setup_scroll.resized.connect(_keep_solo_choice_visible, CONNECT_DEFERRED)
+	refresh_layout()
 
 
 ## Adding or removing the last pad rewrites every control line on the screen.
@@ -116,6 +132,12 @@ func _on_gamepad_availability_changed(_available: bool) -> void:
 
 
 func _on_setting_changed(key: String, _value: Variant) -> void:
+	if _is_solo_setup_key(key):
+		_refresh_solo_setup_choices()
+		_single_player_description.text = _single_player_description_copy()
+		_update_selection_state()
+		_update_confirmation()
+		return
 	if not _uses_custom_keys():
 		return
 	for binding: Dictionary in Settings.control_bindings_for_game(GameCatalog.current_id()):
@@ -136,6 +158,48 @@ func _on_layout_changed(size: Vector2) -> void:
 		if portrait or _pending_mode == GameSession.GameMode.SINGLE_PLAYER
 		else 2
 	)
+	_apply_setup_readability(size)
+
+
+func _apply_setup_readability(size: Vector2) -> void:
+	if not _setup_readability_ready or _solo_setup_options.is_empty():
+		return
+	# The expanded portrait canvas must not turn setup buttons into tiny targets.
+	var preference := float(Settings.get_value("ui/scale", 1.0))
+	var factor := maxf(1.0, size.x * preference / maxf(get_window().size.x, 1.0) / 1.5)
+	var pixel_scale := maxf(float(get_window().size.x) / size.x, 0.01)
+	var compact := Responsive.is_portrait(size)
+	if _setup_font_sizes.is_empty():
+		for node in find_children("*", "Control", true, false):
+			var control := node as Control
+			if not (control is Label or control is Button):
+				continue
+			_setup_font_sizes[control] = control.get_theme_font_size("font_size")
+			if control is Button:
+				_setup_button_sizes[control] = control.custom_minimum_size
+			elif control.get_parent() is VBoxContainer or (
+				control.size_flags_horizontal & Control.SIZE_EXPAND
+			) != 0:
+				(control as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for control: Control in _setup_font_sizes:
+		var font_size := roundi(_setup_font_sizes[control] * factor)
+		if compact and control is Button:
+			font_size = mini(font_size, roundi(26.0 / pixel_scale))
+		elif compact and control == _screen_title:
+			font_size = mini(font_size, roundi(42.0 / pixel_scale))
+		control.add_theme_font_size_override(
+			"font_size", font_size
+		)
+	for button: Control in _setup_button_sizes:
+		var original := _setup_button_sizes[button]
+		button.custom_minimum_size = Vector2(original.x, maxf(original.y, 66.0) * factor)
+
+
+func _keep_solo_choice_visible() -> void:
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused != null and _solo_setup_choices_box.is_ancestor_of(focused):
+		var scroll := _solo_setup_choices_box.get_parent().get_parent() as ScrollContainer
+		scroll.ensure_control_visible(focused)
 
 
 func _on_single_player_pressed() -> void:
@@ -204,12 +268,14 @@ func _update_selection_state() -> void:
 	)
 	_single_player_card.modulate.a = 1.0 if single_player or not _mode_chosen else 0.72
 	_multiplayer_card.modulate.a = 0.72 if _mode_chosen and single_player else 1.0
-	if single_player and _single_player_available:
+	if not _player_count_offered:
+		first_focus = _preferred_confirm_focus()
+	elif single_player and _single_player_available:
 		first_focus = _single_player_button
 	elif not single_player and _multiplayer_available:
 		first_focus = _multiplayer_button
 
-	_single_player_roster.text = "Player 1 plays alone"
+	_single_player_roster.text = _single_player_roster_copy()
 	_multiplayer_roster.text = (
 		"Player 2 is a human or the CPU"
 		if _cpu_opponent_offered()
@@ -223,7 +289,7 @@ func _update_selection_state() -> void:
 		_selection_summary.text = "This mode is not available yet."
 		return
 	_selection_summary.text = (
-		"Selected: Single Player - only Player 1 takes part."
+		_single_player_selection_summary()
 		if single_player
 		else "Selected: Multiplayer - Player 1 vs %s." % _player_two_long_name()
 	)
@@ -272,6 +338,7 @@ func _update_confirmation() -> void:
 	var single_player := _pending_mode == GameSession.GameMode.SINGLE_PLAYER
 	var direct_movement := _uses_direct_movement()
 	_update_control_copy()
+	_solo_setup_choices_box.visible = single_player and not _solo_setup_options.is_empty()
 	_opponent_control.visible = not single_player
 	_opponent_selector.visible = not single_player and _cpu_opponent_offered()
 	_cpu_option_button.disabled = not _cpu_opponent_offered()
@@ -365,6 +432,9 @@ func _update_confirmation() -> void:
 		)
 		_confirm_button.text = "Start vs CPU" if cpu_selected else "Start Local Multiplayer"
 
+	if single_player:
+		_confirm_title.text = _solo_setup_text(_confirm_title.text)
+		_confirm_description.text = _solo_setup_text(_confirm_description.text)
 	if not direct_movement:
 		_update_opponent_options()
 	_on_layout_changed(viewport_size())
@@ -481,7 +551,7 @@ func _configure_platform_options() -> void:
 	# is what the "mobile" copy below is about, while the offer also honours a
 	# manifest that declares the game single-player only.
 	var platform_multiplayer_available := GameSession.multiplayer_available()
-	_single_player_available = true
+	_single_player_available = GameSession.single_player_offered()
 	_multiplayer_available = GameSession.multiplayer_offered()
 
 	# A gated game may have unlocked only some of its modes.
@@ -490,7 +560,10 @@ func _configure_platform_options() -> void:
 	)
 	var mode_gated := not unlocked_modes.is_empty()
 	if mode_gated:
-		_single_player_available = unlocked_modes.has(MODE_SINGLE_PLAYER)
+		_single_player_available = (
+			_single_player_available
+			and unlocked_modes.has(MODE_SINGLE_PLAYER)
+		)
 		_multiplayer_available = (
 			_multiplayer_available
 			and unlocked_modes.has(MODE_MULTIPLAYER)
@@ -499,6 +572,7 @@ func _configure_platform_options() -> void:
 	_single_player_card.visible = _single_player_available
 	_multiplayer_card.visible = _multiplayer_available
 	_select_default_mode()
+	_configure_player_count_step()
 
 	if mode_gated:
 		_update_gated_availability_copy(
@@ -545,6 +619,32 @@ func _select_default_mode() -> void:
 		first_focus = _multiplayer_button
 	else:
 		first_focus = _back_button
+
+
+## Collapses the screen to its second step when the player count is not a real
+## choice: a solo-only game, a game that always seats two, or a gated game with
+## only one mode unlocked. A card that is the only card is not a decision, and
+## leaving it on screen would cost the player a click to agree with themselves.
+##
+## The step is kept when *nothing* is available, so a fully locked game can
+## still explain itself through the selection copy instead of showing a
+## confirmation for a mode it will refuse to start.
+func _configure_player_count_step() -> void:
+	_player_count_offered = [_single_player_available, _multiplayer_available].count(true) != 1
+	_stepper.visible = _player_count_offered
+	_previous_button.visible = _player_count_offered
+	if _player_count_offered:
+		return
+	_pending_mode = (
+		GameSession.GameMode.SINGLE_PLAYER
+		if _single_player_available
+		else GameSession.GameMode.MULTIPLAYER
+	)
+	_mode_chosen = true
+	_step = Step.CONFIRM
+	_selection_step.hide()
+	_confirm_step.show()
+	first_focus = _preferred_confirm_focus()
 
 
 func _update_gated_availability_copy(
@@ -599,14 +699,18 @@ func _configure_game_copy() -> void:
 		)
 	elif not _uses_direct_movement() and not _cpu_opponent_offered():
 		_multiplayer_description.text = "Share this device with Player 2."
-	_single_player_description.text = manifest.text(
-		"single_player_description", _single_player_description.text
-	)
+	_single_player_description.text = _single_player_description_copy()
 	_multiplayer_description.text = manifest.text(
 		"multiplayer_description", _multiplayer_description.text
 	)
 	_player_one_control_description.text = manifest.text(
 		"player_one_control_description", _player_one_control_description.text
+	)
+
+
+func _single_player_description_copy() -> String:
+	return _solo_setup_text(
+		_game_text("single_player_description", _single_player_description.text)
 	)
 
 
@@ -703,6 +807,169 @@ func _selected_cpu_difficulty() -> int:
 	return _cpu_difficulty.get_selected_id()
 
 
+func _configure_solo_setup_choices() -> void:
+	_solo_setup_options.clear()
+	for child: Node in _solo_setup_choices_box.get_children():
+		child.queue_free()
+	var manifest := GameCatalog.current()
+	if manifest == null:
+		return
+	var seen := {}
+	for key: String in manifest.solo_setup_choices:
+		if key.is_empty():
+			push_warning(
+				"ModeSelect: %s declared an empty solo_setup_choices entry." % manifest.id
+			)
+			continue
+		if seen.has(key):
+			push_warning(
+				"ModeSelect: %s repeated solo_setup_choices key '%s'." % [manifest.id, key]
+			)
+			continue
+		seen[key] = true
+		var definition := _solo_setup_definition(manifest, key)
+		if definition.is_empty():
+			push_warning(
+				"ModeSelect: %s solo_setup_choices references missing tunable '%s'."
+				% [manifest.id, key]
+			)
+			continue
+		if str(definition.get("type", GameManifest.OPTION_SLIDER)) != GameManifest.OPTION_CHOICE:
+			push_warning(
+				"ModeSelect: %s solo_setup_choices key '%s' is not a choice option."
+				% [manifest.id, key]
+			)
+			continue
+		var choices: Array[Dictionary] = Settings.option_choices(key)
+		if choices.is_empty():
+			push_warning(
+				"ModeSelect: %s solo_setup_choices key '%s' declares no choices."
+				% [manifest.id, key]
+			)
+			continue
+		var option_panel := PanelContainer.new()
+		option_panel.name = "SoloSetup_%s" % key.replace("/", "_")
+		option_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var layout := VBoxContainer.new()
+		layout.add_theme_constant_override("separation", 8)
+		option_panel.add_child(layout)
+
+		var title := Label.new()
+		title.add_theme_color_override("font_color", StudioInfo.SKY)
+		title.add_theme_font_size_override("font_size", 20)
+		title.text = str(definition.get("title", key)).to_upper()
+		layout.add_child(title)
+
+		var description := str(definition.get("description", "")).strip_edges()
+		if not description.is_empty():
+			var description_label := Label.new()
+			description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			description_label.add_theme_color_override("font_color", StudioInfo.MUTED)
+			description_label.add_theme_font_size_override("font_size", 18)
+			description_label.text = description
+			layout.add_child(description_label)
+
+		var options := HFlowContainer.new()
+		options.add_theme_constant_override("h_separation", 12)
+		options.add_theme_constant_override("v_separation", 12)
+		layout.add_child(options)
+
+		var group := ButtonGroup.new()
+		var buttons: Array[Button] = []
+		for choice: Dictionary in choices:
+			var value := int(choice.get("value", 0))
+			var button := Button.new()
+			button.name = "%s_%s" % [key.replace("/", "_"), value]
+			button.custom_minimum_size = Vector2(SOLO_SETUP_BUTTON_MIN_WIDTH, 56.0)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			button.clip_text = true
+			button.toggle_mode = true
+			button.button_group = group
+			button.set_meta("setting_key", key)
+			button.set_meta("choice_value", value)
+			button.pressed.connect(_on_solo_setup_choice_pressed.bind(key, value))
+			options.add_child(button)
+			buttons.append(button)
+		_solo_setup_choices_box.add_child(option_panel)
+		_solo_setup_options.append({
+			"key": key,
+			"definition": definition,
+			"buttons": buttons,
+		})
+	_refresh_solo_setup_choices()
+
+
+func _solo_setup_definition(manifest: GameManifest, key: String) -> Dictionary:
+	for definition: Dictionary in manifest.tunables:
+		if str(definition.get("key", "")) == key:
+			return definition
+	return {}
+
+
+func _on_solo_setup_choice_pressed(setting_key: String, value: int) -> void:
+	if Settings.tunable_choice(setting_key) == value:
+		_refresh_solo_setup_choices()
+		return
+	Settings.set_value(setting_key, value)
+
+
+func _refresh_solo_setup_choices() -> void:
+	for option: Dictionary in _solo_setup_options:
+		var key := str(option.get("key", ""))
+		var definition: Dictionary = option.get("definition", {})
+		var description := str(definition.get("description", "")).strip_edges()
+		var selected := Settings.tunable_choice(key)
+		for button: Button in option.get("buttons", []):
+			var value := int(button.get_meta("choice_value", 0))
+			var title := _solo_setup_choice_button_title(definition, value)
+			var active := value == selected
+			button.set_pressed_no_signal(active)
+			button.text = "✔  %s" % title if active else title
+			var details := "%s: %s" % [str(definition.get("title", key)), title]
+			if not description.is_empty():
+				details += ". " + description
+			if active:
+				details += " Selected."
+			button.tooltip_text = details
+			button.accessibility_description = details
+
+
+func _is_solo_setup_key(key: String) -> bool:
+	for option: Dictionary in _solo_setup_options:
+		if str(option.get("key", "")) == key:
+			return true
+	return false
+
+
+func _single_player_roster_copy() -> String:
+	return _solo_setup_text(
+		_game_text("single_player_roster",
+			"Player 1 plays alone" if _solo_setup_options.is_empty() else "Single player · %s")
+	)
+
+
+func _single_player_selection_summary() -> String:
+	return _solo_setup_text(
+		_game_text(
+			"single_player_selection_summary",
+			"Selected: Single Player - only Player 1 takes part."
+			if _solo_setup_options.is_empty() else "Selected: Single Player - %s."
+		)
+	)
+
+
+func _solo_setup_text(text: String) -> String:
+	return Settings.solo_setup_text(GameCatalog.current_id(), text)
+
+
+func _solo_setup_choice_button_title(definition: Dictionary, value: int) -> String:
+	for choice: Dictionary in Settings.option_choices(str(definition.get("key", ""))):
+		if int(choice.get("value", 0)) == value:
+			var title := str(choice.get("summary_title", choice.get("title", value))).strip_edges()
+			return title if not title.is_empty() else str(value)
+	return str(value)
+
+
 ## Marks the armed opponent with a tick and spells the choice out underneath, so
 ## the selection never rests on the pressed-button styling alone.
 func _update_opponent_options() -> void:
@@ -781,18 +1048,38 @@ func _focus_current_step() -> void:
 	if _step == Step.PLAYER_COUNT:
 		if first_focus and first_focus.is_visible_in_tree():
 			first_focus.grab_focus()
-	elif (
-		_pending_mode == GameSession.GameMode.MULTIPLAYER
-		and _cpu_opponent_offered()
+		return
+	_preferred_confirm_focus().grab_focus()
+
+
+## Where the confirmation step should land: the armed opponent option when
+## there is one, so the current answer is obvious before the player starts
+## arrowing between them, and the start button otherwise.
+func _preferred_confirm_focus() -> Button:
+	if _pending_mode == GameSession.GameMode.SINGLE_PLAYER:
+		var solo_button := _preferred_solo_setup_button()
+		if solo_button != null:
+			return solo_button
+	if (
+		_pending_mode != GameSession.GameMode.MULTIPLAYER
+		or not _cpu_opponent_offered()
 	):
-		# Land on the armed option so the current answer is obvious before the
-		# player starts arrowing between them.
-		if _cpu_option_button.button_pressed:
-			_cpu_option_button.grab_focus()
-		else:
-			_human_option_button.grab_focus()
-	else:
-		_confirm_button.grab_focus()
+		return _confirm_button
+	return (
+		_cpu_option_button
+		if _cpu_option_button.button_pressed
+		else _human_option_button
+	)
+
+
+func _preferred_solo_setup_button() -> Button:
+	for option: Dictionary in _solo_setup_options:
+		for button: Button in option.get("buttons", []):
+			if button.button_pressed:
+				return button
+		for button: Button in option.get("buttons", []):
+			return button
+	return null
 
 
 func _pending_mode_is_available() -> bool:
@@ -822,7 +1109,9 @@ func _next_scene() -> String:
 
 
 func go_back() -> void:
-	if _step == Step.CONFIRM:
+	# Without a player-count step there is nothing behind the confirmation, so
+	# Back has to leave rather than reveal a card the screen never offered.
+	if _step == Step.CONFIRM and _player_count_offered:
 		if GameCatalog.theme().ui_sounds != null:
 			AudioManager.play_back()
 		_show_step(Step.PLAYER_COUNT)

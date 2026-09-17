@@ -1,0 +1,101 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/menus/store.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+
+[node name="Store" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+back_scene = "res://scenes/menus/main_menu.tscn"
+
+[node name="Background" parent="." instance=ExtResource("2_background")]
+
+[node name="Margins" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_constants/margin_left = 134
+theme_override_constants/margin_top = 54
+theme_override_constants/margin_right = 134
+theme_override_constants/margin_bottom = 54
+
+[node name="Layout" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Header" type="HBoxContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="Margins/Layout/Header"]
+theme_type_variation = &"MenuHeading"
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 56
+text = "Store"
+autowrap_mode = 3
+
+[node name="Balance" type="Label" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(1, 0.831373, 0.360784, 1)
+theme_override_font_sizes/font_size = 30
+text = "0 Points"
+horizontal_alignment = 2
+
+[node name="BackButton" type="Button" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "Back"
+metadata/ui_sound_handled = true
+
+[node name="Intro" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 24
+text = "Play rounds to earn points, then spend them here."
+autowrap_mode = 2
+
+[node name="Empty" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 24
+text = "This game has nothing for sale yet."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Margins/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Row" type="CenterContainer" parent="Margins/Layout/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Sections" type="VBoxContainer" parent="Margins/Layout/Scroll/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/separation = 22
+
+[connection signal="pressed" from="Margins/Layout/Header/BackButton" to="." method="_on_back_pressed"]

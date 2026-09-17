@@ -59,6 +59,9 @@ static func _ensure_discovered() -> void:
 		return
 
 	for folder in directory.get_directories():
+		# Archive/private folders must not shadow a live manifest with the same id.
+		if folder.begins_with("_") or folder.begins_with("."):
+			continue
 		var path := "%s/%s/%s" % [GAMES_ROOT, folder, MANIFEST_FILE]
 		if not ResourceLoader.exists(path):
 			continue

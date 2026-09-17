@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c8geltb74qk35"
-path="res://.godot/imported/tutorial_triangle_rush_poster.webp-2445dc7f841e901b9bdb8de21046b641.ctex"
+uid="uid://csu4y6f6ug1on"
+path="res://.godot/imported/tutorial_poster.webp-6d32105a6bc2ae3e1d484c4fcbae23d9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/video/tutorial_triangle_rush_poster.webp"
-dest_files=["res://.godot/imported/tutorial_triangle_rush_poster.webp-2445dc7f841e901b9bdb8de21046b641.ctex"]
+source_file="res://games/desk_can_saw/assets/video/tutorial_poster.webp"
+dest_files=["res://.godot/imported/tutorial_poster.webp-6d32105a6bc2ae3e1d484c4fcbae23d9.ctex"]
 
 [params]
 

@@ -400,6 +400,7 @@ text = "YOUR RUN"
 horizontal_alignment = 1
 
 [node name="InfoTitle" type="Label" parent="Margins/Columns/InfoPanel/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)

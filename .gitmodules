@@ -1,6 +1,15 @@
-[submodule "godot-base/games/dead_metal_jam"]
-	path = godot-base/games/dead_metal_jam
-	url = git@github.com:jraleman/dead_metal_jam.git
+[submodule "godot-base/games/anti_checkers"]
+	path = godot-base/games/anti_checkers
+	url = git@github.com:jraleman/anti_checkers.git
+[submodule "godot-base/games/anti_chess"]
+	path = godot-base/games/anti_chess
+	url = git@github.com:jraleman/anti_chess.git
 [submodule "godot-base/games/chicken_pit"]
 	path = godot-base/games/chicken_pit
 	url = git@github.com:jraleman/chicken_pit.git
+[submodule "godot-base/games/dead_metal_jam"]
+	path = godot-base/games/dead_metal_jam
+	url = git@github.com:jraleman/dead_metal_jam.git
+[submodule "godot-base/games/lazer_nfc"]
+	path = godot-base/games/lazer_nfc
+	url = git@github.com:jraleman/lazer_nfc.git

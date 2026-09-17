@@ -7,6 +7,7 @@ extends Resource
 ## game's identity on screen never means editing a framework screen. A screen
 ## asks [method GameCatalog.theme] what to wear and gets this back — the game's
 ## when the build ships one game, the studio's otherwise.
+## Shared cards can opt into the result game's theme regardless of build mode.
 ##
 ## Unset presentation resources preserve the shared studio UI. Game-specific
 ## artwork, materials and sound generation stay in the game's own folder.
@@ -22,6 +23,10 @@ enum MenuMotion { SPRING, FIRM }
 @export var background_material: ShaderMaterial
 @export var plaque_material: Material
 @export var menu_motion := MenuMotion.SPRING
+
+## Opt into this game's branding on shared result cards, including in collections.
+## Backdrop materials use the menu uniform contract, frozen at speed zero.
+@export var style_share_card := false
 
 ## Logo shown on the rotating plaque. A single-colour silhouette works best:
 ## it is tinted with [member logo_color], so it suits any theme. A texture with

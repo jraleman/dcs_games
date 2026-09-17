@@ -1,0 +1,77 @@
+# Line endings and diff behaviour for the DCS Games superproject.
+#
+# Godot writes LF, Git for Windows is configured here with core.autocrlf=true,
+# and the result was a split working tree: engine-written files LF, Git-checked-
+# out files CRLF, and two scripts with both. Pinning eol=lf makes the checkout
+# match what the editor writes, on every platform.
+#
+# This is safe to adopt as-is: every tracked blob is already LF in the index, so
+# nothing renormalizes and no mass-rewrite commit is needed. The clean filter
+# strips CR on the way in, so files still sitting CRLF in a working tree keep
+# reading as unmodified until they are next written.
+#
+# Note that a nested repository keeps its own attributes: this file does not
+# reach into the submodules under godot-base/games/. All five carry their own
+# copy of this policy, trimmed to the formats each one actually holds —
+# lazer_nfc additionally keeps its Android template's gradlew.bat on CRLF.
+
+# Normalize EOL for everything Git detects as text.
+* text=auto eol=lf
+
+# --- Godot source formats -------------------------------------------------
+# Declared explicitly so a file that opens with an unlucky byte run is never
+# misdetected as binary and silently skipped by normalization and diffs.
+*.gd        text eol=lf
+*.gdshader  text eol=lf
+*.gdshaderinc text eol=lf
+*.tscn      text eol=lf
+*.tres      text eol=lf
+*.godot     text eol=lf
+*.cfg       text eol=lf
+*.import    text eol=lf
+*.uid       text eol=lf
+*.svg       text eol=lf
+
+# --- Other text in the tree ----------------------------------------------
+*.md        text eol=lf
+*.py        text eol=lf
+*.ps1       text eol=lf
+*.sh        text eol=lf
+*.json      text eol=lf
+*.gradle    text eol=lf
+*.properties text eol=lf
+*.xml       text eol=lf
+gradlew     text eol=lf
+
+# Windows batch files are parsed by cmd.exe, which needs CRLF. gradlew.bat
+# ships with the Android build template, so keep this rule even though no
+# .bat is tracked today.
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# --- Binary assets --------------------------------------------------------
+# `binary` is Git's shorthand for `-text -diff`: never normalize, never try to
+# produce a textual diff. Audio, video and images in this repo are authored
+# artifacts committed beside their sources.
+*.ogv       binary
+*.ogg       binary
+*.wav       binary
+*.mp3       binary
+*.png       binary
+*.webp      binary
+*.jpg       binary
+*.jpeg      binary
+*.ico       binary
+*.ttf       binary
+*.otf       binary
+*.res       binary
+*.pck       binary
+*.ctex      binary
+*.apk       binary
+*.aab       binary
+*.zip       binary
+
+# --- Repository presentation ---------------------------------------------
+# Keep the vendored MIT QR encoder out of GitHub's language statistics and out
+# of diffs by default; it is updated wholesale, never edited here.
+godot-base/third_party/** linguist-vendored

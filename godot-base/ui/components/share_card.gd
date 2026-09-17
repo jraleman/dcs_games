@@ -18,6 +18,7 @@ extends Control
 @onready var _achievement_title: Label = %AchievementTitle
 @onready var _achievement_copy: Label = %AchievementCopy
 @onready var _info_panel: PanelContainer = %InfoPanel
+@onready var _info_title: Label = %InfoTitle
 @onready var _info_game: Label = %InfoGame
 @onready var _qr_code: TextureRect = %QRCode
 @onready var _info_copy: Label = %InfoCopy
@@ -36,10 +37,18 @@ var _game_id := ""
 var _installed_art_path := ""
 var _accent := StudioInfo.SKY
 var _secondary := Color("4da3ff")
+var _card_theme: GameTheme
+var _backdrop: ColorRect
+var _label_colors: Dictionary[Label, Color] = {}
+@onready var _logo: TextureRect = $Margins/Columns/Main/Header/Logo
+@onready var _studio_logo: Texture2D = _logo.texture
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for node in find_children("*", "Label", true, false):
+		var label := node as Label
+		_label_colors[label] = label.get_theme_color("font_color")
 	queue_redraw()
 
 
@@ -50,6 +59,7 @@ func configure(data: Dictionary) -> void:
 	_secondary = data.get("secondary_color", Color("4da3ff"))
 
 	var manifest := GameCatalog.get_manifest(_game_id)
+	_configure_presentation(manifest)
 	var default_title := manifest.title if manifest else StudioInfo.TITLE
 	var game_title := str(
 		data.get("game_title", default_title)
@@ -67,8 +77,14 @@ func configure(data: Dictionary) -> void:
 	_accuracy.text = str(data.get("accuracy", "0%"))
 	_hits.text = str(data.get("hits", "0"))
 	_combo.text = str(data.get("combo", "x0"))
+	var caption_keys := ["accuracy_caption", "hits_caption", "combo_caption"]
+	var caption_defaults := ["ACCURACY", "CORRECT HITS", "BEST COMBO"]
+	for index in range(_stat_panels.size()):
+		var caption := _stat_panels[index].get_node("Layout/Caption") as Label
+		caption.text = str(data.get(caption_keys[index], caption_defaults[index])).to_upper()
 
 	_info_game.text = game_title.to_upper()
+	_info_title.text = str(data.get("qr_heading", "SCAN TO VIEW STATS")).to_upper()
 	_info_copy.text = str(
 		data.get(
 			"qr_copy",
@@ -99,6 +115,52 @@ func configure(data: Dictionary) -> void:
 		82 if score.length() <= 8 else 66
 	)
 	queue_redraw()
+
+
+func _configure_presentation(manifest: GameManifest) -> void:
+	for label: Label in _label_colors:
+		label.add_theme_color_override("font_color", _label_colors[label])
+	_logo.texture = _studio_logo
+	_logo.modulate = Color.WHITE
+	if _backdrop != null:
+		remove_child(_backdrop)
+		_backdrop.queue_free()
+		_backdrop = null
+	_card_theme = manifest.theme if manifest != null else null
+	if _card_theme == null or not _card_theme.style_share_card:
+		_card_theme = null
+		return
+
+	_accent = _card_theme.accent
+	_secondary = _card_theme.light
+	for label: Label in _label_colors:
+		label.add_theme_color_override("font_color", _card_theme.light)
+	var logo := _card_theme.logo_texture()
+	if logo != null:
+		_logo.texture = logo
+		_logo.modulate = _card_theme.logo_color
+	if _card_theme.background_material != null:
+		_backdrop = ColorRect.new()
+		_backdrop.name = "CardBackdrop"
+		_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var mat := _card_theme.background_material.duplicate() as ShaderMaterial
+		mat.set_shader_parameter("top_color", _card_theme.background_top)
+		mat.set_shader_parameter("bottom_color", _card_theme.background_bottom)
+		mat.set_shader_parameter("glow_color", _accent)
+		mat.set_shader_parameter("speed", 0.0)
+		_backdrop.material = mat
+		add_child(_backdrop)
+		move_child(_backdrop, 0)
+		_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_update_backdrop_aspect()
+
+
+func _update_backdrop_aspect() -> void:
+	if _backdrop == null or size.y <= 0.0 or size.x <= 0.0:
+		return
+	var ratio := size.x / size.y
+	var aspect := Vector2(ratio, 1.0) if ratio >= 1.0 else Vector2(1.0, 1.0 / ratio)
+	(_backdrop.material as ShaderMaterial).set_shader_parameter("aspect", aspect)
 
 
 ## Swaps the artwork to whatever the game being rendered declares.
@@ -176,8 +238,12 @@ func _configure_achievements(data: Dictionary) -> void:
 	var achievements_are_new := bool(data.get("achievements_are_new", true))
 	if titles.is_empty():
 		_achievement_badge.text = "GO"
-		_achievement_title.text = "YOUR NEXT RUN STARTS HERE"
-		_achievement_copy.text = "Scan the card, study the score, and take another shot."
+		_achievement_title.text = str(
+			data.get("rematch_title", "YOUR NEXT RUN STARTS HERE")
+		).to_upper()
+		_achievement_copy.text = str(
+			data.get("rematch_copy", "Scan the card, study the score, and take another shot.")
+		)
 		return
 
 	_achievement_badge.text = str(data.get("achievement_badge", "NEW"))
@@ -213,7 +279,13 @@ func _apply_color_theme() -> void:
 			panel,
 			_alpha(_accent, 0.28),
 			_alpha(_accent.darkened(0.55), 0.34)
+			if _card_theme == null else _alpha(_card_theme.background_top, 0.94)
 		)
+	_tint_panel(
+		_action_art.get_parent() as PanelContainer,
+		_alpha(StudioInfo.SKY if _card_theme == null else _accent, 0.12),
+		_alpha(StudioInfo.SKY if _card_theme == null else _card_theme.background_top, 0.035)
+	)
 	_tint_panel(
 		_achievement_panel,
 		_alpha(Color("ffd36a"), 0.52),
@@ -223,6 +295,7 @@ func _apply_color_theme() -> void:
 		_info_panel,
 		_alpha(_accent, 0.72),
 		Color(0.025, 0.075, 0.105, 0.96)
+		if _card_theme == null else _alpha(_card_theme.background_bottom, 0.96)
 	)
 	var cta_panel := %CtaPanel as PanelContainer
 	_tint_panel(cta_panel, _accent.lightened(0.24), _accent)
@@ -275,15 +348,18 @@ func _achievement_titles(raw: Variant) -> PackedStringArray:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
+		_update_backdrop_aspect()
 		queue_redraw()
 
 
 func _draw() -> void:
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
+	if _backdrop != null:
+		return
 
-	var top_color := Color("12202a")
-	var bottom_color := Color("081015")
+	var top_color := Color("12202a") if _card_theme == null else _card_theme.background_top
+	var bottom_color := Color("081015") if _card_theme == null else _card_theme.background_bottom
 	var stripe_height := size.y / 12.0
 	for stripe_index in range(12):
 		var ratio := float(stripe_index) / 11.0

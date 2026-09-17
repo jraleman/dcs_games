@@ -81,17 +81,26 @@ func play_music(stream: AudioStream, fade_time := 0.8) -> void:
 
 
 func stop_music(fade_time := 0.8) -> void:
-	if not _music.playing:
-		return
 	if _music_tween and _music_tween.is_running():
 		_music_tween.kill()
-	_music_tween = create_tween()
-	_music_tween.tween_property(_music, "volume_db", MIN_DB, fade_time)
-	_music_tween.tween_callback(_music.stop)
+	_music_tween = null
+	# During startup/crossfade the incoming voice has not become _music yet.
+	if fade_time <= 0.0:
+		_music.stop()
+		_music_next.stop()
+		return
+	if not is_music_playing():
+		return
+	_music_tween = create_tween().set_parallel(true)
+	for player: AudioStreamPlayer in [_music, _music_next]:
+		if player.playing:
+			_music_tween.tween_property(player, "volume_db", MIN_DB, fade_time)
+	_music_tween.chain().tween_callback(_music.stop)
+	_music_tween.tween_callback(_music_next.stop)
 
 
 func is_music_playing() -> bool:
-	return _music.playing
+	return _music.playing or _music_next.playing
 
 
 func _swap_music_players() -> void:

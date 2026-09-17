@@ -28,10 +28,16 @@ config/name.dcs="Desk-Can-Saw"
 config/custom_user_dir_name.dcs="DeskCanSaw Games/Desk-Can-Saw"
 config/name.cp="Chicken Pit"
 config/custom_user_dir_name.cp="DeskCanSaw Games/Chicken Pit"
+config/name.lazer_nfc="LaZer NFC"
+config/custom_user_dir_name.lazer_nfc="DeskCanSaw Games/LaZer NFC"
 
 [audio]
 
 driver/enable_input=true
+driver/enable_input.lazer_nfc=false
+general/text_to_speech=true
+driver/mix_rate.lazer_nfc=44100
+driver/output_latency.lazer_nfc=15
 
 [autoload]
 
@@ -40,6 +46,7 @@ AudioManager="*res://autoload/audio_manager.gd"
 Router="*res://autoload/router.gd"
 GameSession="*res://autoload/game_session.gd"
 AchievementManager="*res://autoload/achievement_manager.gd"
+Store="*res://autoload/store.gd"
 ShareManager="*res://autoload/share_manager.gd"
 
 [dcs]
@@ -50,6 +57,7 @@ build/single_game_id.dmj="dead_metal_jam"
 build/single_game_id.tr="triangle_rush"
 build/single_game_id.dcs="desk_can_saw"
 build/single_game_id.cp="chicken_pit"
+build/single_game_id.lazer_nfc="lazer_nfc"
 
 [display]
 
@@ -59,11 +67,20 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/size/viewport_width.lazer_nfc=720
+window/size/viewport_height.lazer_nfc=1280
+window/size/window_width_override.lazer_nfc=540
+window/size/window_height_override.lazer_nfc=960
+window/handheld/orientation.lazer_nfc=1
 
 [editor]
 
 movie_writer/fps=30
 movie_writer/mjpeg_quality=0.95
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://games/lazer_nfc/android/plugin.cfg")
 
 [gui]
 
@@ -121,14 +138,23 @@ player_two_target_3={
 ]
 }
 
+[input_devices]
+
+sensors/enable_accelerometer.lazer_nfc=true
+sensors/enable_gravity.lazer_nfc=true
+sensors/enable_gyroscope.lazer_nfc=false
+sensors/enable_magnetometer.lazer_nfc=false
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.054902, 0.082353, 0.098039, 1)
+textures/vram_compression/import_etc2_astc=true
 
 [share]
 
 stats_urls/triangle_rush="https://deskcansaw.com/stats/tr"
 stats_urls/desk_can_saw="https://deskcansaw.com/stats/dcs"
 stats_urls/chicken_pit="https://deskcansaw.com/stats/cp"
+stats_urls/lazer_nfc="https://deskcansaw.com/stats/lz"

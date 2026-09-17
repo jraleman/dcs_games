@@ -28,6 +28,8 @@ func _run() -> void:
 		session.call("configure_single_player")
 		await _drive(manifest)
 
+	# Scene-owned audio releases its stopped playbacks on the mixer thread.
+	await create_timer(0.15, true, false, true).timeout
 	if _failures.is_empty():
 		print("Game shell tests passed.")
 		quit(0)
@@ -82,10 +84,31 @@ func _drive(manifest: GameManifest) -> void:
 		"%s must only show the HUD pause button on a touchscreen." % manifest.id
 	)
 
+	var store := get_root().get_node_or_null("Store")
+	var banked := int(store.call("points", manifest.id)) if store != null else 0
 	game.set("_scores", [7, 3])
 	game.set("_best_streaks", [4, 1])
 	game.call("_on_round_timer_timeout")
 	await process_frame
+
+	# A game that sells cosmetics has to be paid for the round it just played,
+	# or its shop is unreachable by playing it.
+	if store != null and bool(store.call("has_store", manifest.id)):
+		# `_finish_round` may settle the totals, so the payout is checked
+		# against the scores the shell actually ended on.
+		var totals: Array = game.get("_scores")
+		var earned := int(game.call("_round_points_earned", totals[0], totals[1]))
+		_expect(
+			earned > 0
+			and int(store.call("points", manifest.id)) == banked + earned,
+			"%s must bank what its round paid into the store." % manifest.id
+		)
+		_expect(
+			(game.get_node("%RoundHighlight") as Label).text.contains(
+				str(store.call("format_points", manifest.id, earned))
+			),
+			"%s must tell the player what the round earned." % manifest.id
+		)
 
 	var round_over := game.get_node("%RoundOver") as Control
 	var round_panel := game.get_node("%RoundPanel") as Control
@@ -139,8 +162,12 @@ func _drive(manifest: GameManifest) -> void:
 		and str(payload.get("game_title", "")) == manifest.title,
 		"%s must stamp its identity on the share payload." % manifest.id
 	)
+	# A single human can still be playing a two-sided match against the CPU.
+	var shared_scores: Array = payload.get("score_values", [])
+	var expected_scores := [7, 3] if shared_scores.size() == 2 else [7]
 	_expect(
-		str(payload.get("score", "")) == "7"
+		shared_scores == expected_scores
+		and str(payload.get("score", "")) == ("7 - 3" if shared_scores.size() == 2 else "7")
 		and int(payload.get("hits_value", -1)) >= 0
 		and int(payload.get("misses_value", -1)) >= 0
 		and int(payload.get("combo_value", -1)) >= 0,

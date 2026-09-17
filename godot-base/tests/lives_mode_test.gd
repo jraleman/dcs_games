@@ -267,8 +267,9 @@ func _test_instructions(settings: Node, session: Node) -> void:
 		settings.call("set_value", Settings.STARTING_LIVES_KEY, 3)
 		var lived := await _instructions_copy()
 		_expect(
-			str(lived.get("rules", "")).contains("3 lives per round"),
-			"%s must brief the lives pool before a lives round." % manifest.id
+			str(lived.get("rules", "")).contains("3 lives per round")
+			== manifest.uses_shell_round_rules,
+			"%s must only brief a lives pool when its rules support one." % manifest.id
 		)
 		_expect(
 			not str(lived.get("summary", "")).contains("timer reaches zero"),
@@ -307,7 +308,36 @@ func _test_rounds(settings: Node, session: Node) -> void:
 		if not manifest.default_lives_mode:
 			settings.call("set_value", Settings.ROUND_MODE_KEY, Settings.RoundMode.LIVES)
 		session.call("configure_single_player")
-		await _drive_lives_round(manifest)
+		if manifest.uses_shell_round_rules:
+			await _drive_lives_round(manifest)
+		else:
+			await _drive_self_paced_match(manifest)
+
+
+## Self-paced games opt out without rewriting the shared preference or ending
+## a match when a timer or life pool from another game would expire.
+func _drive_self_paced_match(manifest: GameManifest) -> void:
+	var game := (load(manifest.gameplay_scene_path) as PackedScene).instantiate()
+	get_root().add_child(game)
+	await process_frame
+	await process_frame
+	var timer := game.get_node("%RoundTimer") as Timer
+	_expect(
+		not bool(game.get("_lives_mode")) and timer.is_stopped()
+		and bool(game.get("_round_active")),
+		"%s must run an untimed match despite a saved Lives preference." % manifest.id
+	)
+	game.call("_lose_life", 0, 99)
+	_expect(
+		bool(game.get("_round_active")) and not bool(game.call("_player_is_out", 0)),
+		"%s must not apply arcade elimination to its match." % manifest.id
+	)
+	_expect(
+		not str(game.call("_round_mode_summary")).contains("Lives"),
+		"%s must describe its own match, not an unused life pool." % manifest.id
+	)
+	game.free()
+	await process_frame
 
 
 ## Plays one game through a full lives round: three mistakes, three lost lives,

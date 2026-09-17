@@ -229,6 +229,27 @@ func _test_pinned_title_screen(id: String) -> void:
 		play.tooltip_text.contains(manifest.title),
 		"Play must name the only game a standalone '%s' build ships." % id
 	)
+	# The store sells one game's cosmetics, so a standalone build is exactly
+	# where the title screen can afford to offer it.
+	var store_button := menu.get_node("%StoreButton") as Button
+	_expect(
+		store_button.visible == manifest.has_store(),
+		(
+			"A standalone '%s' build must offer its store from the title screen, "
+			% id
+		)
+		+ "and only if it has one."
+	)
+	# Same reasoning for the gallery: one game's models, so one game's museum.
+	var gallery_button := menu.get_node("%GalleryButton") as Button
+	_expect(
+		gallery_button.visible == manifest.has_gallery(),
+		(
+			"A standalone '%s' build must offer its gallery from the title "
+			% id
+		)
+		+ "screen, and only if it has one."
+	)
 	_expect(
 		not GameCatalog.offers_a_choice(),
 		(
@@ -455,6 +476,12 @@ func _test_pinned_settings_screen(id: String) -> void:
 		and row.visible == (manifest.control_style == GameManifest.CONTROL_STYLE_TARGETS),
 		"Only a game played with target keys may offer one-button play ('%s')." % id
 	)
+	for node_name in ["%RoundModeOption", "%StartingLivesSlider", "%ExtraRoundTimeSlider"]:
+		var modifier := menu.get_node(node_name) as Control
+		_expect(
+			(modifier.get_parent() as Control).visible == manifest.uses_shell_round_rules,
+			"'%s' must only offer arcade round modifiers when it uses them." % id
+		)
 
 	menu.queue_free()
 	await process_frame

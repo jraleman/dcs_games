@@ -111,6 +111,7 @@ func _run() -> void:
 	await _test_live_rebindings()
 	await _test_copy_fallbacks()
 	await _test_style_capabilities()
+	await _test_two_seat_only_selection()
 	await _test_existing_instructions()
 	await _test_controller_rows()
 	_restore_state()
@@ -517,6 +518,37 @@ func _test_style_capabilities() -> void:
 		await _close(solo_menu)
 	_fixture.supports_multiplayer = true
 	_fixture.copy = COPY.duplicate()
+
+
+## A game whose second seat is never optional — a tug-of-war, a duel — has one
+## honest answer to "how many players?", so the screen must not ask. Clearing
+## the capability collapses step one rather than pre-selecting a card the
+## player could still change.
+func _test_two_seat_only_selection() -> void:
+	_fixture.supports_single_player = false
+	var menu := await _open(MODE_SELECT)
+	if menu != null:
+		_expect(
+			not bool(menu.get("_player_count_offered"))
+			and not (menu.get_node("Margins/Layout/Stepper") as Control).visible
+			and not _visible(menu, "%PreviousButton")
+			and not _visible(menu, "%SelectionStep")
+			and _visible(menu, "%ConfirmStep"),
+			"A two-seat-only game must open on the confirmation with no player-count step."
+		)
+		_expect(
+			_visible(menu, "%OpponentSelector"),
+			"Collapsing the player count must keep the human-or-CPU choice."
+		)
+		_choose_opponent(menu, false)
+		_press(menu, "%ConfirmButton")
+		_expect(
+			bool(_session.call("player_two_enabled"))
+			and not bool(_session.call("is_single_player")),
+			"Confirming without a player-count step must still seat two players."
+		)
+		await _close(menu)
+	_fixture.supports_single_player = true
 
 
 func _test_existing_instructions() -> void:

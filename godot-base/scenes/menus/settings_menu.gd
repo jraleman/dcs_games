@@ -303,6 +303,17 @@ func _configure_style_rows(manifest: GameManifest) -> void:
 	var row := _one_button_triangle_rush.get_parent() as Control
 	if row != null:
 		row.visible = targets
+	for control: Control in [
+		_round_mode, _starting_lives, _extra_round_time,
+		_gameplay_speed, _target_size,
+	]:
+		(control.get_parent() as Control).visible = manifest.uses_shell_round_rules
+	(_game_options.get_parent().get_node("RoundHeading") as Control).visible = (
+		manifest.uses_shell_round_rules
+	)
+	(_gameplay_speed.get_parent().get_parent().get_node("GameplayHeading") as Control).visible = (
+		manifest.uses_shell_round_rules
+	)
 
 
 ## Controller rows describe one control style at a time: target buttons mean

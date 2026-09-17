@@ -16,6 +16,9 @@ godot --path .                         # standalone Desk-Can-Saw, also the edito
 godot --path . -- --game=triangle_rush  # launch a different standalone game
 godot --path . -- --game=dead_metal_jam
 godot --path . -- --game=chicken_pit
+godot --path . -- --game=anti_chess
+godot --path . -- --game=anti_checkers
+godot --path . -- --game=lazer_nfc
 godot --path . -- --game=all            # launch the full collection
 ```
 
@@ -52,7 +55,7 @@ select or instructions.
 | --- | --- |
 | `scripts/studio_info.gd` | Studio identity: project title, tagline, intro cards, credits, palette. **Start here when renaming the project.** |
 | `scripts/game_manifest.gd` | `GameManifest` resource — everything the framework needs to know about one game (scene, copy, achievements, tunables, share art). |
-| `scripts/game_catalog.gd` | `GameCatalog` static registry — discovers `games/*/game.gd` and tracks the selected game. |
+| `scripts/game_catalog.gd` | `GameCatalog` static registry — discovers `games/*/game.gd`, skipping `_`- and `.`-prefixed archive/private folders, and tracks the selected game. |
 | `scripts/game_unlock_rule.gd` | `GameUnlockRule` base class for gating a game behind progress in another. |
 | `scripts/game_shell.gd` | `GameShell` base class — the shared round loop, HUD, results/stats panels, pause, sharing and accessibility plumbing every game inherits. |
 | `scenes/game/game_shell.tscn` | The matching reusable scene: HUD, results panel, stats panel and an empty `%Playfield` for your game to fill. |
@@ -60,9 +63,12 @@ select or instructions.
 | `autoload/game_session.gd` | Holds player count, CPU configuration and controller assignment while moving between scenes, and reports gamepad presence via `gamepad_connected()` / `gamepad_availability_changed`. |
 | `autoload/audio_manager.gd` | Music crossfades, an 8-voice SFX pool, bus volumes, UI/gameplay sound cues and semantic audio-caption requests. |
 | `autoload/achievement_manager.gd` | Persistent achievement registry, per-game unlock progression and queued global achievement toasts. |
+| `autoload/store.gd` | Per-game cosmetics store: wallets, purchases, equipped slots and round payouts, persisted to `user://store.cfg`. |
 | `autoload/share_manager.gd` | Renders reusable 1200×630 session cards, downloads them on web and saves them for desktop sharing. |
 | `autoload/router.gd` | `Router.goto(path)` — scene changes with a fade. Owns the top overlay layer (fade + FPS counter). `start_selected_game()` is the single definition of "begin the selected game", shared by the title screen and the picker. |
 | `scenes/menus/game_select.tscn` | The picker the **Play** button opens: one card per available game, built from `GameCatalog.available()`. Reached only when there is more than one game to choose from. |
+| `scenes/menus/store.tscn` | The shop: one card per item a game declares in `store_items`, grouped by heading. Reached from the title screen in a standalone build and from the pause menu in any build. |
+| `scenes/menus/gallery.tscn` | The museum: one plinth per entry in `gallery_exhibits`, turned and zoomed on a game-owned stage scene. Reached from the same two places as the store. |
 | `ui/menu_screen.gd` | `MenuScreen` base class: UI sounds, focus handling, `ui_cancel` to go back, responsive margins. |
 | `ui/responsive.gd` | Helpers for margins, portrait detection and content width. |
 | `ui/theme/dcs_theme.tres` | Base buttons, panels, sliders and tabs. A standalone `GameTheme` can recolour it and merge a game-owned partial skin. |
@@ -70,6 +76,7 @@ select or instructions.
 | `ui/components/achievement_toast.tscn` | Small reusable unlock notification used by `AchievementManager`. |
 | `ui/components/audio_caption.tscn` | Reusable gameplay caption panel for important sound-only events. |
 | `ui/components/game_card.tscn` | One game on the picker: looping muted walkthrough clip as a thumbnail, poster fallback, name, tagline and Play button. A view only — it reads no autoload. |
+| `ui/components/store_item_card.gd` | One cosmetic on the shop shelf: preview, price, lock reason and a button per slot it can be worn in. A view only — it reads no autoload and moves no money. |
 | `ui/components/player_avatar.gd` | Drawn placeholder for per-player portrait art; set `portrait` to swap in a real texture. |
 | `ui/components/share_card.tscn` | Default score/achievement image; swap it or pass another scene to `ShareManager`. |
 | `ui/components/share_preview.tscn` | Modal generated-image preview with close and open-original actions. |
@@ -78,8 +85,11 @@ select or instructions.
 | `games/desk_can_saw/` | Desk-Can-Saw: manifest, gameplay scene, cans, chainsaw cursor, unlock rule, workshop theme and its own tests. |
 | `games/dead_metal_jam/` | Dead Metal Jam: manifest, pitch-detection instrument input, encounters, its own intro and theme, and its own tests. |
 | `games/chicken_pit/` | Chicken Pit: a real 3D toy-farm tug-of-war inside the 2D shell, with deterministic pulling, three CPU birds, Timer/Lives rules, original models/audio, and its own regression coverage. |
+| `games/anti_chess/` | Anti-Chess: untimed 3D losing chess, compulsory captures, a seeded CPU or local turn-taking, original chessmen, and a jade/brass standalone theme. |
+| `games/anti_checkers/` | Anti Checkers: untimed 3D English giveaway checkers, compulsory jump chains, crowned kings, a solo CPU or local turn-taking, and an original garnet/ivory table. |
+| `games/lazer_nfc/` | LaZer NFC: real 3D Simon-style memory combat, Android reader-mode NFC, guided tag binding, assisted touch, seven instruments, shades and relaxed timing. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
-| `tools/record_tutorials.ps1` | Records both tutorial clips through Godot's Movie Maker and encodes them to `assets/video/*.ogv` plus poster frames. |
+| `tools/record_tutorials.ps1` | Records each game's tutorial clip through Godot's Movie Maker and encodes it to that game's own `games/<id>/assets/video/tutorial.ogv` plus a poster frame. |
 | `tools/measure_intro_cues.py` | Development-only: finds the pauses in a narration recording and prints the `cue_times` array a card-based intro needs. |
 
 ## Looking right on every screen
@@ -118,7 +128,10 @@ space on the other. Layouts are written in those units and adapt at runtime:
   Desk-Can-Saw; the waves per track, timing leniency, wrong-note penalty,
   note input and the octave and self-test keys in Dead Metal Jam; and the round
   length, rope length, pull power, strength decay, CPU opponent and six
-  rebindable pull keys in Chicken Pit. Options apply
+  rebindable pull keys in Chicken Pit. Anti-Chess adds solo colour, CPU difficulty,
+  live legal-move hints and piece letters, plus shared board and camera controls.
+  Anti Checkers follows the same setup with Red/Ivory sides, hints and checker
+  labels. Their self-paced matches hide the unused arcade assists. Round options apply
   from the next round and stack with the Gameplay assists (size and speed
   multiply, extra time is added on top), so they can make a game harder as well
   as easier.
@@ -166,7 +179,7 @@ manifest `tunables` and it appears on the in-game *Game* tab with no scene
 edit at all — see *Adding your own game* below.
 
 **Change how a round ends** — *Settings → Game → Round mode* picks between the
-two shapes every game shares:
+two shapes arcade games share:
 
 - **Timer** (Triangle Rush's default) — the round runs for its configured
   duration and mistakes only cost points.
@@ -180,6 +193,12 @@ two shapes every game shares:
 Desk-Can-Saw and Dead Metal Jam default to **Lives** through their manifests'
 `default_lives_mode` flag. An existing saved round-mode choice takes precedence;
 resetting settings restores the selected game's default.
+
+Self-paced games declare `uses_shell_round_rules = false`: no countdown or
+life pool is started, the unused arcade modifiers are hidden, and elapsed
+time, pause and results still belong to `GameShell`. The saved Timer/Lives
+preference remains intact for other games. Anti-Chess and Anti Checkers use
+this capability to end on their giveaway rules rather than an unrelated arcade limit.
 
 `GameShell` owns all of it — `Settings.round_mode()`, `.lives_mode_enabled()`
 and `.starting_lives()` are read once per round in `_load_round_settings()`, so
@@ -199,6 +218,16 @@ game's `game.gd` manifest (`game.achievements`), then call
 `AchievementManager.unlock("your_id")` at the game-specific unlock point.
 Registration, persistence, duplicate protection, audio and the animated toast
 are automatic.
+
+**Add a cosmetic** — add a dictionary to your manifest's `store_items` with an
+`id`, `title` and `price`. The shop card, the purchase, the wallet, the saved
+ownership and the Store button all follow from that one entry; read the result
+back with `Store.equipped_id(game_id(), slot_id)`. See *A store of your own*.
+
+**Add an exhibit** — add a dictionary to your manifest's `gallery_exhibits` with
+an `id`, `title` and a line or two of `facts`, and teach your
+`gallery_stage_scene_path` scene to draw that id. The plinth, the grouped list,
+the caption and the orbit controls all follow. See *A gallery of your own*.
 
 **Share a result** — the round-over **See Scores** button opens the
 scorecard, which renders the share card in place with
@@ -327,23 +356,50 @@ that directory at startup, so **no framework file needs to change** to add one.
      literal default keys: the instructions append each action title and its
      live binding in solo and versus. Missing control copy falls back to
      `player_one_control_description` / `player_two_control_description`.
-   - `supports_multiplayer`, `supports_cpu_opponent` — whether a second seat
-     and a CPU opponent are offered. Direct movement keeps its two-human setup;
+   - `supports_multiplayer`, `supports_cpu_opponent` — whether multiplayer
+     and a CPU-controlled second seat are offered. Direct movement keeps its two-human setup;
      custom keys can offer either a human or the CPU. A custom-key game's CPU
      tuning belongs in its own `tunables`, read by the game from `Settings`;
      the shared target-game difficulty picker is hidden. Use
      `cpu_opponent_description`, `instructions_cpu_summary` and
      `instructions_cpu_controls` in `copy` to explain that opponent. CPU
      instructions otherwise use the solo summary and generic automatic-play
-     wording. A CPU is a multiplayer session with an automatic second seat,
-     not `GameSession.is_single_player()`.
+     wording. That selector creates a multiplayer session with an automatic
+     second seat, not `GameSession.is_single_player()`. A game can separately own an intrinsic
+     solo CPU: Anti-Chess does, while clearing `supports_cpu_opponent` to keep
+     its multiplayer mode exclusively local humans.
+   - `solo_setup_choices` — keys of this game's declared choice tunables to
+     offer in the solo confirmation, before play. Settings remains the source
+     of truth. These choices keep setup available even on solo-only platforms;
+     the player-count question collapses, but the choices are not skipped.
+     Anti-Chess declares its White/Black option here.
+   - `supports_single_player` — clear it for a game that is inherently two
+     seats, such as a tug-of-war whose second end is held by a human or a
+     bird. Mode selection then skips the player-count step and opens on the
+     confirmation, where the human/CPU selector already asks the only real
+     question. It is a presentation flag, not a guarantee: the platform still
+     wins where a second seat is impossible, and `tests/game_shell_test.gd`
+     drives every catalogued game through `configure_single_player()`, so the
+     gameplay scene must still seat its second player rather than assert.
    - `default_lives_mode` — defaults new rounds to lives when no round-mode
      preference has been saved; omitted means Timer.
+   - `uses_shell_round_rules` — true by default. Clear it for an untimed,
+     self-paced match that calls `_end_round()` when its model reaches a
+     result. The shell keeps elapsed time and shared round UI but does not
+     start a timer or apply lives. Settings hides unused arcade round assists
+     without deleting the player's shared preferences.
    - `unlock_rule` + `hidden_until_unlocked` — gate the game behind progress in
      another one. Subclass `GameUnlockRule`; every finished round is offered to
      every rule, so "playing A unlocks B" needs no framework change.
-   - `share_art_style`, `stats_url`, `tutorial_video_path` — share card and
-     instructions media.
+   - `store_items`, `store_slots`, `store_currency`, `store_preview_scene_path`
+     — a shop where finished rounds buy cosmetics. See *A store of your own*.
+   - `gallery_exhibits`, `gallery_stage_scene_path` — a turntable museum of the
+     models the game is built from. See *A gallery of your own*.
+   - `share_art_style`, `stats_url`, `tutorial_video_path`, `tutorial_poster_path`
+     — share card and instructions media. Optional `local_tutorial_video_path`
+     and `local_tutorial_poster_path` override instructions media only for two
+     local humans; solo, CPU multiplayer and the game picker retain the primary
+     media. Each empty override falls back to its primary counterpart.
    - `intro_scene_path` — an opening of your own, played instead of the
      framework's placeholder cards. It is only used when the build ships this
      game alone, because a collection has not chosen a game yet when the intro
@@ -366,6 +422,118 @@ disappears again behind an `unlock_rule` until earned. The card's moving
 thumbnail is the same `tutorial_video_path` clip the instructions screen uses,
 falling back to `tutorial_poster_path` and then to a labelled placeholder, so a
 game with no recording yet still gets a card of the right shape.
+
+### A store of your own
+
+Rounds can pay out, and the payout can buy cosmetics. The shop is data: a game
+declares what it sells and the framework does the rest — there is no store
+code to write, and nothing under `autoload/`, `scenes/` or `ui/` knows which
+game it is serving.
+
+Declare four manifest fields (all optional; `store_items` alone turns the shop
+on):
+
+- **`store_items`** — the shelf. Each entry needs an `id` (globally unique and
+  permanent — it is a save key), a `title` and a `price`. Add `description`,
+  `badge` (a glyph for the fallback art), `color`, `heading` to group
+  consecutive cards, `requires_achievement` to gate one behind an unlock, and
+  `"default": true` for a free item the player starts in.
+- **`store_slots`** — where items are worn, one item each. An item declares a
+  `kind`, a slot accepts a `kind`, and any item fits any matching slot, so one
+  purchase can dress both sides of a duel. Omit `empty_title` to make the slot
+  always full — give it a `default` item instead of an empty state.
+- **`store_currency`** — what the points are called and how a round earns them:
+  `round(best_score × points_per_score) + round_bonus`, plus `win_bonus` when a
+  solo player beats the CPU, clamped to `max_per_round`. Scores differ by orders
+  of magnitude between games, so **each game keeps its own wallet**; one shared
+  purse would let the loudest game buy out every other shop.
+- **`store_preview_scene_path`** — an optional `Control` scene drawn as the item
+  picture. It is handed the item dictionary through `configure(Dictionary)`,
+  exactly like a share card, and may also expose `set_preview_running(bool)` if
+  it animates. Without one the store draws the item's `badge` on a coloured
+  plate, so a store always renders something sensible.
+
+`GameShell` banks the payout itself when a round ends; override
+`_round_points_earned(result)` only if the default rule is wrong for your game
+(return a negative number to decline the payout entirely).
+
+Read the result back through the `Store` autoload — usually from
+`_load_round_settings()`, so a change made mid-round applies at the next
+countdown rather than mutating the round being played:
+
+```gdscript
+var hat: String = Store.equipped_id(game_id(), "pit_hat_red")
+```
+
+The rest of the API is `points`, `add_points`, `is_owned`, `purchase`, `equip`,
+`unequip`, `equipped_item`, `items`, `slots`, `describe` and `format_points`,
+all taking the game id first. State lives in `user://store.cfg` (sections
+`points`, `owned`, `equipped`) and, like `settings.cfg` and `achievements.cfg`,
+is **merged** into the stored file — a one-game build never deletes another
+build's purchases. Ownership never regresses, and an equipped id the build does
+not recognise falls back to the slot's `default` rather than being dropped.
+
+The **Store** button appears wherever the shop has a game to serve: on the title
+screen of a standalone build, and on the pause overlay of any build while a
+round with a store is running. Both hide themselves otherwise, so declaring no
+store costs nothing. `tests/store_test.gd` walks `GameCatalog.all()`, so your
+shop is covered the moment the manifest declares it.
+
+### A gallery of your own
+
+The gallery is a museum for the models a game is made of: a list of exhibits on
+the left, one of them on a turntable on the right, and a written label under it.
+It exists because a game's art is usually only ever seen at gameplay distance,
+moving, half-occluded — and because "what am I actually looking at" is a fair
+question to be able to answer.
+
+Like the store it is pure data, and unlike the store it has **no autoload**: a
+shop has a wallet to protect, a museum has an opening time and a door. Two
+manifest fields turn it on, and both are required:
+
+- **`gallery_exhibits`** — what is on the plinths, in order. Each entry needs an
+  `id` (unique within the game) and a `title`. Add `description` and `facts` (an
+  array of short specification lines) for the label, `heading` to group
+  consecutive entries under a subtitle, `badge` and `color` for the fallback art
+  and the list accent, and `requires_achievement` to leave an exhibit **listed
+  but not viewable** until it is earned — a collection reads as something to
+  finish rather than something the game is hiding.
+- **`gallery_stage_scene_path`** — the `Control` scene that actually draws a
+  model. This is the one piece a game writes itself, because only the game knows
+  what its models are.
+
+The stage contract mirrors `share_art_scene_path` and `store_preview_scene_path`:
+
+| Method | Required | Meaning |
+| --- | --- | --- |
+| `configure(exhibit: Dictionary)` | yes | Put this exhibit on the plinth. |
+| `set_view(yaw: float, pitch: float, zoom: float)` | no | Yaw and pitch are **offsets in radians from the exhibit's own default framing**; `zoom` is a magnification where `1.0` is that framing. Without it the screen hides the whole controls row rather than showing buttons that do nothing. |
+| `set_auto_spin(enabled: bool)` | no | The screen has already checked reduced motion before calling. |
+
+Positive yaw walks the camera anticlockwise around the model — the same
+direction a drag to the right does, so the buttons and the mouse can never
+disagree. Positive pitch raises the camera.
+
+Every orbit action has an on-screen button as well as a drag, a wheel notch and
+a touch drag, because the arrow keys are deliberately **not** bound: `ui_left`
+and friends move menu focus, and a viewer that swallowed them would trap
+keyboard and d-pad players inside the picture with no way out.
+
+Reduced motion parks the turntable and **disables** the auto-spin toggle with a
+tooltip saying why, rather than leaving a switch that silently does nothing; the
+player can still turn the model by hand. The `facts` lines are the reason an
+exhibit is never carried by the picture alone.
+
+`games/chicken_pit/ui/gallery_stage.gd` is the worked example: a request-driven
+`SubViewport` turntable that builds every exhibit from the same `ChickenRig` and
+`Scenery` calls a match uses — including the hats the player bought in the store
+— and frames each one automatically from its bounding cylinder, so a new exhibit
+needs no hand-measured camera distance.
+
+The **Gallery** button follows the store's rule exactly: the title screen of a
+standalone build, and the pause overlay of any build while a round with a
+gallery is running. `tests/gallery_test.gd` walks `GameCatalog.all()`, so your
+museum is covered the moment the manifest declares it.
 
 ### Chicken Pit — 3D inside the shared shell
 
@@ -390,7 +558,16 @@ their warm dusk theme while the pit is deliberately sunny.
 
 The manifest uses `CONTROL_STYLE_CUSTOM_KEYS`: its own rebindable action
 clusters, a selectable CPU, and live keyboard instructions instead of
-mouse/target prompts. See the game's `DESIGN.md`, `AGENTS.md` and regression
+mouse/target prompts. It also ships the project's first store: rounds pay
+**Feathers**, and `ui/hat_preview.tscn` shows a hen wearing each of the seven
+hats on the shop shelf. The two coops are separate slots, so one purchase can
+dress either side. It ships the project's first **gallery** too:
+`ui/gallery_stage.tscn` puts nine exhibits on a turntable — both coops' birds
+(wearing whatever the store has equipped), the bleacher bird, the barn, the pit,
+the bleachers, the oak, the bunting, and the whole showground behind the *Chicken
+Run* achievement. Every one is built by the same `ChickenRig` and `Scenery` calls
+the match uses, so the display case can never drift from the game. See the game's
+`DESIGN.md`, `AGENTS.md` and regression
 scripts for the model/view contract and authoring commands. Its earlier
 React/Three.js prototype is no longer kept in a `web` folder.
 
@@ -427,6 +604,91 @@ The cards are the narration's transcript, which is what makes a 45-second
 voice-over acceptable: the story is never sound-only, and it survives the music
 bus being turned down. The transition is a cross-fade, so reduced motion keeps
 every card and every cue and only drops the small scale-in.
+
+### Anti-Chess — a self-paced 3D match
+
+`games/anti_chess/` uses the same isolated 3D viewport and inherited 2D shell
+for a jade-and-brass chess table. Solo offers White or Black against the CPU;
+White always starts, even when that is the CPU. Local multiplayer is exclusively
+two humans. The solo camera faces the chosen colour at a frontal angle; local
+play uses a true overhead view. Right drag or held arrows orbit in solo and pan
+without tilting locally; the wheel zooms, Home resets and F flips. WASD/Enter
+and mouse/touch selection share the same legal-move path.
+
+Captures are compulsory. Kings are ordinary pieces, there is no check or
+castling, and a player wins by having no pieces or no legal moves. The pure
+model includes en passant, five explicit promotion choices (including king),
+repetition and fifty-move draws. The seeded CPU spreads its search over frames,
+and pause, replay and exit cancel or suspend pending work.
+
+The manifest opts out of arcade Timer/Lives rules. The HUD shows pieces left,
+results show pieces given away, and winner copy follows the model rather than
+comparing material. Solo P1 always owns the human's chosen colour across the HUD,
+results, stats, achievements and scorecards. Colour and CPU difficulty change
+next match, including on replay. Original batched geometry, vector art, short
+offline-authored sounds and the menu skin live in the folder. Separate solo/local
+instruction videos show their respective camera and controls. See the game's
+`README.md` for rules, asset authoring and graphical/headless regression commands.
+
+### Anti Checkers - English giveaway checkers in 3D
+
+`godot --path . -- --game=anti_checkers` launches a self-contained companion
+to Anti-Chess, discovered by the same catalog. A real, isolated 3D viewport
+renders an original walnut table and garnet/ivory checkers beneath `GameShell`.
+Solo offers Red or Ivory against three CPU levels; Red always starts. Local
+play is two humans sharing an overhead board. Mouse/touch, rebindable square
+keys, orbit/pan, zoom, flip and reset all use the same legal-move path.
+
+The node-free model uses 8 x 8 English/American rules: forward-only men,
+short-range kings, globally compulsory captures and mandatory same-piece
+jump chains. Any available capture may be chosen; no longest-chain rule
+applies. Reaching the far row crowns a king and ends the turn. Having no
+pieces or no legal move wins; capturing the opponent's final checker makes
+the opponent win. Repetition and forty-move draws prevent endless king play.
+
+The shared Timer/Lives choice is preserved but unused. A chain counts as one
+turn in the ledger and statistics. Live scores count pieces left; results
+count pieces given away while the winner follows the model. Solo P1 always
+denotes the human, including Ivory. Original vector art, captioned sound cues,
+standalone branding, achievements and two-sided scorecards stay game-owned.
+The poster and complete written instructions do not require a tutorial video.
+See `games/anti_checkers/README.md` for rules and focused regression commands.
+
+### LaZer NFC - memory, physical tags and a real 3D laboratory
+
+`godot --path . -- --game=lazer_nfc` follows the normal studio sting, skippable
+laboratory briefing and main menu. The standalone Play button and collection
+picker both reach `games/lazer_nfc/gameplay.tscn`, inherited from `GameShell`.
+No new autoload or game-name branch is required. The game owns its battery
+pool across growing memory rounds; the shell owns pause, results, achievements,
+scorecards and Play Again.
+
+A warm, handmade 3D toy laboratory gives the robots personality without
+revealing the next answer. Listen to the whole sequence, then recall grey
+robots against individual deadlines. Every colour has a shape and one of
+seven original instruments; all fourteen dark/light variants also ship.
+Combos, fast recalls, motion bonuses and double-bonus clean sweeps reward
+practice. A wrong answer costs a battery without restarting the deadline;
+an escape costs a battery and advances. At twelve robots the learned pattern
+rolls forward with a fresh ending instead of repeating a solved melody forever.
+
+The READY screen lets players learn every sound for free. Rebindable colour
+keys default to 1-7 in spectrum order, with Q/E held for dark/light shades.
+The first four active colours are red/yellow/green/blue, so their keys are
+1/3/4/5. NFC-less devices immediately get a labelled colour pad with a shade
+selector. Touch answers flag the run Assisted and halve its score once;
+practice previews do not. Difficulty changes apply next experiment, while
+voice, haptics, pad visibility, bindings and visual accessibility update live.
+
+The **Android - LaZer NFC** preset preserves its user directory and portrait
+feature overrides but no longer bypasses the framework boot scene.
+The game-local v2 reader uses UID-only discovery, per-tag debounce, callback
+age compensation and explicit pause/exit cancellation. Guided binding always
+offers a keyboard/touch exit and merges its `ConfigFile` save without replacing
+bad reads. A printable label sheet and reproducible audio/tutorial sources
+live in the game folder. Build the native AAR and install Godot's Gradle export
+template before exporting; see `games/lazer_nfc/README.md` and
+`games/lazer_nfc/android/README.md`.
 
 ## Shipping one game on its own
 
@@ -596,12 +858,21 @@ The optional presentation fields are:
 | `background_material: ShaderMaterial` | Supports `top_color`, `bottom_color`, `glow_color`, `aspect`, and `speed`; zero speed must freeze all decorative motion. Materials are duplicated per screen. |
 | `plaque_material: Material` | Duplicated onto the title plaque; a `StandardMaterial3D` also receives `plaque_color`. |
 | `menu_motion: GameTheme.MenuMotion` | `SPRING` retains the studio animation; `FIRM` uses non-overshooting button transitions and restrained plaque feedback. |
+| `style_share_card: bool` | Opts the shared result card into the payload game's logo, palette and frozen backdrop, including in collection builds. Defaults to `false`, preserving existing cards. |
+
+Share artwork remains game-owned through `GameManifest.share_art_scene_path`:
+a `Control` scene implementing `configure(Dictionary)`. The shared card also
+accepts `accuracy_caption`, `hits_caption`, and `combo_caption` alongside their
+display values, plus `rematch_title` and `rematch_copy` for the panel shown
+when there are no achievements. `qr_heading` and `qr_copy` describe the QR
+destination, so a studio-homepage link need not promise per-run stats.
+Omitted keys retain the default copy.
 
 Keep these resources in the game's folder. Dead Metal Jam provides an example
 with original SVG plates, a condensed variation of Godot's built-in font and
 in-engine synthesized menu cues. No external fonts or sound downloads are needed.
 
-All four games declare their own standalone look, selected automatically by
+Each game declares its own standalone look, selected automatically by
 `--game=<id>` or the corresponding standalone export preset:
 
 | Game | Standalone presentation |
@@ -609,7 +880,9 @@ All four games declare their own standalone look, selected automatically by
 | Triangle Rush | Mint neon over midnight blue, a rushing-triangle logo, chamfered buttons and panels, triangular toggles, a geometric backdrop and an etched plaque. Keeps the springy arcade menu motion. |
 | Desk-Can-Saw | Safety yellow over warm wood and dark steel, a saw-and-can logo, raised workbench controls, mechanical toggles, pegboard and wood-grain scenery, and a timber plaque. Uses firm menu motion. |
 | Dead Metal Jam | Amber stage lights over cold steel, textured metal plates, condensed headings and mechanical menu cues. Uses firm menu motion. |
-| Chicken Pit | Straw and evening barn light over churned dirt, with a barn-red highlight and a chicken silhouette. Colours only so far — no menu skin or materials yet. Keeps the springy menu motion. |
+| Chicken Pit | Cream and gold over turf shadow, barn-red boards, fairground bunting and an original full-colour toy-farm cover. Its share card uses the same frozen backdrop and portrait with pull/notch captions. Keeps the springy menu motion. |
+| Anti-Chess | Jade, parchment and brass, an original chess crest, a restrained checkerboard backdrop and firm menu motion. The short opening teaches the reversed objective; scorecards use its own chess artwork. |
+| Anti Checkers | Garnet, ivory and warm brass, original turned-checker artwork, a subdued checkered backdrop and firm menu motion. Its opening explains forced jumps and crowning; scorecards show both sides' giveaway totals. |
 
 Triangle Rush and Desk-Can-Saw keep their visual resources under their own
 `assets/` and `ui/` folders, with partial widget skins in `ui/menu_skin.tres`.
@@ -642,7 +915,7 @@ A game that declares no theme, and every collection build, gets
 `GameTheme.studio_default()`: the exact values the shared scenes are authored
 with, so nothing moves.
 
-That makes a standalone release **export configuration only**. All four games
+That makes a standalone release **export configuration only**. Four games
 already have a preset — *Windows — Triangle Rush / Desk-Can-Saw / Dead Metal Jam
 / Chicken Pit (standalone)* — each pinned by its own feature tag, spelled as the
 initials of the game's id (`tr`, `dcs`, `dmj`, `cp`). A preset carries the tag
@@ -677,8 +950,8 @@ startup, so these runs still share the collection's save files. That is fine for
 playtesting, and the reason the override belongs in the preset.
 
 `export_presets.cfg` is tracked deliberately — an untracked preset file means
-nobody else can reproduce a release. Keep credentials out of it; when mobile
-exports land, the Android keystore path and password belong in the editor's
+nobody else can reproduce a release. Keep credentials out of it; the Android
+keystore path and password belong in the editor's
 per-machine settings.
 
 ## Input actions
@@ -765,16 +1038,27 @@ share one screen between two humans; they and games with
 `supports_cpu_opponent = false` hide the selector entirely. The
 confirmation body scrolls, so the step survives portrait phones and the taller
 CPU layout. Android and iOS builds expose single-player mode
-only.
+only. Games may declare `solo_setup_choices` to ask meaningful questions before
+a solo round: Anti-Chess uses this for White/Black without presenting a second
+CPU/human question. Choices remain available when multiplayer is unavailable.
+
+Where the player count has only one answer — a game that clears
+`supports_single_player`, or a gated game with a single unlocked route — the
+step collapses: the screen opens on the confirmation with no stepper and no
+**Change Mode** button, and **Back** leaves for the game picker rather than
+returning to a question with one option. Chicken Pit uses this; both ends of
+its rope are always pulled, so only *who plays as Player 2* was ever a choice.
 
 The instructions screen is shown after mode selection by default. Its
 **Show instructions when starting a mode** toggle is persisted, and the same
 preference can be restored under **Settings → Gameplay**.
 
 It leads with a captioned walkthrough clip of a real round of the selected game
-(`assets/video/tutorial_<game>.ogv`), which takes roughly two thirds of the body
+(`games/<id>/assets/video/tutorial.ogv`), which takes roughly two thirds of the body
 width so the round is actually readable, alongside the control cards and rules
-summary. Playback starts automatically and repeats on a loop so a viewer can keep
+summary. A manifest's optional local video/poster overrides select footage for
+human-vs-human play; Anti-Chess uses a separate overhead walkthrough.
+Playback starts automatically and repeats on a loop so a viewer can keep
 watching without hunting for the replay button. It can be paused, restarted or
 toggled by clicking the picture. **Reduced motion** opts out of both: an
 endlessly restarting clip is exactly the kind of unrequested repeated movement
@@ -812,9 +1096,25 @@ drift from how the game really behaves. `tools/record_tutorials.ps1` runs that
 scene through Godot's Movie Maker, encodes the result to Ogg Theora with ffmpeg
 and extracts the still poster frame shown before playback starts. Nothing
 outside `tools/` references either file — add `tools/*` to your export preset's
-exclude filter to keep the recorder out of shipped builds.
+exclude filter, and `games/*/tools/*` for game-owned drivers, to keep recording
+code out of shipped builds. The included presets exclude both.
 The two score-chase walkthroughs demonstrate Timer rounds regardless of saved
 preferences or a game's launch default; Dead Metal Jam's take uses three lives.
+Chicken Pit's 3D take uses a scripted puller that rotates the game's own
+`Q`/`W`/`E` bindings at a legal cadence so the rope trends one way over the
+clip's length, and `$Qualities` in the recorder drops its encoder quality,
+because grass, bunting and a moving camera otherwise cost Theora twice what a
+2D clip does. It teaches the rhythm rather than staging a pin — the CPU bird is
+seeded from the shell's RNG, so no scripted ending survives a re-record.
+Anti-Chess supplies `games/anti_chess/tools/tutorial_driver.gd`, discovered by
+convention rather than another shared gameplay branch. Its solo and local
+variants become `tutorial.ogv` and `tutorial_local.ogv` in that game's own
+`assets/video/`, each with a matching poster. `-Games anti_chess` records both
+without touching
+other games' clips. The driver uses real legal moves and explicitly labelled
+practice positions to teach compulsory captures, promotion and giveaway wins.
+Captures use a unique temporary directory and isolated user profile per recording
+invocation, and only completed encodes replace the shipped media.
 Recording overrides never persist to the player's settings.
 
 The sample unlocks **Solo Starter** after the first completed single-player
@@ -828,10 +1128,13 @@ local multiplayer, or both after both Triangle Rush conditions have been
 completed. A Player 2 win with at least 25 points awards **Race condition** but
 does not satisfy Player 1's multiplayer requirement. These flags and
 achievements are stored in `user://achievements.cfg` and never regress after
-later matches. Both files are written by merging into what is already on disk,
-never by rebuilding them: a standalone build registers only its own game's keys
-and must not delete another build's saved options or unlocks out of a shared
-`user://`.
+later matches. Store wallets, purchases and equipped cosmetics live beside them
+in `user://store.cfg`. All three files are written by merging into what is
+already on disk, never by rebuilding them: a standalone build registers only its
+own game's keys and must not delete another build's saved options, unlocks or
+purchases out of a shared `user://`. The gallery writes nothing at all — a
+museum has nothing to remember, so its only state is the manifest and whichever
+achievements have opened its gated exhibits.
 
 Focused regression checks can be run headlessly:
 
@@ -843,6 +1146,14 @@ godot --headless --path . --script res://tests/accessibility_test.gd -- --game=a
 godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd -- --game=all
 godot --headless --path . --script res://games/chicken_pit/tests/chicken_pit_options_test.gd -- --game=all
 godot --headless --path . --script res://games/chicken_pit/tests/chicken_pit_intro_test.gd -- --game=all
+godot --headless --path . --script res://games/anti_chess/tests/chess_state_test.gd -- --game=all
+godot --headless --path . --script res://games/anti_chess/tests/cpu_player_test.gd -- --game=all
+godot --headless --path . --script res://games/anti_chess/tests/anti_chess_scene_test.gd -- --game=all
+godot --headless --path . --script res://games/anti_chess/tests/anti_chess_setup_test.gd -- --game=all
+godot --headless --path . --script res://games/anti_chess/tests/tutorial_driver_test.gd -- --game=all
+godot --headless --path . --script res://games/anti_checkers/tests/checkers_state_test.gd -- --game=all
+godot --headless --path . --script res://games/anti_checkers/tests/cpu_player_test.gd -- --game=all
+godot --headless --path . --script res://games/anti_checkers/tests/anti_checkers_scene_test.gd -- --game=all
 godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
 godot --headless --path . --script res://tests/instructions_video_test.gd -- --game=all
 godot --headless --path . --script res://tests/custom_keys_test.gd -- --game=all
@@ -850,6 +1161,8 @@ godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
 godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_options_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_select_test.gd -- --game=all
+godot --headless --path . --script res://tests/store_test.gd -- --game=all
+godot --headless --path . --script res://tests/gallery_test.gd -- --game=all
 godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
 ```
 
@@ -862,6 +1175,16 @@ so a standalone build can still verify its own path. It exercises each declared
 theme on the real title screen: logo tint, widget skin, flat-button text contrast,
 plaque materials, backdrop aspect correction and the reduced-motion switch.
 
+Anti-Chess also has a graphics-only `games/anti_chess/tests/board_view_test.gd`
+for portrait/wide framing, square picking, modal UI and the full-board draw
+budget. Run it without `--headless`; its optional
+`--anti-chess-capture-dir=<absolute directory>` saves rendered examples.
+Anti Checkers has equivalent game-owned graphical coverage in
+`games/anti_checkers/tests/board_view_test.gd`, with optional
+`--anti-checkers-capture-dir=<absolute directory>` output.
+Run tests sequentially and use an isolated user profile for host tests that
+exercise persistence or complete real rounds.
+
 The FPS counter is available under **Settings → Display** and is drawn by
 `Router`, so it stays visible across scenes without each game implementing its
 own counter.
@@ -871,8 +1194,8 @@ own counter.
 - `assets/images/dcs_logo.png` — the real DeskCanSaw Games logo.
 - `assets/audio/ui_click.wav`, `ui_focus.wav`, `ui_back.wav` — synthesised UI
   blips generated for this template; replace them with your own.
-- `assets/video/tutorial_*.ogv` and `tutorial_*_poster.webp` — generated from
-  the placeholder games by `tools/record_tutorials.ps1`; re-record them once
+- `games/<id>/assets/video/tutorial.ogv` and `tutorial_poster.webp` — generated
+  from the placeholder games by `tools/record_tutorials.ps1`; re-record them once
   your own game replaces the sample.
 - `icon.svg` — a simple placeholder mark, not the finished studio icon.
 

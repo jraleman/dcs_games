@@ -93,6 +93,9 @@ func _on_gamepad_availability_changed(_available: bool) -> void:
 
 
 func _on_setting_changed(key: String, _value: Variant) -> void:
+	if _is_solo_setup_key(key):
+		_populate_instructions()
+		return
 	if not _uses_custom_keys():
 		return
 	for binding: Dictionary in Settings.control_bindings_for_game(GameCatalog.current_id()):
@@ -128,10 +131,12 @@ func _populate_instructions() -> void:
 	_configure_avatars()
 	if _uses_custom_keys():
 		_populate_custom_keys_instructions()
+		_summary.text = _solo_setup_text(_summary.text)
 		_append_round_mode_note()
 		return
 	if _uses_direct_movement():
 		_populate_direct_movement_instructions()
+		_summary.text = _solo_setup_text(_summary.text)
 		_append_round_mode_note()
 		return
 
@@ -195,6 +200,9 @@ func _round_goal_phrase() -> String:
 ## belong to the game; only the round mode decides whether a mistake also ends
 ## the round, so the note is appended rather than baked into a game's copy.
 func _append_round_mode_note() -> void:
+	var game := GameCatalog.current()
+	if game != null and not game.uses_shell_round_rules:
+		return
 	if not Settings.lives_mode_enabled():
 		return
 	var lives := Settings.starting_lives()
@@ -357,8 +365,7 @@ func _game_text(key: String, fallback: String) -> String:
 ## Loads the walkthrough clip for the active game. When the file is missing the
 ## card is removed and the screen keeps its original single-column layout.
 func _setup_video() -> void:
-	var manifest := GameCatalog.current()
-	var path := manifest.tutorial_video_path if manifest else ""
+	var path := _selected_tutorial_video_path()
 	if path.is_empty() or not ResourceLoader.exists(path):
 		_video_card.hide()
 		set_process(false)
@@ -380,7 +387,7 @@ func _setup_video() -> void:
 	_video_title.text = "WATCH A ROUND · %s" % _current_game_title().to_upper()
 	_video_caption.text = "No audio — captions explain each step."
 	_video.gui_input.connect(_on_video_gui_input)
-	var poster_path := manifest.tutorial_poster_path if manifest else ""
+	var poster_path := _selected_tutorial_poster_path()
 	if not poster_path.is_empty() and ResourceLoader.exists(poster_path):
 		_poster_image.texture = load(poster_path)
 	_update_video_time()
@@ -388,6 +395,28 @@ func _setup_video() -> void:
 		_set_video_idle("Play the walkthrough")
 	else:
 		_play_video()
+
+
+func _selected_tutorial_video_path() -> String:
+	var manifest := GameCatalog.current()
+	if manifest == null:
+		return ""
+	if _uses_local_tutorial_media() and not manifest.local_tutorial_video_path.is_empty():
+		return manifest.local_tutorial_video_path
+	return manifest.tutorial_video_path
+
+
+func _selected_tutorial_poster_path() -> String:
+	var manifest := GameCatalog.current()
+	if manifest == null:
+		return ""
+	if _uses_local_tutorial_media() and not manifest.local_tutorial_poster_path.is_empty():
+		return manifest.local_tutorial_poster_path
+	return manifest.tutorial_poster_path
+
+
+func _uses_local_tutorial_media() -> bool:
+	return GameSession.player_two_enabled() and not GameSession.player_two_is_cpu()
 
 
 func _current_game_id() -> String:
@@ -413,6 +442,20 @@ func _uses_custom_keys() -> bool:
 		manifest != null
 		and manifest.control_style == GameManifest.CONTROL_STYLE_CUSTOM_KEYS
 	)
+
+
+func _is_solo_setup_key(key: String) -> bool:
+	var manifest := GameCatalog.current()
+	if manifest == null:
+		return false
+	for choice_key: String in manifest.solo_setup_choices:
+		if choice_key == key:
+			return true
+	return false
+
+
+func _solo_setup_text(text: String) -> String:
+	return Settings.solo_setup_text(GameCatalog.current_id(), text)
 
 
 func _play_video() -> void:

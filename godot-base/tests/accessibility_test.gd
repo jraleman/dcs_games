@@ -46,6 +46,11 @@ func _test_values() -> Dictionary:
 		Settings.AUDIO_CAPTIONS_KEY: true,
 		Settings.PLAYER_LABELS_KEY: true,
 		Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY: true,
+		# Pinned, not inherited: the HUD copy checked below is exact, and a game
+		# whose manifest declares default_lives_mode would otherwise append its
+		# lives note on a profile that has never chosen a round mode. Lives-mode
+		# behaviour is lives_mode_test.gd's subject, not this file's.
+		Settings.ROUND_MODE_KEY: Settings.RoundMode.TIMER,
 		Settings.GAMEPLAY_SPEED_KEY: 0.7,
 		Settings.TARGET_SIZE_KEY: 1.3,
 		Settings.EXTRA_ROUND_TIME_KEY: 15.0,

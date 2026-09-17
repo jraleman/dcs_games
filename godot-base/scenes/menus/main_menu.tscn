@@ -160,6 +160,16 @@ text = "Play"
 layout_mode = 2
 text = "Settings"
 
+[node name="StoreButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Store"
+
+[node name="GalleryButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Gallery"
+
 [node name="CreditsButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
 layout_mode = 2
 text = "Credits"
@@ -196,5 +206,7 @@ horizontal_alignment = 2
 
 [connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/PlayButton" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/SettingsButton" to="." method="_on_settings_pressed"]
+[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/StoreButton" to="." method="_on_store_pressed"]
+[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/GalleryButton" to="." method="_on_gallery_pressed"]
 [connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/CreditsButton" to="." method="_on_credits_pressed"]
 [connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/QuitButton" to="." method="_on_quit_pressed"]

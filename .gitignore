@@ -1,0 +1,82 @@
+# Repository-root ignores.
+#
+# Scope: this file covers noise that can land anywhere in the superproject —
+# OS turds, editor state, Python tool caches and local secrets. It deliberately
+# does NOT restate the Godot project's own rules; those live in
+# godot-base/.gitignore, next to the project.godot they describe.
+#
+# Note that these rules do not reach inside the submodules listed in
+# .gitmodules (anti_checkers, anti_chess, chicken_pit, dead_metal_jam,
+# lazer_nfc). A submodule is its own repository with its own index, so it
+# carries its own .gitignore. Plain game folders under godot-base/games/
+# (desk_can_saw, triangle_rush) are part of this repository and are covered.
+
+# Godot engine caches — a safety net, not a duplicate.
+# godot-base/.gitignore already covers the host project, but a game folder
+# opened directly in the editor writes these beside its own files, and a
+# reimport run from an unexpected working directory can drop one at the root.
+.godot/
+.import/
+*.translation
+mono_crash.*.json
+
+# Per-machine engine overrides. Godot reads an override.cfg beside
+# project.godot to patch project settings locally; committing one would hand
+# every other clone somebody's private renderer or window setup.
+override.cfg
+
+# Export output. Presets are tracked on purpose (see godot-base/.gitignore),
+# but the binaries they produce are not.
+/exports/
+*.apk
+*.aab
+*.ipa
+*.pck
+
+# Signing material and other local secrets. AGENTS.md requires keystore paths
+# and passwords to stay in the editor's per-machine settings rather than in the
+# tracked export_presets.cfg; this makes a slip harder to commit by accident.
+*.keystore
+*.jks
+export_credentials.cfg
+.env
+.env.*
+!.env.example
+
+# Python tooling under */tools/ (render_audio.py, measure_intro_cues.py,
+# render_cover.gd's companions). Standard library only, so there is nothing to
+# lock — just interpreter and cache droppings.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Editor and IDE state.
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
+
+# OS noise.
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Scratch output: crash dumps and stray local logs. Recorded assets and
+# generated covers are committed with their sources, so nothing here should
+# shadow them.
+*.stackdump
+*.tmp
+*.bak

@@ -25,7 +25,11 @@ Four games currently live in it:
 > that folder's `AGENTS.md` and `DESIGN.md` before changing the rules.
 > The old web prototype is no longer present. Its generic
 > `CONTROL_STYLE_CUSTOM_KEYS` trait supports declared action keys and a CPU
-> without adding game-name branches to the shared framework.
+> without adding game-name branches to the shared framework. It is also the
+> first game with a store: rounds pay Feathers, and seven hats dress either
+> coop. It is the first with a **gallery** too — nine exhibits on a turntable,
+> from a single bird to the whole showground, all built by the same `ChickenRig`
+> and `Scenery` calls the match uses.
 
 > Triangle Rush and Desk-Can-Saw were previously `target_rush` and
 > `slice_and_slash`. Those ids are gone — no alias, no migration — so a
@@ -45,7 +49,8 @@ SHARE_IMAGE_DESIGN.md      # spec for the shareable score card + QR contract
 godot-base/
   project.godot            # autoloads, input actions, [share] stats URLs
   autoload/                # Settings, AudioManager, Router, GameSession,
-                           #   AchievementManager, ShareManager  (load order matters)
+                           #   AchievementManager, Store, ShareManager
+                           #   (load order matters)
   scripts/                 # StudioInfo, GameManifest, GameCatalog, GameUnlockRule,
                            #   GameTheme, GameShell, ShareQrCode
                            #   (class_name globals, not autoloads)
@@ -54,14 +59,23 @@ godot-base/
   scenes/boot/             # studio_logo, intro
   scenes/game/             # game_shell.tscn — the round/HUD scene games inherit
   scenes/menus/           # main_menu, game_select, mode_select, instructions,
-                          #   settings, credits, pause
-  games/<id>/              # one folder per game: game.gd manifest, scenes, actors, tests
+                          #   settings, credits, store, gallery, pause
+  games/<id>/              # one folder per game: game.gd manifest, scenes, actors,
+                           #   assets (incl. assets/video/tutorial.ogv), tests
   tests/                   # framework-wide headless SceneTree regression scripts
   tools/                   # dev-only tutorial recorder + intro cue measurer
                            #   (exclude from export presets)
   third_party/greaby_qrcode/  # vendored MIT QR encoder — keep LICENSE intact
-  assets/                  # audio, images, tutorial videos
+  assets/                  # shared UI audio and images only — every game-specific
+                           #   asset lives in that game's own folder
 ```
+
+Five game folders are **Git submodules** (`anti_checkers`, `anti_chess`,
+`chicken_pit`, `dead_metal_jam`, `lazer_nfc`); `desk_can_saw` and
+`triangle_rush` are plain folders in this repository. Clone with
+`git clone --recurse-submodules`, or run `git submodule update --init` in an
+existing checkout. A change that spans a submodule and the host is two commits:
+one inside the game repository, then the updated gitlink here.
 
 ## Commands
 
@@ -76,7 +90,7 @@ godot --headless --path . --import   # reimport assets and refresh the class cac
 ```
 
 Tests are standalone headless `SceneTree` scripts, run one at a time. All
-fourteen must exit 0:
+sixteen must exit 0:
 
 ```bash
 godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_test.gd -- --game=all
@@ -92,6 +106,8 @@ godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
 godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_options_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_select_test.gd -- --game=all
+godot --headless --path . --script res://tests/store_test.gd -- --game=all
+godot --headless --path . --script res://tests/gallery_test.gd -- --game=all
 godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
 ```
 
@@ -117,8 +133,17 @@ while a collection build points at each game instead, and that a declared
 `GameTheme` reaches the plaque and the shared theme, plus that the title screen
 keeps its single Play button. `tests/game_select_test.gd` covers the picker
 itself: a card per available game, previews running, reduced motion parking
-them, the responsive grid and the back targets. Run the suite with
-`--game=all`: several tests assert values that a specific game declares, so
+them, the responsive grid and the back targets. `tests/store_test.gd` does the
+same for the shop: every game's declared catalogue, the wallet, purchase and
+equip rules, achievement gates, `user://store.cfg` round-tripping, the
+round payout, and the Store button on the title and pause menus.
+`tests/gallery_test.gd` does the same for the museum: every game's declared
+exhibits, the stage contract, the generated list and caption, the orbit clamps
+and reset, reduced motion parking the turntable, a gated exhibit staying listed
+but disabled until it unlocks, and the Gallery button on both menus. It pins
+Reduced motion for the duration rather than inheriting whatever the machine has
+saved, because the turntable's behaviour depends on it. Run the suite
+with `--game=all`: several tests assert values that a specific game declares, so
 only `single_game_test.gd` supports a standalone launch.
 
 There is no linter, formatter or CI configured. Match the existing style by hand.
@@ -162,6 +187,8 @@ add data to `GameManifest` instead.
 | `control_style` | `targets`, `direct_movement` or `custom_keys` — menus branch on this *trait*, never on a game name |
 | `default_lives_mode` | Default round rule when no choice is saved; true for Desk-Can-Saw and Dead Metal Jam, false for Triangle Rush and Chicken Pit |
 | `unlock_rule`, `hidden_until_unlocked` | Gate the game behind progress elsewhere |
+| `store_items`, `store_slots`, `store_currency`, `store_preview_scene_path` | The game's cosmetics shop: what it sells, where items are worn, what its points are called, and the scene that draws an item |
+| `gallery_exhibits`, `gallery_stage_scene_path` | The game's museum: what is on the plinths, and the `Control` scene that draws one. `has_gallery()` needs both |
 | `share_art_style`, `stats_url` | Share-card art variant and QR link |
 | `tutorial_video_path`, `tutorial_poster_path` | Instructions-screen media |
 | `supports_multiplayer`, `supports_cpu_opponent` | Mode availability |
@@ -170,6 +197,9 @@ add data to `GameManifest` instead.
 `games/<id>/<prefix>_options.gd` (`TriangleRushOptions`, `DeskCanSawOptions`,
 `DmjOptions`, `ChickenPitOptions`) so headless tests can import the keys without touching an
 autoload. The game's scenes read the same constants back through `Settings`.
+A game's store catalogue lives there too, for the same reason —
+`ChickenPitOptions.STORE_ITEMS`, `STORE_SLOTS`, `STORE_CURRENCY` — as does its
+gallery: `ChickenPitOptions.GALLERY_EXHIBITS`.
 
 **Settings tabs**: Audio · Display · Accessibility · Gameplay · **Controls** ·
 **Game**. The last two configure one game, so in a collection build they only
@@ -212,6 +242,22 @@ manifest, so **a new game's options need no scene edit**.
 - `AchievementManager.record_round(source_game_id, result)` — offers every
   finished round to **every** game's `GameUnlockRule`, so "playing A unlocks B"
   needs no framework change. Rules filter by `source_game_id` themselves.
+- `Store.points(id)` / `.add_points(id, n)` / `.is_owned(id, item)` /
+  `.purchase(id, item)` / `.equip(id, item, slot)` / `.unequip(id, slot)` /
+  `.equipped_id(id, slot)` / `.equipped_item(id, slot)` / `.items(id)` /
+  `.slots(id)` / `.describe(id, item)` / `.format_points(id, n)` — one game's
+  shop. Every call takes the game id first because **wallets are per game**:
+  scores differ by orders of magnitude, so a shared purse would let the
+  loudest game buy out every other shop. `GameShell` banks the payout itself
+  in `_end_round()`; a game only overrides `_round_points_earned(result)` when
+  the declared currency rule is wrong for it.
+- `manifest.has_gallery()` — exhibits **and** a stage. There is no `Gallery`
+  autoload on purpose: a store has a wallet to protect, a museum has an opening
+  time and a door, so the manifest is the whole state. `gallery.gd` reads the
+  manifest directly and drives the game's stage scene through `configure`,
+  `set_view(yaw, pitch, zoom)` and `set_auto_spin(enabled)`; yaw/pitch are
+  offsets in radians from the exhibit's own framing, and a stage without
+  `set_view` gets no orbit controls rather than dead buttons.
 - `Settings.tunable(key)` / `.tunable_bool(key)` / `.tunable_choice(key)` /
   `.tunable_min(key)` / `.tunable_max(key)` — read a game-declared option.
   `Settings` never hardcodes a game's numbers.
@@ -231,6 +277,14 @@ game opens `scenes/menus/game_select.tscn`, otherwise the only game is selected
 and `Router.start_selected_game()` runs — the same "never ask a question with
 one answer" rule that already skips mode select for a solo-only game. A
 standalone build therefore never shows the picker.
+
+Beside it, a **Store** button appears only when there is a game whose shop it
+could open: a standalone build's own game on the title screen, or the running
+game from the pause overlay. `pause_menu.gd` sets `store.game_context_id` the
+same way it sets the settings screen's, and both overlays go through one
+`_open_overlay(path)` so only one can be up at a time. A **Gallery** button sits
+next to it under exactly the same rule, and uses the same `game_context_id` and
+overlay machinery.
 
 `game_select.gd` builds one `ui/components/game_card.tscn` per
 `GameCatalog.available()` entry, in `menu_order`, so **a new game needs no
@@ -306,7 +360,8 @@ Shell notes:
 `menu_screen.gd`, `game_shell.gd`, `game_shell.tscn`, `dcs_theme.tres`,
 `background`, `splash_motion`, `achievement_toast`, `audio_caption`,
 `player_avatar`, `share_preview`, `share_qr_code`, `studio_logo`, `intro`,
-`game_catalog.gd`, `game_manifest.gd`, `game_unlock_rule.gd`, and the
+`game_catalog.gd`, `game_manifest.gd`, `game_unlock_rule.gd`, `store.gd` and
+`store.tscn`, `gallery.gd` and `gallery.tscn`, and the
 persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
 
 ## Conventions
@@ -341,12 +396,18 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
 
 **Persistence**
 - Settings → `user://settings.cfg`; achievements/progression →
-  `user://achievements.cfg`. Both via `ConfigFile`.
-- Both saves **merge into the stored file** rather than rebuilding it. A build
-  only registers the keys of the games it ships, so rewriting from the registry
-  would delete an absent game's options and unlocks out of a shared `user://`.
+  `user://achievements.cfg`; store wallets/purchases/equipped slots →
+  `user://store.cfg`. All via `ConfigFile`.
+- All three saves **merge into the stored file** rather than rebuilding it. A
+  build only registers the keys of the games it ships, so rewriting from the
+  registry would delete an absent game's options, unlocks or purchases out of a
+  shared `user://`. Ownership, like an unlock, must never regress; an equipped
+  id the build does not recognise falls back to its slot's `default` instead of
+  being dropped.
 - `application/config/custom_user_dir_name` must be unique per derived game and
   then **stable forever** — changing it strands player saves.
+- The gallery saves nothing. Its only state is the manifest plus whichever
+  achievements have opened its gated exhibits, which is why it has no autoload.
 
 **Share cards**
 - Stats URLs must be ≤ 42 UTF-8 bytes or the QR stops scanning after the card
@@ -378,6 +439,9 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   scene at runtime and poke it with `call`/`get`/`has_method`.
 - After adding a `class_name`, run `--import` before the tests, or the global
   class cache will not know it.
+- The GDScript tokenizer rejects a literal NUL (`"\u0000"`) in source — it
+  aborts the import with "Unexpected NUL character". Pick a different sentinel
+  for "no value"; the store uses an empty string.
 - Setting `min_value`/`max_value` on a `Range` re-emits `value_changed`. Do it
   while the screen's `_syncing` guard is set, or the pre-sync value is written
   back to disk. A generated slider sets its bounds *before* connecting the
@@ -386,9 +450,18 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   `add_child()` if it needs the Controls or Game tab; `_ready()` is what builds
   them. Generated widgets are not scene-unique names — reach them through the
   screen's `_option_controls` / `_option_values` / `_binding_buttons`.
+  `store.tscn` follows the same rule and builds its shelf in `_ready()`; its
+  cards live in `_cards`. `gallery.tscn` does too, and its buttons live in
+  `_buttons` with the loaded stage in `_stage`.
+- `BaseButton.set_pressed_no_signal()` does **not** unpress the rest of its
+  `ButtonGroup` — only a real press does. A list that selects in code (the
+  gallery's opening exhibit, for one) has to clear the other buttons itself, or
+  two of them stay lit.
 - `Settings` now restores manifest-declared options from `settings.cfg` (it
   used to save them and never read them back). A test that changes one must put
-  it back, or it leaks into every later run.
+  it back, or it leaks into every later run. A test whose subject *reads* one —
+  the gallery's turntable reads Reduced motion — must pin it rather than
+  inherit whatever the machine has saved.
 - Prefer `float` accessors over `Vector2` for setting ranges — `Vector2` is
   32-bit and silently corrupts stored values.
 - Achievement and unlock flags must never regress after a later match.

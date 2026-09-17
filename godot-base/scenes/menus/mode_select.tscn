@@ -374,6 +374,7 @@ theme_override_constants/separation = 12
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
+follow_focus = true
 
 [node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll"]
 layout_mode = 2
@@ -409,6 +410,13 @@ custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0.686275, 0.866667, 0.917647, 0.24)
+
+[node name="SoloSetupChoices" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
 
 [node name="ControllerGrid" type="GridContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout"]
 unique_name_in_owner = true
@@ -594,9 +602,10 @@ text = "Player 1 uses keys 1, 2 and 3 or Controller 1 buttons A, B and X."
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="Actions" type="HBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout"]
+[node name="Actions" type="HFlowContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/h_separation = 18
+theme_override_constants/v_separation = 18
 alignment = 1
 
 [node name="PreviousButton" type="Button" parent="Margins/Layout/Stage/ConfirmStep/Layout/Actions"]

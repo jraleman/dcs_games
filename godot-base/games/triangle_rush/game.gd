@@ -25,8 +25,10 @@ static func manifest() -> GameManifest:
 	game.stats_url = "https://deskcansaw.com/stats/tr"
 	game.tunables = TriangleRushOptions.TUNABLES
 	game.share_art_style = ShareCardArt.STYLE_TRIANGLE_RUSH
-	game.tutorial_video_path = "res://assets/video/tutorial_triangle_rush.ogv"
-	game.tutorial_poster_path = "res://assets/video/tutorial_triangle_rush_poster.webp"
+	game.tutorial_video_path = "res://games/triangle_rush/assets/video/tutorial.ogv"
+	game.tutorial_poster_path = (
+		"res://games/triangle_rush/assets/video/tutorial_poster.webp"
+	)
 	game.theme = _theme()
 	game.credits = [
 		{

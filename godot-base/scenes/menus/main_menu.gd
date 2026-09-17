@@ -8,6 +8,8 @@ extends MenuScreen
 @export_file("*.tscn") var play_scene := "res://scenes/menus/mode_select.tscn"
 @export_file("*.tscn") var instructions_scene := "res://scenes/menus/instructions.tscn"
 @export_file("*.tscn") var settings_scene := "res://scenes/menus/settings_menu.tscn"
+@export_file("*.tscn") var store_scene := "res://scenes/menus/store.tscn"
+@export_file("*.tscn") var gallery_scene := "res://scenes/menus/gallery.tscn"
 @export_file("*.tscn") var credits_scene := "res://scenes/menus/credits.tscn"
 
 ## Drop a menu track here to have it fade in on this screen.
@@ -33,6 +35,8 @@ const LOGO_FACE_SPAN := 3.04
 @onready var _button_row: HBoxContainer = %ButtonRow
 @onready var _buttons: VBoxContainer = %Buttons
 @onready var _play_button: Button = %PlayButton
+@onready var _store_button: Button = %StoreButton
+@onready var _gallery_button: Button = %GalleryButton
 @onready var _quit_button: Button = %QuitButton
 @onready var _footer_left: Label = %FooterLeft
 @onready var _footer_right: Label = %FooterRight
@@ -68,6 +72,8 @@ func _ready() -> void:
 	_footer_left.text = "%s  ·  %s" % [StudioInfo.STUDIO, StudioInfo.copyright_line()]
 	_footer_right.text = "v%s" % StudioInfo.version()
 	_refresh_play_button()
+	_refresh_store_button()
+	_refresh_gallery_button()
 	AchievementManager.progression_changed.connect(_on_progression_changed)
 	# Quitting is meaningless in a browser tab and unusual on mobile.
 	_quit_button.visible = not (OS.has_feature("web") or OS.has_feature("mobile"))
@@ -417,6 +423,14 @@ func _on_settings_pressed() -> void:
 	Router.goto(settings_scene)
 
 
+func _on_store_pressed() -> void:
+	Router.goto(store_scene)
+
+
+func _on_gallery_pressed() -> void:
+	Router.goto(gallery_scene)
+
+
 func _on_credits_pressed() -> void:
 	Router.goto(credits_scene)
 
@@ -446,3 +460,38 @@ func _refresh_play_button() -> void:
 ## has to be rewritten without a scene reload.
 func _on_progression_changed(_key: String, _value: bool) -> void:
 	_refresh_play_button()
+
+
+## The store sells one game's cosmetics, so the title screen only offers it when
+## there is one game it could mean — which, exactly as with the Settings screen's
+## Controls and Game tabs, is a build that ships a single game. A collection
+## reaches the same screen from the pause menu, where a game is running and the
+## question has an answer.
+func _refresh_store_button() -> void:
+	_store_button.visible = (
+		GameCatalog.is_single_game_build()
+		and Store.has_store(GameCatalog.current_id())
+	)
+	if not _store_button.visible:
+		return
+	_store_button.tooltip_text = "Spend %s on cosmetics." % Store.currency_name(
+		GameCatalog.current_id()
+	).to_lower()
+	_store_button.accessibility_description = _store_button.tooltip_text
+
+
+## The gallery exhibits one game's models, so it follows the store's rule: a
+## build that ships a single game is the only place the title screen knows which
+## game is meant. A collection reaches the same screen from the pause menu.
+func _refresh_gallery_button() -> void:
+	var manifest := GameCatalog.get_manifest(GameCatalog.current_id())
+	_gallery_button.visible = (
+		GameCatalog.is_single_game_build() and manifest != null and manifest.has_gallery()
+	)
+	if not _gallery_button.visible:
+		return
+	_gallery_button.tooltip_text = (
+		"Look around the %d models %s is built from."
+		% [manifest.gallery_exhibits.size(), manifest.title]
+	)
+	_gallery_button.accessibility_description = _gallery_button.tooltip_text

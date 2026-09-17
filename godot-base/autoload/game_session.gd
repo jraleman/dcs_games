@@ -97,6 +97,19 @@ func multiplayer_offered() -> bool:
 	return manifest == null or manifest.supports_multiplayer
 
 
+## True when a solo round is something the selected game can actually run.
+##
+## The mirror of [method multiplayer_offered]: a game whose rules seat two ends
+## of the same rope has no solo mode to describe. It is deliberately checked
+## second, because a device that cannot seat a second player leaves solo as the
+## only thing left — a manifest preference cannot make a game unplayable.
+func single_player_offered() -> bool:
+	if not multiplayer_offered():
+		return true
+	var manifest := GameCatalog.current()
+	return manifest == null or manifest.supports_single_player
+
+
 func configure_single_player() -> void:
 	game_mode = GameMode.SINGLE_PLAYER
 	player_two_controller = PlayerTwoController.HUMAN

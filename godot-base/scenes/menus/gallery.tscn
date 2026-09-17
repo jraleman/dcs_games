@@ -1,0 +1,238 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/menus/gallery.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+
+[node name="Gallery" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+back_scene = "res://scenes/menus/main_menu.tscn"
+
+[node name="Background" parent="." instance=ExtResource("2_background")]
+
+[node name="Margins" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_constants/margin_left = 134
+theme_override_constants/margin_top = 54
+theme_override_constants/margin_right = 134
+theme_override_constants/margin_bottom = 54
+
+[node name="Layout" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="HBoxContainer" parent="Margins/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+theme_type_variation = &"MenuHeading"
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 56
+text = "Gallery"
+autowrap_mode = 3
+
+[node name="BackButton" type="Button" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "Back"
+metadata/ui_sound_handled = true
+
+[node name="Empty" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 24
+text = "This game has nothing on display yet."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Body" type="BoxContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="ListColumn" type="VBoxContainer" parent="Margins/Layout/Body"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="Intro" type="Label" parent="Margins/Layout/Body/ListColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 20
+text = "Turn and zoom the models this game is built from."
+autowrap_mode = 2
+
+[node name="ListScroll" type="ScrollContainer" parent="Margins/Layout/Body/ListColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Sections" type="VBoxContainer" parent="Margins/Layout/Body/ListColumn/ListScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="StageColumn" type="VBoxContainer" parent="Margins/Layout/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="Viewer" type="PanelContainer" parent="Margins/Layout/Body/StageColumn"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 260)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 0
+mouse_default_cursor_shape = 3
+
+[node name="ViewerStack" type="Control" parent="Margins/Layout/Body/StageColumn/Viewer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="StageHost" type="Control" parent="Margins/Layout/Body/StageColumn/Viewer/ViewerStack"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Placeholder" type="Label" parent="Margins/Layout/Body/StageColumn/Viewer/ViewerStack"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 30
+text = "Nothing on display yet."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Controls" type="HFlowContainer" parent="Margins/Layout/Body/StageColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="TurnLeft" type="Button" parent="Margins/Layout/Body/StageColumn/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Turn the model to the left."
+text = "◀ Turn"
+
+[node name="TurnRight" type="Button" parent="Margins/Layout/Body/StageColumn/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Turn the model to the right."
+text = "Turn ▶"
+
+[node name="TiltUp" type="Button" parent="Margins/Layout/Body/StageColumn/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Look at the model from higher up."
+text = "▲ Tilt"
+
+[node name="TiltDown" type="Button" parent="Margins/Layout/Body/StageColumn/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Look at the model from lower down."
+text = "▼ Tilt"
+
+[node name="ZoomOut" type="Button" parent="Margins/Layout/Body/StageColumn/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Move the camera back."
+text = "Zoom -"
+
+[node name="ZoomIn" type="Button" parent="Margins/Layout/Body/StageColumn/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Move the camera closer."
+text = "Zoom +"
+
+[node name="ResetButton" type="Button" parent="Margins/Layout/Body/StageColumn/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Put the model back the way it was framed."
+text = "Reset"
+
+[node name="SpinToggle" type="CheckButton" parent="Margins/Layout/Body/StageColumn/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Turn the model slowly on its own."
+button_pressed = true
+text = "Auto-spin"
+
+[node name="Hint" type="Label" parent="Margins/Layout/Body/StageColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 18
+text = "Drag the model to turn it  ·  scroll to zoom  ·  or use the buttons above."
+autowrap_mode = 2
+
+[node name="Caption" type="VBoxContainer" parent="Margins/Layout/Body/StageColumn"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ExhibitTitle" type="Label" parent="Margins/Layout/Body/StageColumn/Caption"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.831373, 0.360784, 1)
+theme_override_font_sizes/font_size = 28
+text = "Exhibit"
+autowrap_mode = 2
+
+[node name="ExhibitDescription" type="Label" parent="Margins/Layout/Body/StageColumn/Caption"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.827451, 0.87451, 0.894118, 1)
+theme_override_font_sizes/font_size = 21
+text = "Description"
+autowrap_mode = 2
+
+[node name="Facts" type="Label" parent="Margins/Layout/Body/StageColumn/Caption"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 19
+text = "Facts"
+autowrap_mode = 2
+
+[connection signal="pressed" from="Margins/Layout/Header/BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="Margins/Layout/Body/StageColumn/Controls/ResetButton" to="." method="_on_reset_pressed"]
+[connection signal="toggled" from="Margins/Layout/Body/StageColumn/Controls/SpinToggle" to="." method="_on_spin_toggled"]

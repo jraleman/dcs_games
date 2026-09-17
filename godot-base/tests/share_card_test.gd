@@ -205,6 +205,15 @@ func _test_share_card() -> void:
 	)
 	_expect_card_fits(card)
 
+	var heading_data: Dictionary = prepared["data"].duplicate(true)
+	heading_data["qr_heading"] = "Discover more games"
+	card.configure(heading_data)
+	_expect((card.get_node("%InfoTitle") as Label).text == "DISCOVER MORE GAMES",
+		"A QR heading must describe a game-supplied destination without promising run stats.")
+	card.configure(prepared["data"])
+	_expect((card.get_node("%InfoTitle") as Label).text == "SCAN TO VIEW STATS",
+		"An omitted QR heading must restore the existing stats wording.")
+
 	var desk_data: Dictionary = prepared["data"].duplicate(true)
 	desk_data["score"] = "-1"
 	desk_data["score_values"] = [-1]
@@ -239,9 +248,123 @@ func _test_share_card() -> void:
 	_expect_card_fits(card)
 
 	_test_game_supplied_art(card, desk_data)
+	await _test_game_theme(card, desk_data)
 
 	card.queue_free()
 	await process_frame
+
+
+func _test_game_theme(card: SessionShareCard, base: Dictionary) -> void:
+	var manifest := GameCatalog.get_manifest("chicken_pit")
+	if manifest == null:
+		return
+	var original_game := GameCatalog.current_id()
+	GameCatalog.select("desk_can_saw")
+	var data := base.duplicate(true)
+	data.merge({
+		"game_id": manifest.id,
+		"game_title": manifest.title,
+		"stats_url": manifest.resolved_stats_url(),
+		"mode": "Red vs Rooster - 3 Lives",
+		"result": "BLUE COOP PINS RED!",
+		"score": "12340 - 14340",
+		"score_values": [12340, 14340],
+		"score_caption": "RED COOP - BLUE COOP",
+		"challenge": "WHO RULES THE ROOST NEXT?",
+		"accuracy_caption": "PULLS",
+		"accuracy": "420",
+		"hits_caption": "NOTCHES TAKEN",
+		"hits": "32",
+		"combo_caption": "BEST NOTCH RUN",
+		"combo": "x12",
+		"cta": "GRAB THE ROPE",
+		"qr_copy": "Study the tug, challenge a rival, and take the pit.",
+		"rematch_title": "TWO COOPS. ONE ROPE.",
+		"rematch_copy": "The pit is ready for a rematch. Bring your best pulling rhythm.",
+		"achievements": PackedStringArray(),
+		"achievement_count": 0,
+	}, true)
+	card.configure(data)
+	await process_frame
+	await process_frame
+	_expect(
+		(card.get_node("%ActionArt") as TextureRect).texture == manifest.theme.logo_texture(),
+		"Chicken Pit must reuse its full-colour original farm portrait."
+	)
+	var backdrop := card.get_node_or_null("CardBackdrop") as ColorRect
+	_expect(backdrop != null, "An opted-in card must install the game's backdrop.")
+	if backdrop != null:
+		var mat := backdrop.material as ShaderMaterial
+		_expect(mat != manifest.theme.background_material,
+			"The card must not mutate the menu's shared material.")
+		_expect(is_zero_approx(float(mat.get_shader_parameter("speed"))),
+			"Share-card decoration must be frozen.")
+		_expect(float(manifest.theme.background_material.get_shader_parameter("speed")) > 0.0,
+			"Rendering a card must not freeze the game's menus.")
+		_expect(mat.get_shader_parameter("top_color") == manifest.theme.background_top,
+			"The payload's game must select the palette, not the active collection game.")
+	_expect((card.get_node("%Score") as Label).get_theme_color("font_color")
+		== manifest.theme.accent.lightened(0.08),
+		"The score must use the game's gold accent rather than the result's team colour.")
+	_expect((card.get_node("%AccuracyPanel/Layout/Caption") as Label).text == "PULLS"
+		and (card.get_node("%HitsPanel/Layout/Caption") as Label).text == "NOTCHES TAKEN"
+		and (card.get_node("%ComboPanel/Layout/Caption") as Label).text == "BEST NOTCH RUN",
+		"The card must accept game-native stat captions.")
+	_expect((card.get_node("%AchievementTitle") as Label).text == "TWO COOPS. ONE ROPE.",
+		"A card without achievements must use the game's rematch copy.")
+	_expect_card_fits(card)
+
+	if DisplayServer.get_name() != "headless":
+		var manager := get_root().get_node("ShareManager")
+		for headline in ["BLUE COOP PINS RED!", "RED COOP HOLDS THE PIT", "DEAD EVEN"]:
+			data["result"] = headline
+			if headline == "RED COOP HOLDS THE PIT":
+				data["score"] = "14340 - 12340"
+				data["score_values"] = [14340, 12340]
+				data["achievements"] = PackedStringArray(["Chicken Run", "Fowl Play"])
+				data["achievement_count"] = 2
+				data["achievement_badge"] = "RUN"
+			if headline == "DEAD EVEN":
+				data["score"] = "0 - 0"
+				data["score_values"] = [0, 0]
+				data["accuracy"] = "0"
+				data["hits"] = "0"
+				data["combo"] = "x0"
+				data["achievements"] = PackedStringArray()
+				data["achievement_count"] = 0
+			card.configure(data)
+			await process_frame
+			await process_frame
+			_expect_card_fits(card)
+			var rendered: Dictionary = await manager.call("preview_score_image", data)
+			_expect(bool(rendered.get("ok", false)),
+				"The themed card must render through the actual share manager.")
+			if bool(rendered.get("ok", false)):
+				var texture: Texture2D = rendered["texture"]
+				_expect(texture.get_size() == Vector2(1200, 630),
+					"The themed share image must retain the standard export dimensions.")
+				for argument in OS.get_cmdline_user_args():
+					if argument.begins_with("--share-capture-dir="):
+						var directory := argument.trim_prefix("--share-capture-dir=")
+						var path := directory.path_join(headline.validate_filename() + ".png")
+						_expect(texture.get_image().save_png(path) == OK,
+							"The requested rendered card must be saved.")
+
+	card.configure(base)
+	await process_frame
+	await process_frame
+	_expect(card.get_node_or_null("CardBackdrop") == null,
+		"A reused card must remove a previous game's backdrop.")
+	_expect((card.get_node("%AccuracyPanel/Layout/Caption") as Label).text == "ACCURACY"
+		and (card.get_node("%ComboPanel/Layout/Caption") as Label).text == "BEST COMBO",
+		"A reused card must restore default stat captions.")
+	_expect((card.get_node("%GameTitle") as Label).get_theme_color("font_color")
+		.is_equal_approx(Color(0.94902, 0.968627, 0.976471, 1)),
+		"A reused card must restore its authored label colours.")
+	_expect(card.get_node("%ActionArt") is ShareCardArt,
+		"A reused card must restore the next game's art.")
+	_expect_card_fits(card)
+	GameCatalog.select(original_game)
 
 
 ## A game may bring its own art scene instead of one of the built-in styles.
@@ -305,6 +428,10 @@ func _test_game_supplied_art(card: SessionShareCard, base: Dictionary) -> void:
 
 
 func _expect_card_fits(card: Control) -> void:
+	for node in card.find_children("*", "Control", true, false):
+		var control := node as Control
+		_expect(card.get_global_rect().grow(0.5).encloses(control.get_global_rect()),
+			"Card content must remain inside the export: %s." % card.get_path_to(control))
 	var info_panel := card.get_node("%InfoPanel") as Control
 	var achievement_panel := card.get_node("%AchievementPanel") as Control
 	_expect(

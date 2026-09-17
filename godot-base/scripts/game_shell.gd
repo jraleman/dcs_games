@@ -150,6 +150,7 @@ var _active_round_duration := 30.0
 ## Set from [method Settings.lives_mode_enabled] when a round starts, so a mode
 ## change mid-round only takes effect on the next one.
 var _lives_mode := false
+var _uses_shell_round_rules := true
 var _starting_lives := Settings.DEFAULT_STARTING_LIVES
 var _lives := [0, 0]
 ## Seconds the current round has been running. Lives mode has no fixed length,
@@ -197,6 +198,11 @@ func _process(delta: float) -> void:
 	_update_screen_shake(delta)
 
 	if not _round_active:
+		return
+
+	if not _uses_shell_round_rules:
+		_round_elapsed += delta
+		_update_round(delta, _round_time_left())
 		return
 
 	if _lives_mode:
@@ -287,7 +293,7 @@ func _start_round() -> void:
 	# rebuilt after `_load_round_settings()` rather than only once at startup.
 	_configure_mode_ui()
 
-	if not _lives_mode:
+	if _uses_shell_round_rules and not _lives_mode:
 		_round_timer.start(_active_round_duration)
 	_activate_round()
 
@@ -317,7 +323,7 @@ func _end_round() -> void:
 	_finish_round()
 	if _lives_mode:
 		_update_lives()
-	else:
+	elif _uses_shell_round_rules:
 		_update_time(0)
 		_time_progress.value = 0.0
 	_reset_urgency()
@@ -336,6 +342,7 @@ func _end_round() -> void:
 
 	_award_round_achievements(player_one_total, player_two_total)
 	var unlocked_title := _record_round(player_one_total, player_two_total)
+	_bank_store_points(player_one_total, player_two_total)
 
 	_round_highlight.text = _round_highlight_summary()
 	_round_result_color = celebration_color
@@ -376,6 +383,36 @@ func _record_round(player_one_total: int, player_two_total: int) -> String:
 			var game := GameCatalog.get_manifest(unlocked_game_id)
 			unlocked_title = game.title if game else unlocked_game_id
 	return unlocked_title
+
+
+## Banks this round's store payout and says so on the results line, so a player
+## can watch a purchase get closer without leaving the game to check.
+##
+## Games without cosmetics never reach the wallet, so nothing changes for them.
+func _bank_store_points(player_one_total: int, player_two_total: int) -> void:
+	if not Store.has_store(game_id()):
+		return
+	var earned := _round_points_earned(player_one_total, player_two_total)
+	if earned <= 0:
+		return
+	Store.add_points(game_id(), earned)
+	_round_progression_notes.append(
+		"+%s earned" % Store.format_points(game_id(), earned)
+	)
+
+
+## Points this finished round pays into the game's store. The default applies
+## the payout rule the manifest declares; override to bank a game's own idea of
+## a round worth paying for.
+func _round_points_earned(player_one_total: int, player_two_total: int) -> int:
+	return Store.default_round_points(
+		game_id(),
+		{
+			"single_player": GameSession.is_single_player(),
+			"player_one_score": player_one_total,
+			"player_two_score": player_two_total,
+		}
+	)
 
 
 func _unlock_round_achievement(id: String) -> void:
@@ -492,6 +529,13 @@ func _update_time(seconds_left: int) -> void:
 ## Repoints the TimerCard and the progress bar at whatever this round is
 ## measuring, and rearms the lives pool.
 func _reset_round_gauge() -> void:
+	if not _uses_shell_round_rules:
+		_lives = [0, 0]
+		_time_caption.text = "MATCH"
+		_time_label.text = "--"
+		_time_progress.hide()
+		return
+	_time_progress.show()
 	_time_caption.text = "LIVES LEFT" if _lives_mode else "SECONDS LEFT"
 	if _lives_mode:
 		_lives = [_starting_lives, _starting_lives]
@@ -602,21 +646,29 @@ func _announce_lost_life(player_index: int, remaining: int) -> void:
 
 ## Seconds left on the clock.
 ##
-## Lives mode has no clock, so a round always reports its full length there and
-## games that ramp difficulty with the countdown hold their opening pace.
+## Lives and self-paced matches have no clock, so their hooks receive the full
+## length and games that ramp difficulty with the countdown hold their opening pace.
 func _round_time_left() -> float:
-	return _active_round_duration if _lives_mode else _round_timer.time_left
+	return (
+		_active_round_duration
+		if _lives_mode or not _uses_shell_round_rules else _round_timer.time_left
+	)
 
 
-## How long the round lasted, for the stats panel. Lives mode has no fixed
-## length, so it reports the time actually survived.
+## How long the round lasted, for the stats panel. Matches without a countdown
+## report the time actually played.
 func _round_length_seconds() -> float:
-	return _round_elapsed if _lives_mode else _active_round_duration
+	return (
+		_round_elapsed
+		if _lives_mode or not _uses_shell_round_rules else _active_round_duration
+	)
 
 
 ## How the round was measured, for results copy that used to say "in 30
 ## seconds". Reads correctly in both modes, so games never branch on the mode.
 func _round_length_phrase() -> String:
+	if not _uses_shell_round_rules:
+		return "%d seconds" % roundi(_round_elapsed)
 	if not _lives_mode:
 		return "%d seconds" % roundi(_active_round_duration)
 	return "%d seconds on %d %s" % [
@@ -1214,10 +1266,14 @@ func _spawn_round_confetti(color: Color) -> void:
 ## round mode. Override and call `super()` to add game-declared
 ## `GameManifest.tunables`.
 func _load_round_settings() -> void:
-	_active_round_duration = round_duration + Settings.extra_round_time()
-	_round_gameplay_speed = Settings.gameplay_speed_scale()
-	_round_target_size = Settings.target_size_scale()
-	_lives_mode = Settings.lives_mode_enabled(game_id())
+	var game := manifest()
+	_uses_shell_round_rules = game == null or game.uses_shell_round_rules
+	_active_round_duration = round_duration + (
+		Settings.extra_round_time() if _uses_shell_round_rules else 0.0
+	)
+	_round_gameplay_speed = Settings.gameplay_speed_scale() if _uses_shell_round_rules else 1.0
+	_round_target_size = Settings.target_size_scale() if _uses_shell_round_rules else 1.0
+	_lives_mode = _uses_shell_round_rules and Settings.lives_mode_enabled(game_id())
 	_starting_lives = Settings.starting_lives()
 
 
@@ -1252,8 +1308,7 @@ func _finish_round() -> void:
 
 
 ## Per-frame gameplay while the round is live. `time_left` is the countdown,
-## and holds steady at the full round length in lives mode, where nothing is
-## counting down.
+## or the full round length in lives and self-paced matches.
 func _update_round(_delta: float, _time_left: float) -> void:
 	pass
 

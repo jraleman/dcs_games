@@ -62,10 +62,22 @@ text = "Resume"
 layout_mode = 2
 text = "Settings"
 
+[node name="StoreButton" type="Button" parent="Center/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Store"
+
+[node name="GalleryButton" type="Button" parent="Center/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Gallery"
+
 [node name="ExitToMainMenuButton" type="Button" parent="Center/Panel/Layout"]
 layout_mode = 2
 text = "Exit to Main Menu"
 
 [connection signal="pressed" from="Center/Panel/Layout/ResumeButton" to="." method="_on_resume_pressed"]
 [connection signal="pressed" from="Center/Panel/Layout/SettingsButton" to="." method="_on_settings_pressed"]
+[connection signal="pressed" from="Center/Panel/Layout/StoreButton" to="." method="_on_store_pressed"]
+[connection signal="pressed" from="Center/Panel/Layout/GalleryButton" to="." method="_on_gallery_pressed"]
 [connection signal="pressed" from="Center/Panel/Layout/ExitToMainMenuButton" to="." method="_on_exit_to_main_menu_pressed"]
