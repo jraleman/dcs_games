@@ -222,7 +222,8 @@ func _test_payout(store: Node, manifest: GameManifest) -> void:
 	var cap := int(rule["max_per_round"])
 
 	var duel := {
-		"single_player": false, "player_one_score": 40, "player_two_score": 100
+		"single_player": false, "vs_cpu": false,
+		"player_one_score": 40, "player_two_score": 100
 	}
 	var expected := int(roundf(100.0 * rate)) + bonus
 	if cap > 0:
@@ -233,15 +234,37 @@ func _test_payout(store: Node, manifest: GameManifest) -> void:
 		% manifest.id
 	)
 
-	var solo := {
-		"single_player": true, "player_one_score": 100, "player_two_score": 40
+	var beat_cpu := {
+		"single_player": false, "vs_cpu": true,
+		"player_one_score": 100, "player_two_score": 40
 	}
-	var solo_expected := int(roundf(100.0 * rate)) + bonus + win
+	var beat_cpu_expected := int(roundf(100.0 * rate)) + bonus + win
+	if cap > 0:
+		beat_cpu_expected = mini(beat_cpu_expected, cap)
+	_expect(
+		int(store.call("default_round_points", manifest.id, beat_cpu)) == beat_cpu_expected,
+		"%s must add its win bonus when the player beat the CPU." % manifest.id
+	)
+
+	var lost_to_cpu := {
+		"single_player": false, "vs_cpu": true,
+		"player_one_score": 40, "player_two_score": 100
+	}
+	_expect(
+		int(store.call("default_round_points", manifest.id, lost_to_cpu)) == expected,
+		"%s must withhold the win bonus from a round the CPU won." % manifest.id
+	)
+
+	var solo := {
+		"single_player": true, "vs_cpu": false,
+		"player_one_score": 100, "player_two_score": 0
+	}
+	var solo_expected := int(roundf(100.0 * rate)) + bonus
 	if cap > 0:
 		solo_expected = mini(solo_expected, cap)
 	_expect(
 		int(store.call("default_round_points", manifest.id, solo)) == solo_expected,
-		"%s must add its win bonus to a round a solo player won." % manifest.id
+		"%s must not pay a win bonus for a round with no opponent." % manifest.id
 	)
 
 	var wipeout := {

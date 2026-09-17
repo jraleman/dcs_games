@@ -135,9 +135,14 @@ space on the other. Layouts are written in those units and adapt at runtime:
   from the next round and stack with the Gameplay assists (size and speed
   multiply, extra time is added on top), so they can make a game harder as well
   as easier.
-- **One-button Triangle Rush** lets any of a player's assigned keys or mapped
-  controller target buttons activate their highlighted target. Desk-Can-Saw
-  also exposes controller movement speed, stick deadzone and movement-layout
+- **One-button target select** lets any of a player's assigned keys or mapped
+  controller target buttons activate their highlighted target. It belongs to the
+  `targets` control style, not to one game, and so do the rest of the shared
+  rows: object size, pad cursor speed, movement scheme and the target buttons.
+  Their captions and help text are neutral by default and any game may reword
+  them with a `setting_*` key on its `GameManifest.copy` (see *Its own
+  settings*). Games in the `direct_movement` style
+  also expose controller movement speed, stick deadzone and movement-layout
   controls. Every one of those pad-only rows hides itself until a controller is
   connected, so the screen never advertises hardware the player does not have.
 - **`MenuScreen.refresh_layout()`** recomputes margins from the live viewport
@@ -288,24 +293,35 @@ that directory at startup, so **no framework file needs to change** to add one.
 
    | Hook | Override it to |
    | --- | --- |
-   | `game_id()` | **Required.** Return your manifest id. |
-   | `_build_playfield()` | Spawn your actors under `%Playfield`. |
-   | `_prepare_session()` | Read `GameSession` before the first round. |
-   | `_begin_first_round()` | Kick off the opening round if it needs custom timing. |
-   | `_load_round_settings()` | Pull your `Settings.tunable(...)` values. Call `super()`. |
-   | `_reset_round_state()` | Clear per-round state before the countdown. |
-   | `_activate_round()` | Start motion the moment the countdown clears. |
-   | `_update_round(delta)` | Per-frame gameplay. |
-   | `_handle_gameplay_input(event)` | Gameplay input; the shell already ate `pause`. |
-   | `_finish_round()` | Stop motion and settle scores when time runs out. |
-   | `_round_totals()` / `_player_stats(index)` | Feed the results and stats panels. |
-   | `_describe_round_outcome()` / `_round_highlight_summary()` | Word the results copy. |
-   | `_award_round_achievements(result)` | Unlock your own achievements. |
-   | `_spawn_round_confetti()` | Custom celebration particles. |
-   | `_playfield_bounds()` | Report your play area if it is not the whole viewport. |
-   | `_configure_mode_ui()` | Extra HUD wiring for 1P/2P/CPU. Call `super()`. |
-   | `_on_player_labels_changed()` / `_on_controls_changed()` | React to accessibility settings. |
-   | `_on_game_setting_changed(key)` | React to one of your tunables changing live. |
+   | `game_id() -> String` | **Required.** Return your manifest id. |
+   | `_build_playfield() -> void` | Spawn your actors under `%Playfield`. |
+   | `_prepare_session() -> void` | Read `GameSession` before the first round. |
+   | `_begin_first_round() -> void` | Kick off the opening round if it needs custom timing. |
+   | `_load_round_settings() -> void` | Pull your `Settings.tunable(...)` values. Call `super()`. |
+   | `_reset_round_state() -> void` | Clear per-round state before the countdown. |
+   | `_activate_round() -> void` | Start motion the moment the countdown clears. |
+   | `_update_round(delta: float, time_left: float) -> void` | Per-frame gameplay. |
+   | `_handle_gameplay_input(event: InputEvent) -> void` | Gameplay input; the shell already ate `pause`. |
+   | `_finish_round() -> void` | Stop motion and settle scores when time runs out. |
+   | `_round_totals() -> Dictionary` / `_player_stats(player_index: int) -> Dictionary` | Feed the results and stats panels. |
+   | `_describe_round_outcome(p1_total: int, p2_total: int) -> Dictionary` / `_round_highlight_summary() -> String` | Word the results copy. |
+   | `_award_round_achievements(p1_total: int, p2_total: int) -> void` | Unlock your own achievements. |
+   | `_round_points_earned(p1_total: int, p2_total: int) -> int` | Replace the store payout rule; negative declines it. |
+   | `_spawn_round_confetti(color: Color) -> void` | Custom celebration particles. |
+   | `_playfield_bounds() -> Rect2` | Report your play area if it is not the whole viewport. |
+   | `_configure_mode_ui() -> void` | Extra HUD wiring for 1P/2P/CPU. Call `super()`. |
+   | `_on_player_labels_changed() -> void` / `_on_controls_changed() -> void` | React to accessibility settings. |
+   | `_on_game_setting_changed(key: String, value: Variant) -> void` | React to one of your tunables changing live. |
+   | `_set_reduced_motion_enabled(value: bool) -> void` | Park your own ambient motion. **Call `super(value)`.** |
+   | `_set_intense_effects_enabled(value: bool) -> void` | Gate your own flashes and shake. **Call `super(value)`.** |
+   | `_reset_reduced_motion_state() -> void` | Re-apply the parked pose when a round restarts. |
+
+   The two accessibility setters are the only hooks where forgetting `super()`
+   breaks a contract rather than a feature: the base implementations are what
+   store the flag the shell's own shake, flash and confetti read.
+   `tests/accessibility_test.gd` and `tests/visual_effects_test.gd` sweep every
+   game in `GameCatalog.all()` for exactly that, so a new game is covered the
+   moment it is discovered.
 
    The shell also hands you three helpers for the lives round mode (see *Round
    modes* below). All three are safe to call unconditionally — under the
@@ -396,7 +412,10 @@ that directory at startup, so **no framework file needs to change** to add one.
    - `gallery_exhibits`, `gallery_stage_scene_path` — a turntable museum of the
      models the game is built from. See *A gallery of your own*.
    - `share_art_style`, `stats_url`, `tutorial_video_path`, `tutorial_poster_path`
-     — share card and instructions media. Optional `local_tutorial_video_path`
+     — share card and instructions media. `share_art_style` names one of
+     `ShareCardArt`'s hand-drawn variants; anything it does not recognise —
+     including leaving it unset — draws the neutral studio mark, never another
+     game's art. Optional `local_tutorial_video_path`
      and `local_tutorial_poster_path` override instructions media only for two
      local humans; solo, CPU multiplayer and the game picker retain the primary
      media. Each empty override falls back to its primary counterpart.
@@ -437,14 +456,18 @@ on):
   permanent — it is a save key), a `title` and a `price`. Add `description`,
   `badge` (a glyph for the fallback art), `color`, `heading` to group
   consecutive cards, `requires_achievement` to gate one behind an unlock, and
-  `"default": true` for a free item the player starts in.
+  `"default": true` for a free item the player starts in. `color` may be a
+  `Color` or an HTML string — a manifest is data, so the store coerces it and
+  warns on anything else instead of asserting the shop out of existence.
 - **`store_slots`** — where items are worn, one item each. An item declares a
   `kind`, a slot accepts a `kind`, and any item fits any matching slot, so one
   purchase can dress both sides of a duel. Omit `empty_title` to make the slot
   always full — give it a `default` item instead of an empty state.
 - **`store_currency`** — what the points are called and how a round earns them:
-  `round(best_score × points_per_score) + round_bonus`, plus `win_bonus` when a
-  solo player beats the CPU, clamped to `max_per_round`. Scores differ by orders
+  `round(best_score × points_per_score) + round_bonus`, plus `win_bonus` when
+  the player beat a **CPU** opponent, clamped to `max_per_round`. A two-human
+  duel and a round with no opponent pay no bonus — there is nobody to have
+  beaten. Scores differ by orders
   of magnitude between games, so **each game keeps its own wallet**; one shared
   purse would let the loudest game buy out every other shop.
 - **`store_preview_scene_path`** — an optional `Control` scene drawn as the item
@@ -454,8 +477,9 @@ on):
   plate, so a store always renders something sensible.
 
 `GameShell` banks the payout itself when a round ends; override
-`_round_points_earned(result)` only if the default rule is wrong for your game
-(return a negative number to decline the payout entirely).
+`_round_points_earned(player_one_total, player_two_total)` only if the default
+rule is wrong for your game (return a negative number to decline the payout
+entirely).
 
 Read the result back through the `Store` autoload — usually from
 `_load_round_settings()`, so a change made mid-round applies at the next
@@ -506,7 +530,7 @@ The stage contract mirrors `share_art_scene_path` and `store_preview_scene_path`
 
 | Method | Required | Meaning |
 | --- | --- | --- |
-| `configure(exhibit: Dictionary)` | yes | Put this exhibit on the plinth. |
+| `configure(exhibit: Dictionary)` | expected | Put this exhibit on the plinth. A stage without it is a mistake the screen survives rather than a crash: `gallery.gd` warns once and falls back to the exhibit's badge. |
 | `set_view(yaw: float, pitch: float, zoom: float)` | no | Yaw and pitch are **offsets in radians from the exhibit's own default framing**; `zoom` is a magnification where `1.0` is that framing. Without it the screen hides the whole controls row rather than showing buttons that do nothing. |
 | `set_auto_spin(enabled: bool)` | no | The screen has already checked reduced motion before calling. |
 
@@ -733,6 +757,24 @@ change the game's options before pressing Play. Rows outside those tabs that
 only suit one control style — one-button play, the controller target buttons —
 are hidden for a game they do not fit, so nothing on screen names another game.
 
+The rows that *are* shown speak in traits rather than titles. Their captions and
+help text live in `settings_menu.gd`'s `SETTING_COPY` as neutral defaults, and
+`_setting_text(key)` lets the pinned game reword any of them from its
+`GameManifest.copy`:
+
+| `copy` key | Neutral default |
+| --- | --- |
+| `setting_one_button_title` / `setting_one_button_help` | "One-button target select" |
+| `setting_object_size_title` / `setting_object_size_help` | "Object size" |
+| `setting_gameplay_speed_help` | "Slows the objects you chase next round." |
+| `setting_audio_captions_help` | "Shows text for scoring, misses and countdown cues." |
+| `setting_pad_speed_title` | "Pad cursor speed" |
+| `setting_movement_scheme_title` | "Movement scheme" |
+| `setting_target_button_title` | "Target %d button" |
+
+If a caption you need only makes sense for your game, add a `copy` key — never
+the game's name to the shared scene.
+
 None of that is per-game code: the screen asks `GameCatalog` which game the
 build ships, and the rows come from that game's manifest.
 
@@ -915,11 +957,11 @@ A game that declares no theme, and every collection build, gets
 `GameTheme.studio_default()`: the exact values the shared scenes are authored
 with, so nothing moves.
 
-That makes a standalone release **export configuration only**. Four games
+That makes a standalone release **export configuration only**. Five games
 already have a preset — *Windows — Triangle Rush / Desk-Can-Saw / Dead Metal Jam
-/ Chicken Pit (standalone)* — each pinned by its own feature tag, spelled as the
-initials of the game's id (`tr`, `dcs`, `dmj`, `cp`). A preset carries the tag
-and drops the other games:
+/ Chicken Pit (standalone)* plus *Android — LaZer NFC* — each pinned by its own
+feature tag, spelled as the initials of the game's id (`tr`, `dcs`, `dmj`, `cp`,
+`lazer_nfc`). A preset carries the tag and drops the other games:
 
 ```ini
 custom_features="dmj"
@@ -944,7 +986,13 @@ default so that export still ships the full collection experience.
 
 The user-dir override is **not optional**. Without it the standalone build
 shares `user://` with the collection, so saves, settings and achievements
-collide. Source runs, including the default Desk-Can-Saw launch and `--game`
+collide. Anti-Chess and Anti Checkers have no preset yet, but their tags are
+already reserved in `project.godot` (`antichess`, `anticheckers`) precisely so
+that whoever writes those presets cannot ship a build that quietly shares the
+collection's save folder. Add the three `project.godot` overrides
+(`build/single_game_id.<tag>`, `config/name.<tag>`,
+`config/custom_user_dir_name.<tag>`) **before** the preset, not after.
+Source runs, including the default Desk-Can-Saw launch and `--game`
 overrides, keep the existing development user directory. The engine fixes it at
 startup, so these runs still share the collection's save files. That is fine for
 playtesting, and the reason the override belongs in the preset.
@@ -953,6 +1001,13 @@ playtesting, and the reason the override belongs in the preset.
 nobody else can reproduce a release. Keep credentials out of it; the Android
 keystore path and password belong in the editor's
 per-machine settings.
+
+One caveat the feature-tag system cannot cover: `[editor_plugins] enabled` in
+`project.godot` is a plain list, not a feature-overridable key, and it currently
+names `res://games/lazer_nfc/android/plugin.cfg`. Every editor session and every
+export loads it, including builds that ship no LaZer NFC, and a clone made
+without `--recurse-submodules` will error on open because the file is inside a
+submodule. If you add an editor plugin for a game, expect it to be global.
 
 ## Input actions
 
@@ -974,13 +1029,25 @@ Gameplay keys can be changed under **Settings → Controls** — which only exis
 while a game is running, because a key binding belongs to a game — and are
 saved in `user://settings.cfg`; assigning an occupied key swaps the two
 bindings within that game. Two different games may use the same key, since only
-one of them is ever running. A game with no `control_bindings` of its own
+one of them is ever running.
+
+Renaming a saved settings key is a migration, never an edit.
+`Settings.load_settings()` ends in `_adopt_renamed_keys()`, which reads the old
+key **only** when the new one is absent and leaves the old one on disk, so an
+older build sharing the same `user://` keeps working.
+`LEGACY_ONE_BUTTON_TARGETS_KEY` is the worked example — the one-button setting
+was renamed off the first game that used it once it became a `targets`-style
+option. Keep every legacy constant forever; deleting one silently resets
+players.
+
+A game with no `control_bindings` of its own
 inherits the built-in set for its `control_style`, which is where Triangle Rush's
 six target keys come from. Desk-Can-Saw declares four movement keys (the arrow
 keys by default), Dead Metal Jam declares its octave and self-test keys, and
 Chicken Pit declares three pull keys per coop.
-Controller 1 controls Player 1 and Controller 2 controls Player 2. In Target
-Rush they share three remappable target buttons (A, B and X by default).
+Controller 1 controls Player 1 and Controller 2 controls Player 2. In the
+`targets` control style they share three remappable target buttons (A, B and X
+by default).
 Controller pause is remappable too; target and pause buttons remain unique, so
 assigning an occupied button swaps the two bindings. Pause excludes D-pad
 directions so they remain available to Desk-Can-Saw movement. The HUD's on-screen
@@ -1136,34 +1203,38 @@ purchases out of a shared `user://`. The gallery writes nothing at all — a
 museum has nothing to remember, so its only state is the manifest and whichever
 achievements have opened its gated exhibits.
 
-Focused regression checks can be run headlessly:
+Focused regression checks can be run headlessly. The **12 framework suites**
+in `tests/` cover the shell, the menus and every game the catalog discovers:
 
 ```bash
-godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_test.gd -- --game=all
-godot --headless --path . --script res://games/desk_can_saw/tests/desk_can_saw_scene_test.gd -- --game=all
-godot --headless --path . --script res://tests/visual_effects_test.gd -- --game=all
 godot --headless --path . --script res://tests/accessibility_test.gd -- --game=all
-godot --headless --path . --script res://games/triangle_rush/tests/triangle_rush_options_test.gd -- --game=all
-godot --headless --path . --script res://games/chicken_pit/tests/chicken_pit_options_test.gd -- --game=all
-godot --headless --path . --script res://games/chicken_pit/tests/chicken_pit_intro_test.gd -- --game=all
-godot --headless --path . --script res://games/anti_chess/tests/chess_state_test.gd -- --game=all
-godot --headless --path . --script res://games/anti_chess/tests/cpu_player_test.gd -- --game=all
-godot --headless --path . --script res://games/anti_chess/tests/anti_chess_scene_test.gd -- --game=all
-godot --headless --path . --script res://games/anti_chess/tests/anti_chess_setup_test.gd -- --game=all
-godot --headless --path . --script res://games/anti_chess/tests/tutorial_driver_test.gd -- --game=all
-godot --headless --path . --script res://games/anti_checkers/tests/checkers_state_test.gd -- --game=all
-godot --headless --path . --script res://games/anti_checkers/tests/cpu_player_test.gd -- --game=all
-godot --headless --path . --script res://games/anti_checkers/tests/anti_checkers_scene_test.gd -- --game=all
-godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
-godot --headless --path . --script res://tests/instructions_video_test.gd -- --game=all
 godot --headless --path . --script res://tests/custom_keys_test.gd -- --game=all
-godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
-godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
+godot --headless --path . --script res://tests/gallery_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_options_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_select_test.gd -- --game=all
-godot --headless --path . --script res://tests/store_test.gd -- --game=all
-godot --headless --path . --script res://tests/gallery_test.gd -- --game=all
+godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
+godot --headless --path . --script res://tests/instructions_video_test.gd -- --game=all
+godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
+godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
 godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
+godot --headless --path . --script res://tests/store_test.gd -- --game=all
+godot --headless --path . --script res://tests/visual_effects_test.gd -- --game=all
+```
+
+Each game owns the rest under `games/<id>/tests/` — 45 of them at the time of
+writing, spread across Dead Metal Jam (14), Chicken Pit (9), LaZer NFC (9),
+Anti-Chess (6), Anti Checkers (4), Desk-Can-Saw (2) and Triangle Rush (1).
+Counts drift as games grow, so enumerate the folders rather than trusting a
+list. `*_fixture.gd` files are helpers, not suites:
+
+```powershell
+Get-ChildItem tests\*.gd, games\*\tests\*.gd |
+  Where-Object { $_.Name -notlike '*_fixture.gd' } |
+  ForEach-Object {
+    $rel = "res://" + ((Resolve-Path -Relative $_.FullName) -replace '^\.\\','' -replace '\\','/')
+    & godot --headless --path . --script $rel -- --game=all | Out-Null
+    "{0} -> {1}" -f $_.Name, $LASTEXITCODE
+  }
 ```
 
 Run the suite against the full collection with `--game=all`: several checks
@@ -1175,13 +1246,19 @@ so a standalone build can still verify its own path. It exercises each declared
 theme on the real title screen: logo tint, widget skin, flat-button text contrast,
 plaque materials, backdrop aspect correction and the reduced-motion switch.
 
-Anti-Chess also has a graphics-only `games/anti_chess/tests/board_view_test.gd`
-for portrait/wide framing, square picking, modal UI and the full-board draw
-budget. Run it without `--headless`; its optional
-`--anti-chess-capture-dir=<absolute directory>` saves rendered examples.
-Anti Checkers has equivalent game-owned graphical coverage in
-`games/anti_checkers/tests/board_view_test.gd`, with optional
-`--anti-checkers-capture-dir=<absolute directory>` output.
+Four game-owned suites need a **real graphics window** and deliberately exit 1
+under `--headless`, where they guard `DisplayServer.get_name() == "headless"`
+and say so. Run them without `--headless`, and never read their headless exit
+code as a regression:
+
+- `games/anti_chess/tests/board_view_test.gd` — portrait/wide framing, square
+  picking, modal UI and the full-board draw budget. Optional
+  `--anti-chess-capture-dir=<absolute directory>` saves rendered examples.
+- `games/anti_checkers/tests/board_view_test.gd` — the equivalent coverage, with
+  optional `--anti-checkers-capture-dir=<absolute directory>` output.
+- `games/chicken_pit/tests/pit_view_test.gd` — the 3D pit's `SubViewport`.
+- `games/lazer_nfc/tests/lazer_nfc_layout_test.gd` — its responsive layout.
+
 Run tests sequentially and use an isolated user profile for host tests that
 exercise persistence or complete real rounds.
 

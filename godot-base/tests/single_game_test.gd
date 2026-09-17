@@ -469,7 +469,7 @@ func _test_pinned_settings_screen(id: String) -> void:
 		"'%s' must get its rebindable controls on the main menu." % id
 	)
 
-	var one_button := menu.get_node_or_null("%OneButtonTriangleRushToggle") as Control
+	var one_button := menu.get_node_or_null("%OneButtonTargetsToggle") as Control
 	var row: Control = one_button.get_parent() if one_button != null else null
 	_expect(
 		row != null

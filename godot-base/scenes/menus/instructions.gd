@@ -140,30 +140,51 @@ func _populate_instructions() -> void:
 		_append_round_mode_note()
 		return
 
+	_populate_target_instructions()
+	_summary.text = _solo_setup_text(_summary.text)
+	_append_round_mode_note()
+
+
+## Copy for games whose players select numbered targets
+## ([constant GameManifest.CONTROL_STYLE_TARGETS]). Like the other two style
+## branches, every string is routed through [method _game_text] so a second
+## `targets` game can describe its own scoring instead of inheriting the first
+## one's, and the framework wording is only the fallback.
+func _populate_target_instructions() -> void:
 	_mode_label.text = GameSession.mode_title().to_upper()
-	_headline.text = "Follow your highlighted target"
-	_rules.text = (
+	_headline.text = _game_text(
+		"instructions_headline", "Follow your highlighted target"
+	)
+	_rules.text = _game_text(
+		"instructions_rules",
 		"Bright target = correct  ·  Correct hit +1  ·  Wrong target -1  ·  Esc pauses"
 	)
-	_player_one_controls.text = _triangle_rush_controls(0, 1)
+	_player_one_controls.text = _target_controls(0, 1)
 	if GameSession.is_single_player():
-		_summary.text = (
+		_summary.text = _game_text(
+			"instructions_solo_summary",
 			"Only Player 1 is active. Score as many correct hits as possible "
 			+ "%s." % _round_goal_phrase()
 		)
-		_demo_prompt.text = "WATCH PLAYER 1'S HIGHLIGHTED TARGET"
+		_demo_prompt.text = _game_text(
+			"instructions_demo_prompt", "WATCH PLAYER 1'S HIGHLIGHTED TARGET"
+		)
 		_opponent_card.hide()
 	elif GameSession.player_two_is_cpu():
-		_summary.text = (
+		_summary.text = _game_text(
+			"instructions_cpu_summary",
 			(
 				"Race the %s CPU for the highest score. You control P1 targets; "
 				% GameSession.cpu_difficulty_title().to_lower()
 			)
 			+ "the CPU controls P2 targets."
 		)
-		_demo_prompt.text = "PLAYER 1 FOLLOWS THE HIGHLIGHT"
+		_demo_prompt.text = _game_text(
+			"instructions_demo_prompt", "PLAYER 1 FOLLOWS THE HIGHLIGHT"
+		)
 		_opponent_title.text = "CPU OPPONENT"
-		_opponent_controls.text = (
+		_opponent_controls.text = _game_text(
+			"instructions_cpu_controls",
 			(
 				"%s · %s\n" % [
 					GameSession.cpu_difficulty_title(),
@@ -174,14 +195,16 @@ func _populate_instructions() -> void:
 			+ "Follow Player 1's highlighted target and beat the CPU's score."
 		)
 	else:
-		_summary.text = (
+		_summary.text = _game_text(
+			"instructions_versus_summary",
 			"Both players act at the same time. Each player must follow their "
 			+ "own highlighted target."
 		)
-		_demo_prompt.text = "EACH PLAYER FOLLOWS THEIR OWN HIGHLIGHT"
+		_demo_prompt.text = _game_text(
+			"instructions_demo_prompt", "EACH PLAYER FOLLOWS THEIR OWN HIGHLIGHT"
+		)
 		_opponent_title.text = "PLAYER 2"
-		_opponent_controls.text = _triangle_rush_controls(1, 2)
-	_append_round_mode_note()
+		_opponent_controls.text = _target_controls(1, 2)
 
 
 ## How the round the player is about to start will end, so the briefing
@@ -545,18 +568,20 @@ func _on_video_finished() -> void:
 # --- Static explanation ------------------------------------------------------
 
 
-func _triangle_rush_controls(player_index: int, controller_number: int) -> String:
+## One control card for a target-selection game. Named for the control style,
+## not for the first game that used it.
+func _target_controls(player_index: int, controller_number: int) -> String:
 	var keyboard_summary := Settings.control_summary(player_index)
-	var triangle_summary := "P%d triangles" % (player_index + 1)
+	var target_summary := "P%d targets" % (player_index + 1)
 	var lines := PackedStringArray(["Keyboard: %s" % keyboard_summary])
 	if GameSession.gamepad_connected():
 		var controller_summary := (
 			"any mapped button (%s)" % Settings.controller_target_summary(", ")
-			if Settings.one_button_triangle_rush_enabled()
+			if Settings.one_button_targets_enabled()
 			else Settings.controller_target_summary(", ")
 		)
 		lines.append("Controller %d: %s" % [controller_number, controller_summary])
-	lines.append("Mouse/touch: select %s" % triangle_summary)
+	lines.append("Mouse/touch: select %s" % target_summary)
 	return "\n".join(lines)
 
 

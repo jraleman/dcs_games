@@ -30,6 +30,10 @@ config/name.cp="Chicken Pit"
 config/custom_user_dir_name.cp="DeskCanSaw Games/Chicken Pit"
 config/name.lazer_nfc="LaZer NFC"
 config/custom_user_dir_name.lazer_nfc="DeskCanSaw Games/LaZer NFC"
+config/name.antichess="Anti-Chess"
+config/custom_user_dir_name.antichess="DeskCanSaw Games/Anti-Chess"
+config/name.anticheckers="Anti Checkers"
+config/custom_user_dir_name.anticheckers="DeskCanSaw Games/Anti Checkers"
 
 [audio]
 
@@ -58,6 +62,8 @@ build/single_game_id.tr="triangle_rush"
 build/single_game_id.dcs="desk_can_saw"
 build/single_game_id.cp="chicken_pit"
 build/single_game_id.lazer_nfc="lazer_nfc"
+build/single_game_id.antichess="anti_chess"
+build/single_game_id.anticheckers="anti_checkers"
 
 [display]
 

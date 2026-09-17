@@ -79,6 +79,10 @@ var _buttons: Array[Button] = []
 var _stage: Node = null
 var _stage_orbits := false
 var _stage_spins := false
+## A stage scene is game-supplied data, so every call into it is optional. A
+## stage that cannot draw an exhibit falls back to the badge placeholder rather
+## than raising inside the menu.
+var _stage_configures := false
 var _selected := -1
 var _yaw := 0.0
 var _pitch := 0.0
@@ -151,6 +155,13 @@ func _build_stage() -> void:
 	_stage_host.add_child(view)
 	_stage_orbits = _stage.has_method("set_view")
 	_stage_spins = _stage.has_method("set_auto_spin")
+	_stage_configures = _stage.has_method("configure")
+	if not _stage_configures:
+		push_warning(
+			"Gallery: %s has no configure(Dictionary); exhibits will fall back "
+			% manifest.gallery_stage_scene_path
+			+ "to their badge."
+		)
 
 
 ## One button per exhibit, grouped by heading in declaration order — the same
@@ -328,7 +339,7 @@ func _select(index: int) -> void:
 	_facts.text = _facts_copy(exhibit)
 	_facts.visible = not _facts.text.is_empty()
 	_reset_view()
-	if _stage == null:
+	if _stage == null or not _stage_configures:
 		_show_placeholder(_badge_of(exhibit))
 		return
 	_placeholder.visible = false

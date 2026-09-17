@@ -418,18 +418,18 @@ theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
 theme_override_font_sizes/font_size = 22
 text = "INPUT ASSISTS"
 
-[node name="OneButtonTriangleRushRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
+[node name="OneButtonTargetsRow" type="HBoxContainer" parent="Margins/Layout/Tabs/Accessibility/Pad/List"]
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/OneButtonTriangleRushRow"]
+[node name="Label" type="Label" parent="Margins/Layout/Tabs/Accessibility/Pad/List/OneButtonTargetsRow"]
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "One-button Triangle Rush"
+text = "One-button target select"
 vertical_alignment = 1
 
-[node name="OneButtonTriangleRushToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/OneButtonTriangleRushRow"]
+[node name="OneButtonTargetsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/OneButtonTargetsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
@@ -442,7 +442,7 @@ theme_override_constants/separation = 24
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Desk-Can-Saw pad speed"
+text = "Pad cursor speed"
 vertical_alignment = 1
 
 [node name="ControllerSpeedSlider" type="HSlider" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ControllerSpeedRow"]
@@ -561,7 +561,7 @@ theme_override_constants/separation = 24
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Target and can size"
+text = "Object size"
 vertical_alignment = 1
 
 [node name="TargetSizeSlider" type="HSlider" parent="Margins/Layout/Tabs/Gameplay/Pad/List/TargetSizeRow"]
@@ -706,7 +706,7 @@ theme_override_constants/separation = 24
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Triangle Rush target 1"
+text = "Target 1 button"
 vertical_alignment = 1
 
 [node name="ControllerTargetOne" type="OptionButton" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerTargetOneRow"]
@@ -723,7 +723,7 @@ theme_override_constants/separation = 24
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Triangle Rush target 2"
+text = "Target 2 button"
 vertical_alignment = 1
 
 [node name="ControllerTargetTwo" type="OptionButton" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerTargetTwoRow"]
@@ -740,7 +740,7 @@ theme_override_constants/separation = 24
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Triangle Rush target 3"
+text = "Target 3 button"
 vertical_alignment = 1
 
 [node name="ControllerTargetThree" type="OptionButton" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerTargetThreeRow"]
@@ -774,7 +774,7 @@ theme_override_constants/separation = 24
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Desk-Can-Saw movement"
+text = "Movement scheme"
 vertical_alignment = 1
 
 [node name="ControllerMovementScheme" type="OptionButton" parent="Margins/Layout/Tabs/Controls/Pad/List/ControllerMovementRow"]

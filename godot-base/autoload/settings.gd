@@ -27,7 +27,13 @@ const VISUAL_EFFECTS_KEY := "accessibility/visual_effects"
 const REDUCED_MOTION_KEY := "accessibility/reduced_motion"
 const AUDIO_CAPTIONS_KEY := "accessibility/audio_captions"
 const PLAYER_LABELS_KEY := "accessibility/player_labels"
-const ONE_BUTTON_TRIANGLE_RUSH_KEY := "accessibility/one_button_triangle_rush"
+const ONE_BUTTON_TARGETS_KEY := "accessibility/one_button_targets"
+## Pre-rename spelling of [constant ONE_BUTTON_TARGETS_KEY]. The setting is
+## gated on the `targets` control style, never on a game, so it was renamed off
+## the first game that used it — but a player's saved preference must survive
+## that, so [method load_settings] still reads this key when the new one is
+## absent. Keep it forever; removing it silently resets those players.
+const LEGACY_ONE_BUTTON_TARGETS_KEY := "accessibility/one_button_triangle_rush"
 const GAMEPLAY_SPEED_KEY := "accessibility/gameplay_speed"
 const TARGET_SIZE_KEY := "accessibility/target_size"
 const EXTRA_ROUND_TIME_KEY := "accessibility/extra_round_time"
@@ -144,7 +150,7 @@ const DEFAULTS := {
 	"accessibility/reduced_motion": false,
 	"accessibility/audio_captions": false,
 	"accessibility/player_labels": true,
-	"accessibility/one_button_triangle_rush": false,
+	"accessibility/one_button_targets": false,
 	"accessibility/gameplay_speed": 1.0,
 	"accessibility/target_size": 1.0,
 	"accessibility/extra_round_time": 0.0,
@@ -229,8 +235,8 @@ func player_labels_enabled() -> bool:
 	return bool(get_value(PLAYER_LABELS_KEY, true))
 
 
-func one_button_triangle_rush_enabled() -> bool:
-	return bool(get_value(ONE_BUTTON_TRIANGLE_RUSH_KEY, false))
+func one_button_targets_enabled() -> bool:
+	return bool(get_value(ONE_BUTTON_TARGETS_KEY, false))
 
 
 func gameplay_speed_scale() -> float:
@@ -950,6 +956,28 @@ func load_settings(path := SAVE_PATH) -> void:
 		elif typeof(expected) == TYPE_FLOAT and typeof(stored) == TYPE_INT:
 			# A whole-numbered float round-trips through ConfigFile as an int.
 			_values[key] = float(stored)
+	_adopt_renamed_keys(config)
+
+
+## Carries a saved value across a settings key that was renamed. Only applied
+## when the new key is absent from the file, so a player who has since set the
+## new one keeps their newer choice, and the old key is left on disk rather than
+## erased: a shared `user://` may still be read by an older build.
+func _adopt_renamed_keys(config: ConfigFile) -> void:
+	for renamed: Array in [
+		[LEGACY_ONE_BUTTON_TARGETS_KEY, ONE_BUTTON_TARGETS_KEY],
+	]:
+		var old_key: String = renamed[0]
+		var new_key: String = renamed[1]
+		var old_parts := old_key.split("/", false, 1)
+		var new_parts := new_key.split("/", false, 1)
+		if config.has_section_key(new_parts[0], new_parts[1]):
+			continue
+		if not config.has_section_key(old_parts[0], old_parts[1]):
+			continue
+		var stored: Variant = config.get_value(old_parts[0], old_parts[1])
+		if typeof(stored) == typeof(DEFAULTS.get(new_key)):
+			_values[new_key] = stored
 
 
 func save(path := SAVE_PATH) -> void:

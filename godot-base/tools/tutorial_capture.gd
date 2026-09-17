@@ -76,7 +76,7 @@ const SETTING_OVERRIDES := {
 	"accessibility/reduced_motion": false,
 	"accessibility/audio_captions": false,
 	"accessibility/player_labels": true,
-	"accessibility/one_button_triangle_rush": false,
+	"accessibility/one_button_targets": false,
 	"accessibility/gameplay_speed": 1.0,
 	"accessibility/target_size": 1.0,
 	"accessibility/extra_round_time": 0.0,

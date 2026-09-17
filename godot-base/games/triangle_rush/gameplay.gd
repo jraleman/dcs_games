@@ -163,7 +163,7 @@ func _target_for_keyboard_event(event: InputEventKey) -> TriangleTarget:
 	for action: StringName in _targets_by_action:
 		if event.is_action_pressed(action):
 			var target := _targets_by_action[action] as TriangleTarget
-			if Settings.one_button_triangle_rush_enabled() and target != null:
+			if Settings.one_button_targets_enabled() and target != null:
 				return _active_targets[target.player_index] as TriangleTarget
 			return target
 	return null
@@ -177,7 +177,7 @@ func _target_for_controller_event(event: InputEventJoypadButton) -> TriangleTarg
 	var player_index := _controller_player_index(event.device)
 	if not _player_accepts_human_input(player_index):
 		return null
-	if Settings.one_button_triangle_rush_enabled():
+	if Settings.one_button_targets_enabled():
 		return _active_targets[player_index] as TriangleTarget
 
 	var actions := Settings.control_actions_for_player(player_index)
@@ -199,7 +199,7 @@ func _configure_mode_ui() -> void:
 	var mapped_buttons := Settings.controller_target_summary(" / ")
 	var controller_keys := (
 		"ANY %s" % mapped_buttons
-		if Settings.one_button_triangle_rush_enabled()
+		if Settings.one_button_targets_enabled()
 		else mapped_buttons
 	)
 	var gamepad := GameSession.gamepad_connected()
@@ -238,7 +238,7 @@ func _on_controls_changed() -> void:
 
 
 func _on_game_setting_changed(key: String, _value: Variant) -> void:
-	if key == Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY:
+	if key == Settings.ONE_BUTTON_TARGETS_KEY:
 		_configure_mode_ui()
 
 
@@ -340,7 +340,7 @@ func _update_hint() -> void:
 				points_per_match,
 				miss_penalty,
 			]
-	elif Settings.one_button_triangle_rush_enabled():
+	elif Settings.one_button_targets_enabled():
 		var mapped_buttons := Settings.controller_target_summary("/")
 		var gamepad := GameSession.gamepad_connected()
 		if GameSession.is_single_player():
@@ -408,7 +408,7 @@ func _update_hint() -> void:
 					_letters_hint(PLAYER_TWO),
 				]
 			)
-	if Settings.one_button_triangle_rush_enabled():
+	if Settings.one_button_targets_enabled():
 		_round_instructions.text = (
 			"Any assigned key/button hits your highlighted target: +%d | "
 			+ "Wrong triangle: -%d"
@@ -431,7 +431,7 @@ func _update_callout() -> void:
 	var cue := "HIGHLIGHT" if _reduced_motion_enabled else "PULSE"
 	var control := (
 		"ANY ASSIGNED CONTROL"
-		if Settings.one_button_triangle_rush_enabled()
+		if Settings.one_button_targets_enabled()
 		else "THE MATCHING CONTROL"
 	)
 	_callout.text = "FOLLOW THE %s - PRESS %s" % [cue, control]

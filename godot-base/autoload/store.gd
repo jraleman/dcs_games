@@ -148,7 +148,7 @@ func _normalize_item(
 	if id.is_empty():
 		push_warning("Store: %s declares an item with no id." % game_id)
 		return {}
-	var color: Color = source.get("color", Color("5c6b7a"))
+	var color := _to_color(source.get("color", null), Color("5c6b7a"), game_id, id)
 	return {
 		"id": id,
 		"game_id": game_id,
@@ -163,6 +163,26 @@ func _normalize_item(
 		"heading": str(source.get("heading", "")),
 		"preview_scene_path": str(source.get("preview_scene_path", preview_scene_path)),
 	}
+
+
+## Coerces a manifest-supplied colour. Game data reaches the store as plain
+## dictionaries, so a `"color"` written as a hex string — the obvious mistake —
+## must degrade to the declared value or the default rather than raising a type
+## error inside the autoload. Every neighbouring field is coerced the same way.
+func _to_color(raw: Variant, fallback: Color, game_id: String, item_id: String) -> Color:
+	if raw == null:
+		return fallback
+	if raw is Color:
+		return raw
+	if raw is String:
+		var text := str(raw)
+		if Color.html_is_valid(text.trim_prefix("#")):
+			return Color(text)
+	push_warning(
+		"Store: %s item '%s' declares an unreadable color; using the default."
+		% [game_id, item_id]
+	)
+	return fallback
 
 
 func _normalize_currency(source: Dictionary) -> Dictionary:
@@ -294,11 +314,12 @@ func add_points(game_id: String, amount: int) -> int:
 
 ## The points a finished round pays out under this game's declared rule.
 ##
-## [param result] is the shell's round summary (`single_player`,
+## [param result] is the shell's round summary (`single_player`, `vs_cpu`,
 ## `player_one_score`, `player_two_score`). The best score on the mat is what
-## pays, because both seats of a local duel share one keyboard and one wallet;
-## the win bonus is solo-only for the same reason — in a two-human match
-## somebody always wins.
+## pays, because both seats of a local duel share one keyboard and one wallet.
+## The win bonus needs an opponent worth beating, so it pays only when the
+## human beat the CPU: in a two-human match somebody always wins, and in a
+## round with no opponent at all there is nothing to have won.
 func default_round_points(game_id: String, result: Dictionary) -> int:
 	if not _items.has(game_id):
 		return 0
@@ -308,7 +329,7 @@ func default_round_points(game_id: String, result: Dictionary) -> int:
 	var best := maxi(maxi(player_one, player_two), 0)
 	var earned := int(roundf(float(best) * float(rule["points_per_score"])))
 	earned += int(rule["round_bonus"])
-	if bool(result.get("single_player", false)) and player_one > player_two:
+	if bool(result.get("vs_cpu", false)) and player_one > player_two:
 		earned += int(rule["win_bonus"])
 	var cap := int(rule["max_per_round"])
 	if cap > 0:

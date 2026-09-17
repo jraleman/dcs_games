@@ -36,6 +36,7 @@ func _run() -> void:
 	await _test_target_feedback()
 	_test_can_spin()
 	await _test_chainsaw_feedback()
+	await _test_every_game(session, settings)
 	await _test_triangle_rush(session, settings)
 	await _test_desk_can_saw(session, settings)
 
@@ -167,6 +168,56 @@ func _test_chainsaw_feedback() -> void:
 		"Disabling intense effects must keep chainsaw animation enabled."
 	)
 	await _free_scene(chainsaw)
+
+
+## The intense-effects contract belongs to the shell, not to any one game, so it
+## is asserted against every game the build ships. Driving `GameCatalog.all()`
+## is what keeps this a *framework* test: a new game inherits the coverage by
+## declaring a manifest, exactly as `game_shell_test.gd` already does, instead
+## of needing a per-game case added to this file.
+##
+## The deep, game-specific cases below stay as they are — this sweep is the
+## floor every game has to clear, not a replacement for them.
+func _test_every_game(session: Node, settings: Node) -> void:
+	var manifests := GameCatalog.all()
+	_expect(not manifests.is_empty(), "GameCatalog must discover at least one game.")
+	for manifest in manifests:
+		GameCatalog.select(manifest.id)
+		session.call("configure_single_player")
+		var game := _instantiate_scene(manifest.gameplay_scene_path)
+		if game == null:
+			continue
+		await process_frame
+		await process_frame
+		var timer := game.get_node_or_null("%RoundTimer") as Timer
+		if timer != null:
+			timer.stop()
+		var playfield := game.get_node_or_null("%Playfield") as Node2D
+
+		settings.call("set_value", Settings.VISUAL_EFFECTS_KEY, false)
+		game.call("_flash_screen", Color.WHITE, 0.8)
+		game.call("_add_screen_shake", 20.0)
+		game.call("_update_screen_shake", 0.0)
+		if playfield != null:
+			_expect_hard_effects_cleared(game, manifest.title, playfield)
+
+		# The setting has to be a real choice, not a permanent suppression:
+		# a game that never flashes would pass the check above by accident.
+		settings.call("set_value", Settings.VISUAL_EFFECTS_KEY, true)
+		game.call("_flash_screen", Color.WHITE, 0.8)
+		game.call("_add_screen_shake", 20.0)
+		game.call("_update_screen_shake", 0.0)
+		_expect(
+			(game.get_node("%ScreenFlash") as ColorRect).color.a > 0.0
+			and float(game.get("_shake_strength")) > 0.0,
+			"%s must allow intense effects when the setting is enabled." % manifest.id
+		)
+
+		settings.call("set_value", Settings.VISUAL_EFFECTS_KEY, false)
+		if timer != null:
+			timer.stop()
+		game.set("_round_active", false)
+		await _free_scene(game)
 
 
 func _test_triangle_rush(session: Node, settings: Node) -> void:

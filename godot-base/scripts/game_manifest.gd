@@ -252,7 +252,9 @@ var store_slots: Array[Dictionary] = []
 ##     "plural": "Feathers",
 ##     "points_per_score": 0.02,    # multiplies the round's best score
 ##     "round_bonus": 5,            # flat payment for finishing a round
-##     "win_bonus": 10,             # added when a solo player beats the CPU
+##     "win_bonus": 10,             # added when the player out-scores the CPU
+##                                  #   (needs a CPU: a two-human duel and a
+##                                  #   round with no opponent both pay none)
 ##     "max_per_round": 120,        # payout ceiling; 0 removes it
 ## }
 ## [/codeblock]

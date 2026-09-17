@@ -760,7 +760,7 @@ func _update_control_copy() -> void:
 	var mapped_buttons := Settings.controller_target_summary(" ")
 	var pad_copy := (
 		"ANY %s" % mapped_buttons
-		if Settings.one_button_triangle_rush_enabled()
+		if Settings.one_button_targets_enabled()
 		else mapped_buttons
 	)
 	_single_player_controls.text = (
@@ -795,7 +795,7 @@ func _custom_key_summary(player_index: int, separator := " · ") -> String:
 func _target_pad_copy() -> String:
 	return (
 		"any mapped button (%s)" % Settings.controller_target_summary(", ")
-		if Settings.one_button_triangle_rush_enabled()
+		if Settings.one_button_targets_enabled()
 		else "buttons %s" % Settings.controller_target_summary(", ")
 	)
 

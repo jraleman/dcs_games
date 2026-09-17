@@ -46,8 +46,53 @@ func _draw() -> void:
 	match _art_style:
 		STYLE_DESK_CAN_SAW:
 			_draw_desk_can_saw()
-		_:
+		STYLE_TRIANGLE_RUSH:
 			_draw_triangle_rush()
+		_:
+			_draw_neutral()
+
+
+## The game-agnostic mark, drawn for a game that declares no art style and for
+## any style this build does not recognise. It is deliberately built from the
+## studio palette and the shared bolt motif rather than any game's iconography:
+## this is the branch a new game lands on before it owns any art, so it must not
+## put another game's product on that game's share card.
+func _draw_neutral() -> void:
+	var center := Vector2(size.x * 0.52, size.y * 0.5)
+	var unit := minf(size.x, size.y)
+	draw_arc(center, unit * 0.38, 0.0, TAU, 72, _alpha(_accent, 0.55), 6.0, true)
+	draw_arc(center, unit * 0.29, 0.0, TAU, 64, _alpha(_secondary, 0.4), 3.0, true)
+	draw_circle(center, unit * 0.23, _alpha(_secondary, 0.16))
+	draw_circle(center, unit * 0.16, _alpha(_accent, 0.22))
+	_draw_bolt(center, unit * 0.013, ELECTRIC_YELLOW)
+	for spark_index in range(12):
+		var angle := TAU * float(spark_index) / 12.0
+		var direction := Vector2.RIGHT.rotated(angle)
+		draw_line(
+			center + direction * (unit * 0.43),
+			center + direction * (unit * (0.49 + float(spark_index % 3) * 0.02)),
+			_alpha(_accent, 0.5),
+			2.5,
+			true
+		)
+
+
+## The studio bolt, shared by the neutral mark. [param scale] is a multiplier on
+## the glyph's nominal ~22x26 unit box.
+func _draw_bolt(center: Vector2, scale: float, color: Color) -> void:
+	var points := PackedVector2Array([
+		Vector2(-4.0, -13.0),
+		Vector2(8.0, -13.0),
+		Vector2(1.0, -2.0),
+		Vector2(11.0, -2.0),
+		Vector2(-7.0, 13.0),
+		Vector2(-2.0, 3.0),
+		Vector2(-11.0, 3.0),
+	])
+	var scaled := PackedVector2Array()
+	for point in points:
+		scaled.append(center + point * scale)
+	draw_colored_polygon(scaled, color)
 
 
 func _draw_triangle_rush() -> void:

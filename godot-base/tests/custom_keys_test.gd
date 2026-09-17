@@ -633,7 +633,7 @@ func _test_controller_rows() -> void:
 				"Custom-key help must not promise that controllers drive the players."
 			)
 		_expect(
-			_row_visible(menu, "%OneButtonTriangleRushToggle")
+			_row_visible(menu, "%OneButtonTargetsToggle")
 			== (style == GameManifest.CONTROL_STYLE_TARGETS),
 			"One-button target play must remain specific to target games."
 		)

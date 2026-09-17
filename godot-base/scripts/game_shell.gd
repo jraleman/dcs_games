@@ -409,6 +409,9 @@ func _round_points_earned(player_one_total: int, player_two_total: int) -> int:
 		game_id(),
 		{
 			"single_player": GameSession.is_single_player(),
+			# Whether the seat the player beat was the CPU. The win bonus needs
+			# an opponent worth beating, and only the session knows who held P2.
+			"vs_cpu": GameSession.player_two_is_cpu(),
 			"player_one_score": player_one_total,
 			"player_two_score": player_two_total,
 		}
@@ -1136,6 +1139,11 @@ func _clear_world_fx() -> void:
 		child.queue_free()
 
 
+## Applies the intense-visual-effects preference. **Overridable hook**: a game
+## that owns its own flashes or shake overrides this and must call
+## `super(value)`, or the shared HUD, panels and screen shake keep running
+## while the game itself looks correct. Live, not per-round — the setting is an
+## accessibility control, so it takes effect immediately.
 func _set_intense_effects_enabled(value: bool) -> void:
 	_intense_effects_enabled = value
 	if not value:
@@ -1158,6 +1166,11 @@ func _reset_motion_fx() -> void:
 	_time_label.scale = Vector2.ONE
 
 
+## Applies the reduced-motion preference. **Overridable hook**, and the one
+## every game actually uses: override it to park the game's own ambient motion,
+## and call `super(value)` so the shell parks its own. Prefer this over
+## [method _reset_reduced_motion_state] when the reaction depends on whether the
+## setting was turned on or off; that one is only reached when it is on.
 func _set_reduced_motion_enabled(value: bool) -> void:
 	_reduced_motion_enabled = value
 	if value:

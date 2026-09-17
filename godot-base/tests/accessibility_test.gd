@@ -34,6 +34,7 @@ func _run() -> void:
 	await _test_background_motion(settings)
 	await _test_player_cues(settings, audio_manager)
 	await _test_reduced_motion_menus(session)
+	await _test_every_game(session, settings)
 	await _test_triangle_rush(session, settings)
 	await _test_desk_can_saw(session, settings)
 	await _finish(settings)
@@ -45,7 +46,7 @@ func _test_values() -> Dictionary:
 		Settings.REDUCED_MOTION_KEY: true,
 		Settings.AUDIO_CAPTIONS_KEY: true,
 		Settings.PLAYER_LABELS_KEY: true,
-		Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY: true,
+		Settings.ONE_BUTTON_TARGETS_KEY: true,
 		# Pinned, not inherited: the HUD copy checked below is exact, and a game
 		# whose manifest declares default_lives_mode would otherwise append its
 		# lives note on a profile that has never chosen a round mode. Lives-mode
@@ -106,7 +107,7 @@ func _test_settings_helpers(settings: Node) -> void:
 		"Player identity labels must be available through Settings."
 	)
 	_expect(
-		bool(settings.call("one_button_triangle_rush_enabled")),
+		bool(settings.call("one_button_targets_enabled")),
 		"One-button Triangle Rush must be available through Settings."
 	)
 	_expect_approx(
@@ -347,7 +348,7 @@ func _test_settings_menu(settings: Node) -> void:
 	var audio_captions := menu.get_node_or_null("%AudioCaptionsToggle") as CheckButton
 	var player_labels := menu.get_node_or_null("%PlayerLabelsToggle") as CheckButton
 	var one_button := menu.get_node_or_null(
-		"%OneButtonTriangleRushToggle"
+		"%OneButtonTargetsToggle"
 	) as CheckButton
 	var gameplay_speed := menu.get_node_or_null("%GameplaySpeedSlider") as HSlider
 	var target_size := menu.get_node_or_null("%TargetSizeSlider") as HSlider
@@ -504,7 +505,7 @@ func _test_settings_menu(settings: Node) -> void:
 	if one_button != null:
 		one_button.button_pressed = false
 		_expect(
-			not bool(settings.call("one_button_triangle_rush_enabled")),
+			not bool(settings.call("one_button_targets_enabled")),
 			"The one-button toggle must update Settings."
 		)
 		one_button.button_pressed = true
@@ -863,6 +864,97 @@ func _test_opponent_selector(mode_select: Node) -> void:
 		)
 
 
+## The accessibility contract is the shell's, so it is checked against every
+## game in the catalog rather than against a list of game names. Driving
+## `GameCatalog.all()` is what keeps this a *framework* test: a new game
+## inherits the coverage by declaring a manifest, the same rule
+## `game_shell_test.gd` and `single_game_test.gd` already follow. The deep
+## per-game cases below stay; this sweep is the floor all of them clear.
+##
+## The specific hazard guarded here: every shipped game overrides
+## `_set_reduced_motion_enabled` and most override
+## `_set_intense_effects_enabled`. An override that forgets `super(value)`
+## leaves the shell's own flag stale — the game looks right while the shared
+## HUD, panels and shake keep animating. Flipping each setting and reading the
+## flag back is what catches that.
+func _test_every_game(session: Node, settings: Node) -> void:
+	var manifests := GameCatalog.all()
+	_expect(not manifests.is_empty(), "GameCatalog must discover at least one game.")
+	for manifest in manifests:
+		GameCatalog.select(manifest.id)
+		session.call("configure_single_player")
+		var game := _instantiate_scene(manifest.gameplay_scene_path)
+		if game == null:
+			continue
+		await process_frame
+		await process_frame
+		var timer := game.get_node_or_null("%RoundTimer") as Timer
+		if timer != null:
+			timer.stop()
+
+		_expect(
+			bool(game.get("_reduced_motion_enabled")),
+			"%s must adopt the saved Reduced motion preference." % manifest.id
+		)
+		for value: bool in [false, true]:
+			settings.call("set_value", Settings.REDUCED_MOTION_KEY, value)
+			await process_frame
+			_expect(
+				bool(game.get("_reduced_motion_enabled")) == value,
+				(
+					"%s must follow Reduced motion changing mid-round; "
+					% manifest.id
+				)
+				+ "an override of _set_reduced_motion_enabled must call super(value)."
+			)
+		for value: bool in [false, true]:
+			settings.call("set_value", Settings.VISUAL_EFFECTS_KEY, value)
+			await process_frame
+			_expect(
+				bool(game.get("_intense_effects_enabled")) == value,
+				(
+					"%s must follow the intense-effects setting mid-round; "
+					% manifest.id
+				)
+				+ "an override of _set_intense_effects_enabled must call super(value)."
+			)
+
+		# Assists belong to the shell's round rules. A game that runs its own
+		# round must not be silently rescaled by them, and a game that uses the
+		# shell's must actually receive them.
+		if manifest.uses_shell_round_rules:
+			_expect_approx(
+				float(game.get("_round_gameplay_speed")),
+				0.7,
+				"%s must apply the moving-object speed assist." % manifest.id
+			)
+			_expect_approx(
+				float(game.get("_round_target_size")),
+				1.3,
+				"%s must apply the object-size assist." % manifest.id
+			)
+			_expect_approx(
+				float(game.get("_active_round_duration")),
+				float(game.get("round_duration")) + 15.0,
+				"%s must apply the extra-time assist to a new round." % manifest.id
+			)
+		else:
+			_expect_approx(
+				float(game.get("_round_gameplay_speed")),
+				1.0,
+				(
+					"%s owns its round rules, so the shell assists must leave "
+					% manifest.id
+				)
+				+ "its pace alone."
+			)
+
+		if timer != null:
+			timer.stop()
+		game.set("_round_active", false)
+		await _free_scene(game)
+
+
 func _test_triangle_rush(session: Node, settings: Node) -> void:
 	GameCatalog.select("triangle_rush")
 	session.call("configure_single_player")
@@ -980,7 +1072,7 @@ func _test_triangle_rush(session: Node, settings: Node) -> void:
 		"One-button Triangle Rush must route any mapped controller button to the active target."
 	)
 
-	settings.call("set_value", Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY, false)
+	settings.call("set_value", Settings.ONE_BUTTON_TARGETS_KEY, false)
 	var direct_target := game.call(
 		"_target_for_keyboard_event",
 		key_event
@@ -1002,7 +1094,7 @@ func _test_triangle_rush(session: Node, settings: Node) -> void:
 		== "FOLLOW THE HIGHLIGHT - PRESS THE MATCHING CONTROL",
 		"Triangle Rush callout copy must update when one-button mode changes live."
 	)
-	settings.call("set_value", Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY, true)
+	settings.call("set_value", Settings.ONE_BUTTON_TARGETS_KEY, true)
 
 	var caption := game.get_node_or_null("%AudioCaption") as Control
 	var world_fx := game.get_node("%WorldFX") as Node2D

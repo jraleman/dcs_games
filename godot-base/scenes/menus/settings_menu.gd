@@ -31,6 +31,26 @@ const PLAYER_TWO_HEADING_COLOR := Color(1, 0.360784, 0.423529, 1)
 const VALUE_COLOR := Color(0.686275, 0.866667, 0.917647, 1)
 const REBIND_HELP := "Select, then press a key. Reusing a key swaps the bindings."
 
+## Wording for the framework rows that describe *what a game contains* rather
+## than what the framework does. A game overrides any of these through
+## [member GameManifest.copy]; the value here is the neutral fallback.
+##
+## These rows are shown to whole classes of game — every `targets` game gets the
+## one-button row, every shell-round game gets the size and speed rows — so the
+## authored text has to name the trait, not the first game that used it.
+## Otherwise the screen tells one game's player about another game's objects.
+const SETTING_COPY := {
+	"setting_one_button_title": "One-button target select",
+	"setting_one_button_help": "Any target input activates the highlighted target.",
+	"setting_object_size_title": "Object size",
+	"setting_object_size_help": "Makes the objects you aim at larger next round.",
+	"setting_gameplay_speed_help": "Slows the objects you chase next round.",
+	"setting_audio_captions_help": "Shows text for scoring, misses and countdown cues.",
+	"setting_pad_speed_title": "Pad cursor speed",
+	"setting_movement_scheme_title": "Movement scheme",
+	"setting_target_button_title": "Target %d button",
+}
+
 ## Game whose Controls and Game tabs this screen configures. Empty means the
 ## screen was opened outside a game, where per-game options are meaningless —
 ## which a standalone build resolves for itself in [method _resolve_game_context].
@@ -53,7 +73,7 @@ var game_context_id := ""
 @onready var _reduced_motion: CheckButton = %ReducedMotionToggle
 @onready var _audio_captions: CheckButton = %AudioCaptionsToggle
 @onready var _player_labels: CheckButton = %PlayerLabelsToggle
-@onready var _one_button_triangle_rush: CheckButton = %OneButtonTriangleRushToggle
+@onready var _one_button_targets: CheckButton = %OneButtonTargetsToggle
 @onready var _gameplay_speed: HSlider = %GameplaySpeedSlider
 @onready var _gameplay_speed_value: Label = %GameplaySpeedValue
 @onready var _target_size: HSlider = %TargetSizeSlider
@@ -300,9 +320,14 @@ func _option_title(definition: Dictionary) -> String:
 ## because a collection's main menu is configuring all of them at once.
 func _configure_style_rows(manifest: GameManifest) -> void:
 	var targets := manifest.control_style == GameManifest.CONTROL_STYLE_TARGETS
-	var row := _one_button_triangle_rush.get_parent() as Control
+	var row := _one_button_targets.get_parent() as Control
 	if row != null:
 		row.visible = targets
+		_set_row_label(row, _setting_text("setting_one_button_title"))
+	_set_row_label(
+		_target_size.get_parent() as Control,
+		_setting_text("setting_object_size_title")
+	)
 	for control: Control in [
 		_round_mode, _starting_lives, _extra_round_time,
 		_gameplay_speed, _target_size,
@@ -316,20 +341,57 @@ func _configure_style_rows(manifest: GameManifest) -> void:
 	)
 
 
+## The manifest whose wording this screen should use, or null on a collection's
+## main menu where no game has been chosen and the neutral text is correct.
+func _context_manifest() -> GameManifest:
+	if game_context_id.is_empty():
+		return null
+	return GameCatalog.get_manifest(game_context_id)
+
+
+## Row wording for the active game, falling back to the neutral framework text.
+func _setting_text(key: String, args: Array = []) -> String:
+	var fallback := str(SETTING_COPY.get(key, ""))
+	var manifest := _context_manifest()
+	var text := manifest.text(key, fallback) if manifest != null else fallback
+	return text % args if not args.is_empty() else text
+
+
+## Rewrites the caption of a generated or authored settings row. Rows are
+## authored as `<Row>/Label` + widget, so the label is found by name rather than
+## by a scene-unique name each row would otherwise have to declare.
+func _set_row_label(row: Control, text: String) -> void:
+	if row == null or text.is_empty():
+		return
+	var label := row.get_node_or_null("Label") as Label
+	if label != null:
+		label.text = text
+
+
 ## Controller rows describe one control style at a time: target buttons mean
 ## nothing to a game you steer, and a movement scheme means nothing to a game
 ## played by pressing target keys. Custom action keys imply neither.
 func _configure_controller_rows(manifest: GameManifest, connected: bool) -> void:
 	var targets := manifest.control_style == GameManifest.CONTROL_STYLE_TARGETS
+	var target_number := 0
 	for setting_key: String in Settings.CONTROLLER_TARGET_KEYS:
+		target_number += 1
 		var row := (_controller_buttons[setting_key] as Control).get_parent() as Control
 		if row != null:
 			row.visible = connected and targets
+			_set_row_label(
+				row, _setting_text("setting_target_button_title", [target_number])
+			)
+	_set_row_label(
+		_controller_speed.get_parent() as Control,
+		_setting_text("setting_pad_speed_title")
+	)
 	var movement_row := _controller_movement_scheme.get_parent() as Control
 	if movement_row != null:
 		movement_row.visible = (
 			connected and manifest.control_style == GameManifest.CONTROL_STYLE_DIRECT_MOVEMENT
 		)
+		_set_row_label(movement_row, _setting_text("setting_movement_scheme_title"))
 	if manifest.control_style == GameManifest.CONTROL_STYLE_CUSTOM_KEYS:
 		(_controller_speed.get_parent() as Control).hide()
 		(_controller_deadzone.get_parent() as Control).hide()
@@ -395,8 +457,8 @@ func _connect_ui() -> void:
 	_player_labels.toggled.connect(
 		_on_bool_toggled.bind(Settings.PLAYER_LABELS_KEY)
 	)
-	_one_button_triangle_rush.toggled.connect(
-		_on_bool_toggled.bind(Settings.ONE_BUTTON_TRIANGLE_RUSH_KEY)
+	_one_button_targets.toggled.connect(
+		_on_bool_toggled.bind(Settings.ONE_BUTTON_TARGETS_KEY)
 	)
 	_gameplay_speed.value_changed.connect(
 		_on_setting_slider_changed.bind(Settings.GAMEPLAY_SPEED_KEY)
@@ -450,16 +512,16 @@ func _configure_setting_help() -> void:
 		),
 		_reduced_motion: "Stops decorative motion, trails and animated backgrounds.",
 		_player_labels: "Shows P1/P2 markers so color is not the only player cue.",
-		_audio_captions: "Shows text for scoring, misses, saws and countdown cues.",
-		_gameplay_speed: "Slows moving targets and falling cans next round.",
-		_target_size: "Makes targets and cans larger next round.",
+		_audio_captions: _setting_text("setting_audio_captions_help"),
+		_gameplay_speed: _setting_text("setting_gameplay_speed_help"),
+		_target_size: _setting_text("setting_object_size_help"),
 		_extra_round_time: "Adds time to each round starting next round.",
 		_round_mode: (
 			"Choose whether a round ends on the countdown or on running "
 			+ "out of lives."
 		),
 		_starting_lives: "Lives each player gets per round in Lives mode.",
-		_one_button_triangle_rush: "Any target input activates the highlighted target.",
+		_one_button_targets: _setting_text("setting_one_button_help"),
 		_controller_speed: "Changes controller cursor speed in direct-movement games.",
 		_controller_deadzone: "Sets how far a stick moves before input begins.",
 		_controller_pause: (
@@ -602,7 +664,7 @@ func _sync_from_settings() -> void:
 	_reduced_motion.button_pressed = Settings.reduced_motion_enabled()
 	_audio_captions.button_pressed = Settings.audio_captions_enabled()
 	_player_labels.button_pressed = Settings.player_labels_enabled()
-	_one_button_triangle_rush.button_pressed = Settings.one_button_triangle_rush_enabled()
+	_one_button_targets.button_pressed = Settings.one_button_targets_enabled()
 	_gameplay_speed.value = Settings.gameplay_speed_scale()
 	_target_size.value = Settings.target_size_scale()
 	_extra_round_time.value = Settings.extra_round_time()
