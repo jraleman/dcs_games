@@ -91,24 +91,25 @@ func _drive(manifest: GameManifest) -> void:
 	game.call("_on_round_timer_timeout")
 	await process_frame
 
-	# A game that sells cosmetics has to be paid for the round it just played,
-	# or its shop is unreachable by playing it.
+	# A synthetic timeout is not necessarily a completed match for a game
+	# that owns its ending rule. Its own suite covers genuine earning outcomes.
 	if store != null and bool(store.call("has_store", manifest.id)):
 		# `_finish_round` may settle the totals, so the payout is checked
 		# against the scores the shell actually ended on.
 		var totals: Array = game.get("_scores")
 		var earned := int(game.call("_round_points_earned", totals[0], totals[1]))
 		_expect(
-			earned > 0
-			and int(store.call("points", manifest.id)) == banked + earned,
+			(earned > 0 or not manifest.uses_shell_round_rules)
+			and int(store.call("points", manifest.id)) == banked + maxi(earned, 0),
 			"%s must bank what its round paid into the store." % manifest.id
 		)
-		_expect(
-			(game.get_node("%RoundHighlight") as Label).text.contains(
-				str(store.call("format_points", manifest.id, earned))
-			),
-			"%s must tell the player what the round earned." % manifest.id
-		)
+		if earned > 0:
+			_expect(
+				(game.get_node("%RoundHighlight") as Label).text.contains(
+					str(store.call("format_points", manifest.id, earned))
+				),
+				"%s must tell the player what the round earned." % manifest.id
+			)
 
 	var round_over := game.get_node("%RoundOver") as Control
 	var round_panel := game.get_node("%RoundPanel") as Control

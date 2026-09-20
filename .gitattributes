@@ -11,7 +11,7 @@
 # reading as unmodified until they are next written.
 #
 # Note that a nested repository keeps its own attributes: this file does not
-# reach into the submodules under godot-base/games/. All five carry their own
+# reach into the submodules under godot-base/games/. All six carry their own
 # copy of this policy, trimmed to the formats each one actually holds —
 # lazer_nfc additionally keeps its Android template's gradlew.bat on CRLF.
 

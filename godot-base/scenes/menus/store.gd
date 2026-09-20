@@ -22,10 +22,13 @@ var game_context_id := ""
 const MAX_CARD_WIDTH := 320.0
 const MAX_COLUMNS := 4
 const CARD_SEPARATION := 20.0
+const MIN_NATIVE_SCALE := 0.75
 const HEADING_FONT_SIZE := 26
 const HEADING_COLOR := Color(0.686275, 0.866667, 0.917647, 1.0)
 
 @onready var _margins: MarginContainer = %Margins
+@onready var _header: BoxContainer = %Header
+@onready var _header_actions: HBoxContainer = %HeaderActions
 @onready var _title: Label = %Title
 @onready var _balance: Label = %Balance
 @onready var _intro: Label = %Intro
@@ -36,6 +39,7 @@ const HEADING_COLOR := Color(0.686275, 0.866667, 0.917647, 1.0)
 var _cards: Array[StoreItemCard] = []
 var _grids: Array[GridContainer] = []
 var _reduced_motion := false
+var _cards_refresh_pending := false
 
 
 func _ready() -> void:
@@ -63,31 +67,64 @@ func _resolve_game_context() -> void:
 
 
 func _on_layout_changed(size: Vector2) -> void:
-	# `MenuScreen.refresh_layout` applies the margin overrides immediately
-	# before this hook, so they describe the box the grid is actually inside.
+	# A stretched 1920-wide canvas is still wide on a phone. Size the actual
+	# fonts and controls before choosing columns; scaling a container blurs type.
+	var units := maxf(1.0, size.x * MIN_NATIVE_SCALE / maxf(1, get_window().size.x))
+	var layout_size := size / units
+	var margin_x := roundi(
+		clampf(layout_size.x * margin_ratio.x, margin_min.x, margin_max.x) * units
+	)
+	var margin_y := roundi(
+		clampf(layout_size.y * margin_ratio.y, margin_min.y, margin_max.y) * units
+	)
+	Responsive.set_margins(_margins, margin_x, margin_y, margin_x, margin_y)
 	var horizontal := float(
 		_margins.get_theme_constant("margin_left")
 		+ _margins.get_theme_constant("margin_right")
 	)
-	var usable := maxf(size.x - horizontal, StoreItemCard.MIN_WIDTH)
+	var minimum := StoreItemCard.MIN_WIDTH * units
+	for card in _cards:
+		card.set_ui_scale(units)
+		minimum = maxf(minimum, card.get_combined_minimum_size().x)
+	var usable := maxf(size.x - horizontal, minimum)
+	var separation := CARD_SEPARATION * units
 	var fits := int(
-		(usable + CARD_SEPARATION) / (StoreItemCard.MIN_WIDTH + CARD_SEPARATION)
+		(usable + separation) / (minimum + separation)
 	)
 	var columns := clampi(fits, 1, mini(MAX_COLUMNS, maxi(_cards.size(), 1)))
-	var width := minf(usable, columns * MAX_CARD_WIDTH + (columns - 1) * CARD_SEPARATION)
+	var width := usable if columns == 1 else minf(
+		usable, columns * maxf(MAX_CARD_WIDTH * units, minimum) + (columns - 1) * separation
+	)
 	for grid in _grids:
 		grid.columns = columns
+		grid.add_theme_constant_override("h_separation", roundi(separation))
+		grid.add_theme_constant_override("v_separation", roundi(separation))
 		grid.custom_minimum_size.x = width
 	_sections.custom_minimum_size.x = width
+	_sections.add_theme_constant_override("separation", roundi(22 * units))
+	for shelf in _sections.get_children():
+		(shelf as VBoxContainer).add_theme_constant_override("separation", roundi(10 * units))
+		var heading := shelf.get_node_or_null("Heading") as Label
+		if heading != null:
+			heading.add_theme_font_size_override("font_size", roundi(HEADING_FONT_SIZE * units))
+	var layout := _header.get_parent() as VBoxContainer
+	layout.add_theme_constant_override("separation", roundi(16 * units))
+	_header.add_theme_constant_override("separation", roundi(24 * units))
+	_header_actions.add_theme_constant_override("separation", roundi(24 * units))
 	# The header stacks on a phone, where a title, a balance and Back will not
 	# share a line without one of them losing its words.
-	var portrait := Responsive.is_portrait(size)
+	var compact := layout_size.x < 1000.0
+	_header.vertical = compact
 	_balance.horizontal_alignment = (
-		HORIZONTAL_ALIGNMENT_LEFT if portrait else HORIZONTAL_ALIGNMENT_RIGHT
+		HORIZONTAL_ALIGNMENT_LEFT if compact else HORIZONTAL_ALIGNMENT_RIGHT
 	)
-	_title.add_theme_font_size_override(
-		"font_size", int(clampf(minf(size.x, size.y) * 0.055, 32.0, 56.0))
-	)
+	_intro.add_theme_font_size_override("font_size", roundi((20 if compact else 24) * units))
+	_empty.add_theme_font_size_override("font_size", roundi(24 * units))
+	_balance.add_theme_font_size_override("font_size", roundi(30 * units))
+	_back_button.add_theme_font_size_override("font_size", roundi(28 * units))
+	_back_button.custom_minimum_size.y = 60 * units
+	var title_size := clampf(minf(layout_size.x, layout_size.y) * 0.055, 32.0, 56.0)
+	_title.add_theme_font_size_override("font_size", roundi(title_size * units))
 
 
 ## Builds one grid per heading, in declaration order, so a game groups its
@@ -186,9 +223,21 @@ func _refresh_balance() -> void:
 	_balance.accessibility_description = _balance.tooltip_text
 
 
+## A purchase emits equip, balance and ownership changes together. Rebuild once
+## so its deferred focus target is not removed by a second rebuild.
+func _queue_card_refresh() -> void:
+	if _cards_refresh_pending:
+		return
+	_cards_refresh_pending = true
+	_refresh_cards.call_deferred()
+
+
 ## Rebuilds every card rather than only the one that changed: a purchase moves
 ## the balance, which can make every other card affordable or not.
 func _refresh_cards() -> void:
+	_cards_refresh_pending = false
+	if not is_inside_tree() or is_queued_for_deletion():
+		return
 	var focused := get_viewport().gui_get_focus_owner()
 	var focused_card := _card_owning(focused)
 	for card in _cards:
@@ -201,6 +250,8 @@ func _refresh_cards() -> void:
 			Store.slots_for_item(game_context_id, item_id),
 			Store.format_points(game_context_id, int(item.get("price", 0)))
 		)
+		card.set_preview_running(not _reduced_motion)
+	refresh_layout()
 	_attach_card_sounds.call_deferred()
 	# The buttons that had focus were freed by the rebuild, so focus is handed
 	# back to the same card rather than lost to the top of the screen.
@@ -255,17 +306,17 @@ func _on_points_changed(game_id: String, _points: int) -> void:
 	if game_id != game_context_id:
 		return
 	_refresh_balance()
-	_refresh_cards()
+	_queue_card_refresh()
 
 
 func _on_store_changed(game_id: String, _item_id: String) -> void:
 	if game_id == game_context_id:
-		_refresh_cards()
+		_queue_card_refresh()
 
 
 func _on_equipped_changed(game_id: String, _slot_id: String, _item_id: String) -> void:
 	if game_id == game_context_id:
-		_refresh_cards()
+		_queue_card_refresh()
 
 
 func _on_setting_changed(key: String, value: Variant) -> void:

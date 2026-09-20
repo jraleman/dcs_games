@@ -6,10 +6,11 @@
 # godot-base/.gitignore, next to the project.godot they describe.
 #
 # Note that these rules do not reach inside the submodules listed in
-# .gitmodules (anti_checkers, anti_chess, chicken_pit, dead_metal_jam,
-# lazer_nfc). A submodule is its own repository with its own index, so it
-# carries its own .gitignore. Plain game folders under godot-base/games/
-# (desk_can_saw, triangle_rush) are part of this repository and are covered.
+# .gitmodules (anti_checkers, anti_chess, chicken_pit, creep_code,
+# dead_metal_jam, lazer_nfc). A submodule is its own repository with its own
+# index, so it carries its own .gitignore. Plain game folders under
+# godot-base/games/ (desk_can_saw, triangle_rush) are part of this repository
+# and are covered.
 
 # Godot engine caches — a safety net, not a duplicate.
 # godot-base/.gitignore already covers the host project, but a game folder

@@ -908,5 +908,13 @@ func _finish_round() -> void:
 func _award_round_achievements(player_one_total: int, player_two_total: int) -> void:
 	if GameSession.is_single_player():
 		_unlock_round_achievement("first_single_player_game")
-	elif player_one_total > player_two_total:
+		return
+	if player_one_total > player_two_total:
 		_unlock_round_achievement("first_win")
+		return
+	# A draw is not a loss, so Race condition needs a decisive Player 2 win.
+	if (
+		player_two_total > player_one_total
+		and player_two_total >= TriangleRushOptions.RACE_CONDITION_SCORE
+	):
+		_unlock_round_achievement("race_condition")

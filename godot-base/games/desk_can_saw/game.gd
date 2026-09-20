@@ -1,9 +1,11 @@
 extends RefCounted
 
-## Desk-Can-Saw manifest — an unlockable game earned by playing Triangle Rush.
+## Desk-Can-Saw manifest — a chainsaw-versus-falling-cans game.
 ##
-## The gate is expressed entirely through [DeskCanSawUnlockRule], so the
-## framework hides and reveals this game without knowing what it is.
+## It ships ungated: the collection lists it from the first launch, and both
+## its modes are always playable. Nothing here declares an [GameUnlockRule],
+## so [method GameCatalog.available] never hides it and `mode_select.gd`
+## imposes no per-mode restriction.
 
 const GAME_ID := "desk_can_saw"
 
@@ -63,8 +65,8 @@ static func manifest() -> GameManifest:
 			+ "chainsaw to tear through a can earns its point."
 		),
 	}
-	game.hidden_until_unlocked = true
-	game.unlock_rule = DeskCanSawUnlockRule.new()
+	game.hidden_until_unlocked = false
+	game.unlock_rule = null
 	game.tunables = DeskCanSawOptions.TUNABLES
 	game.control_bindings = DeskCanSawOptions.CONTROL_BINDINGS
 	game.stats_url = "https://deskcansaw.com/stats/dcs"
@@ -93,13 +95,6 @@ static func manifest() -> GameManifest:
 			],
 		},
 	]
-	game.achievements = {
-		DeskCanSawUnlockRule.RACE_CONDITION_ACHIEVEMENT: {
-			"title": "Race condition",
-			"description": "Lose to Player 2 after they score at least 25 points.",
-			"badge": "RACE",
-		},
-	}
 	return game
 
 

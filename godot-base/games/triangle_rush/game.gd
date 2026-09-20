@@ -58,6 +58,16 @@ static func manifest() -> GameManifest:
 			"description": "Win your first multiplayer round as Player 1.",
 			"badge": "WIN",
 		},
+		# Earned in a Triangle Rush versus round, so it is declared here. The id
+		# is a save key in `user://achievements.cfg` and must never change.
+		"race_condition": {
+			"title": "Race condition",
+			"description": (
+				"Lose to Player 2 after they score at least %d points."
+				% TriangleRushOptions.RACE_CONDITION_SCORE
+			),
+			"badge": "RACE",
+		},
 	}
 	return game
 

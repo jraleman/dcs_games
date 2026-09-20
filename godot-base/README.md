@@ -3,7 +3,7 @@
 A Godot 4 starting point for DeskCanSaw Games projects. It ships the parts every
 game needs before it is a game: the studio sting, an intro, a main menu,
 settings that persist, credits, a pause overlay and a placeholder gameplay
-scene — plus the unlockable Desk-Can-Saw minigame — all built to look right
+scene — plus the Desk-Can-Saw minigame — all built to look right
 from a phone in portrait to an ultrawide monitor.
 
 Made with **Godot 4.7** (`gl_compatibility` renderer, so it exports to web and
@@ -19,13 +19,14 @@ godot --path . -- --game=chicken_pit
 godot --path . -- --game=anti_chess
 godot --path . -- --game=anti_checkers
 godot --path . -- --game=lazer_nfc
+godot --path . -- --game=creep_code
 godot --path . -- --game=all            # launch the full collection
 ```
 
 Ordinary launches show only Desk-Can-Saw and default to three lives. A saved
-round-mode choice or starting-lives preference still wins. The collection's
-Triangle Rush unlock path remains unchanged; standalone Desk-Can-Saw is always
-playable.
+round-mode choice or starting-lives preference still wins. No game is gated:
+`--game=all` lists every game in the picker from the first launch, and
+standalone Desk-Can-Saw is always playable.
 
 The first scene is `scenes/boot/studio_logo.tscn`; from there the flow is:
 
@@ -82,12 +83,13 @@ select or instructions.
 | `ui/components/share_preview.tscn` | Modal generated-image preview with close and open-original actions. |
 | `ui/components/splash_motion.gd` | Lightweight animated geometry for logo stings and splash screens. |
 | `games/triangle_rush/` | Triangle Rush: manifest, gameplay scene, targets, options, arcade theme and its own tests. |
-| `games/desk_can_saw/` | Desk-Can-Saw: manifest, gameplay scene, cans, chainsaw cursor, unlock rule, workshop theme and its own tests. |
+| `games/desk_can_saw/` | Desk-Can-Saw: manifest, gameplay scene, cans, chainsaw cursor, workshop theme and its own tests. |
 | `games/dead_metal_jam/` | Dead Metal Jam: manifest, pitch-detection instrument input, encounters, its own intro and theme, and its own tests. |
 | `games/chicken_pit/` | Chicken Pit: a real 3D toy-farm tug-of-war inside the 2D shell, with deterministic pulling, three CPU birds, Timer/Lives rules, original models/audio, and its own regression coverage. |
 | `games/anti_chess/` | Anti-Chess: untimed 3D losing chess, compulsory captures, a seeded CPU or local turn-taking, original chessmen, and a jade/brass standalone theme. |
 | `games/anti_checkers/` | Anti Checkers: untimed 3D English giveaway checkers, compulsory jump chains, crowned kings, a solo CPU or local turn-taking, and an original garnet/ivory table. |
 | `games/lazer_nfc/` | LaZer NFC: real 3D Simon-style memory combat, Android reader-mode NFC, guided tag binding, assisted touch, seven instruments, shades and relaxed timing. |
+| `games/creep_code/` | Creep Code: one evolving 3D ritual stage with Sliding Window, Binary Search and BFS relics, a growing constellation, permanent seals and a game-local Puzzle Manager. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
 | `tools/record_tutorials.ps1` | Records each game's tutorial clip through Godot's Movie Maker and encodes it to that game's own `games/<id>/assets/video/tutorial.ogv` plus a poster frame. |
 | `tools/measure_intro_cues.py` | Development-only: finds the pauses in a narration recording and prints the `cue_times` array a card-based intro needs. |
@@ -489,6 +491,14 @@ countdown rather than mutating the round being played:
 var hat: String = Store.equipped_id(game_id(), "pit_hat_red")
 ```
 
+Purely cosmetic changes can instead follow `Store.equipped_changed` live, as
+Creep Code's keeper does, provided they do not alter a round's rules or state.
+The shop coalesces the equip, wallet and purchase notifications into one card
+refresh so a purchase cannot remove its own deferred focus target. Rebuilt
+previews retain the reduced-motion policy. The grid and its header use native
+window sizing for readable text and touch targets on a stretched phone canvas;
+`StoreItemCard.set_ui_scale()` applies that size to new action buttons too.
+
 The rest of the API is `points`, `add_points`, `is_owned`, `purchase`, `equip`,
 `unequip`, `equipped_item`, `items`, `slots`, `describe` and `format_points`,
 all taking the game id first. State lives in `user://store.cfg` (sections
@@ -654,6 +664,14 @@ offline-authored sounds and the menu skin live in the folder. Separate solo/loca
 instruction videos show their respective camera and controls. See the game's
 `README.md` for rules, asset authoring and graphical/headless regression commands.
 
+Its scaffold-backed **Store** offers six free piece palettes and unlockable
+Bronze, Silver, Gold, Platinum and faceted Diamond finishes. Completed matches
+pay Coins for participation and pieces given away, plus a bonus for beating the
+CPU by the actual chess win rule. Independent P1 and P2/CPU finishes apply next
+match, follow the human's chosen side, and persist through the shared `Store`.
+The store portraits reuse the refined match models; player-colour rings, one
+on White and two on Black, remain visible even when both finishes match.
+
 ### Anti Checkers - English giveaway checkers in 3D
 
 `godot --path . -- --game=anti_checkers` launches a self-contained companion
@@ -713,6 +731,81 @@ bad reads. A printable label sheet and reproducible audio/tutorial sources
 live in the game folder. Build the native AAR and install Godot's Gradle export
 template before exporting; see `games/lazer_nfc/README.md` and
 `games/lazer_nfc/android/README.md`.
+
+### Creep Code - an enchanted dungeon observatory
+
+`godot --path . -- --game=creep_code` launches a solo ritual on **one persistent
+3D stage**, transforming from Sunrail to Whisper Shaft to Echo Garden. There
+is no hub or walking commute. Direct clicks/taps and rebindable keys shift a crystal
+frame, choose a numbered listening seal or follow equal-cost garden walkways.
+After each solve a keystone joins the constellation and the next mechanism
+unfolds automatically. Interact skips a flourish without also arming the next
+puzzle. The shaft is ready to listen on arrival; the garden's first wave is
+automatic and can be revealed instantly. Retry keeps a revealed garden's
+echoes. There is no jumping or combat.
+The stage uses the full width on desktop and phone, with a compact, unboxed
+bottom action row rather than a sidebar. The actual crystals, listening seals,
+garden platforms and their numbers are clickable/tappable. The Grimoire action
+opens rules and hints on demand, freezing puzzle time and input.
+
+Its original dungeon meshes use weathered stone, aged brass, candles and
+blue/violet runes: a circular dais, broken vault, old books, floating solar
+crystals, a turning listening astrolabe and a blooming rune garden. Cached
+procedural weathering, bounded local lights, soft candle modulation, orbiting
+rings, keeper hops, sparks and curved keystone flights stay on the Compatibility
+renderer. Reduced motion uses settled poses and short opacity-only handoffs;
+effects-off removes particles and light pulses without removing useful
+illumination. The game owns every asset and
+uses no downloaded models or extra packages.
+
+The game inherits `GameShell`, declares `custom_keys` and disables shell round
+rules. Its three pure models own capacitor timing, comparison charges and the
+shortest-route budget. A scene-owned `PuzzleManager` spans all ritual acts and
+coordinates signals; it is deliberately not a project autoload. The isolated
+3D viewport follows the same framework boundary as Chicken Pit, without
+importing any other game's code.
+
+Restoring each relay immediately unlocks its game-owned achievement, so
+progress survives returning to the title or restarting the application.
+Replays and failed attempts never revoke those flags. An incomplete save
+prelights earned seals and resumes at the first missing relic; a complete save
+starts a fresh full ritual without erasing its permanent achievements. The
+completed constellation automatically reaches shared results and scorecards.
+Scoring is explicitly **one point per different relic solved this visit, at
+most three**; permanent seals and current constellation progress are separate.
+Hints, retries and
+failures cost no points, and speed earns no bonus. Only the armed Sunrail
+counts down from 90 seconds; pause and the grimoire freeze that
+budget. Shaft listens and garden crossings are charges, not seconds. The
+results' elapsed time is informational.
+There is one fixed configuration: 12 crystals, 15 listening seals/four questions
+and a 5x5 garden/eight crossings, retaining the previous default balance.
+There is no difficulty setting or solo setup prompt. Legacy difficulty values
+are ignored without deleting saved progress. An untimed Sunrail assist and all
+shared visual accessibility settings apply live. The standalone build has a
+15-second, skippable opening demonstrating the actual evolving stage and
+constellation behind the regular centered intro subtitles, not a side panel.
+Its demonstration relays never touch saves. An astral-key title icon and
+matching ritual poster also appear
+through the existing theme and picker contracts; there is no prerecorded clip.
+
+The keeper also has a **cosmetic outfit store**, declared entirely by its
+manifest. Finishing a ritual banks one **Star Shard** per relic solved that
+visit, capped at three. Warrior, ranger and wizard outfits each cost three
+shards; the original keeper look is free. Purchases equip immediately, including
+from pause, without changing puzzles or restarting the stage. Gameplay, the
+opening and the rotating shop portraits share the same game-owned meshes and
+weathered material. Wallets, ownership and the equipped outfit use the existing
+merged `user://store.cfg`; previews respect reduced motion and never change
+equipment themselves. The shop is reached from the standalone title screen or
+the running game's pause menu.
+
+The `Windows - Creep Code (standalone)` preset activates `creep_code`,
+excludes the other games and development helpers, and reserves
+`DeskCanSaw Games/Creep Code` as its stable user directory. Source launches
+continue using the common development profile, just like the other games.
+See `games/creep_code/README.md` for all six puzzle designs, the three
+implemented mechanics, extension points and focused regression commands.
 
 ## Shipping one game on its own
 
@@ -802,7 +895,7 @@ and *Game* tabs, credits, the pause overlay, achievements and share cards.
 An intro is a plain `Control` scene. It must stay skippable (`skip` and
 `ui_cancel`) and hand over with `Router.goto(next_scene)` when it ends.
 
-Two games declare one, and they are worth reading as a pair. Dead Metal Jam's
+Dead Metal Jam and Chicken Pit provide two useful examples. Dead Metal Jam's
 is a **staged demonstration** — the game's own actors walk out and are shot
 with notes, so the opening teaches the verb before the menu appears. Chicken
 Pit's is **narrated** — a recording plays while its transcript turns over in
@@ -823,6 +916,13 @@ the game's real `RustyClanky` actors across a stage so the opening cannot drift
 away from the game, synthesises its own audio rather than adding sounds to
 `AudioManager`, and honours reduced motion, intense visual effects and audio
 captions.
+
+Creep Code's `games/creep_code/intro.tscn` is a shorter, skippable **3D
+awakening**. It reuses the actual dungeon and lights three demonstration
+relays over 15 seconds, without connecting to progression saves. Its timeline
+uses the standard intro's unboxed subtitle, skip button and progress track
+over a full-width stage. It is directly driven by the expedition suite, and
+the real-window view suite covers landscape, portrait and ultrawide framing.
 
 ### Its own credits
 
@@ -1185,16 +1285,14 @@ invocation, and only completed encodes replace the shipped media.
 Recording overrides never persist to the player's settings.
 
 The sample unlocks **Solo Starter** after the first completed single-player
-round and **First Win** after Player 1's first multiplayer victory.
-In the collection, Desk-Can-Saw is completely hidden until the player either
-scores at least 25 in a solo Triangle Rush round or wins a multiplayer round as Player 1
-with at least 25 points (Medium difficulty when the opponent is the CPU). Its
-first unlock triggers a dedicated fanfare and visual celebration. The
-Desk-Can-Saw's mode selector only shows the matching unlocked route: solo,
-local multiplayer, or both after both Triangle Rush conditions have been
-completed. A Player 2 win with at least 25 points awards **Race condition** but
-does not satisfy Player 1's multiplayer requirement. These flags and
-achievements are stored in `user://achievements.cfg` and never regress after
+round and **First Win** after Player 1's first multiplayer victory. A Player 2
+win with at least 25 points awards **Race condition** instead — the joke is
+losing the race you were leading, so a draw does not count. No game is gated:
+every game the catalog discovers is listed in the picker from the first launch,
+and Desk-Can-Saw offers both of its modes straight away. The framework keeps
+`unlock_rule` and `hidden_until_unlocked` for a game that wants a gate, along
+with the fanfare and visual celebration a first unlock triggers. Achievements
+are stored in `user://achievements.cfg` and never regress after
 later matches. Store wallets, purchases and equipped cosmetics live beside them
 in `user://store.cfg`. All three files are written by merging into what is
 already on disk, never by rebuilding them: a standalone build registers only its
@@ -1223,7 +1321,7 @@ godot --headless --path . --script res://tests/visual_effects_test.gd -- --game=
 
 Each game owns the rest under `games/<id>/tests/` — 45 of them at the time of
 writing, spread across Dead Metal Jam (14), Chicken Pit (9), LaZer NFC (9),
-Anti-Chess (6), Anti Checkers (4), Desk-Can-Saw (2) and Triangle Rush (1).
+Anti-Chess (8), Anti Checkers (4), Desk-Can-Saw (2) and Triangle Rush (1).
 Counts drift as games grow, so enumerate the folders rather than trusting a
 list. `*_fixture.gd` files are helpers, not suites:
 
@@ -1246,7 +1344,7 @@ so a standalone build can still verify its own path. It exercises each declared
 theme on the real title screen: logo tint, widget skin, flat-button text contrast,
 plaque materials, backdrop aspect correction and the reduced-motion switch.
 
-Four game-owned suites need a **real graphics window** and deliberately exit 1
+Five game-owned suites need a **real graphics window** and deliberately exit 1
 under `--headless`, where they guard `DisplayServer.get_name() == "headless"`
 and say so. Run them without `--headless`, and never read their headless exit
 code as a regression:
@@ -1258,6 +1356,13 @@ code as a regression:
   optional `--anti-checkers-capture-dir=<absolute directory>` output.
 - `games/chicken_pit/tests/pit_view_test.gd` — the 3D pit's `SubViewport`.
 - `games/lazer_nfc/tests/lazer_nfc_layout_test.gd` — its responsive layout.
+- `games/creep_code/tests/observatory_view_test.gd` — all three relics and the
+  finale, camera framing, direct mesh/number input, compact bottom controls,
+  persistent stage/constellation, effects and the regular-subtitle opening
+  in landscape, portrait and ultrawide. It also covers the outfit models,
+  rotating portraits and responsive shop with native-size text/touch controls.
+  Optional `--creep-capture-dir=<absolute directory>` saves actual gameplay
+  and intro frames.
 
 Run tests sequentially and use an isolated user profile for host tests that
 exercise persistence or complete real rounds.

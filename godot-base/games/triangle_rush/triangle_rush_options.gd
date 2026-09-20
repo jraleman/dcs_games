@@ -26,6 +26,11 @@ const MAX_SPEED_RUSH := 1.0
 const MIN_ROUND_LENGTH := 15.0
 const MAX_ROUND_LENGTH := 90.0
 
+## Score Player 2 must reach, while beating Player 1, to earn Race condition.
+## It lives beside the tunables rather than in the gameplay scene for the same
+## reason they do: a headless test can import the number without an autoload.
+const RACE_CONDITION_SCORE := 25
+
 ## Triangles ship large and slow: a 150% target that drifts at half speed is
 ## far easier to read and to aim at than the original 100%/100% pairing.
 const DEFAULT_SIZE := 1.5

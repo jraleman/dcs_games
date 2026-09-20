@@ -39,6 +39,7 @@ func _run() -> void:
 		_test_buying(store, manifest)
 		_test_locked_items(store, manifest)
 	_test_persistence(store, selling)
+	await _test_card_scaling()
 	await _test_screen(selling)
 	await _test_empty_screen()
 	await _test_menu_entry_points(store, selling)
@@ -452,6 +453,44 @@ func _test_persistence(store: Node, selling: Array[GameManifest]) -> void:
 				owned.has(str(item["id"])),
 				"%s must remember owning '%s'." % [manifest.id, str(item["id"])]
 			)
+
+
+## Rebuilding actions after a purchase must preserve native-sized controls.
+func _test_card_scaling() -> void:
+	var card := StoreItemCard.new()
+	get_root().add_child(card)
+	var item := {
+		"id": "scale_fixture", "title": "Example cosmetic",
+		"description": "Readable cosmetic description.",
+		"price": 3, "affordable": true, "owned": false,
+	}
+	var slots: Array[Dictionary] = [
+		{"id": "appearance", "title": "Wearer", "allows_empty": false},
+	]
+	card.configure(item, slots, "3 Points")
+	card.set_ui_scale(3.0)
+	var buy := card.get("_buy_button") as Button
+	_expect(
+		buy.custom_minimum_size.y >= 180
+		and buy.get_theme_font_size("font_size") == 84
+		and (card.get("_description") as Label).get_theme_font_size("font_size") == 54,
+		"Store cards must enlarge real fonts and touch targets on a stretched canvas."
+	)
+	item["owned"] = true
+	card.configure(item, slots, "3 Points")
+	var equip := (card.get("_slot_buttons") as Array)[0] as Button
+	_expect(
+		equip.custom_minimum_size.y >= 180
+		and equip.get_theme_font_size("font_size") == 84,
+		"Replacing Buy with Equip must not reset a card's native sizing."
+	)
+	card.set_ui_scale(1.0)
+	_expect(
+		equip.get_theme_font_size("font_size") == 28
+		and is_equal_approx(card.custom_minimum_size.x, StoreItemCard.MIN_WIDTH),
+		"Returning to a wide window must restore the card's normal sizing."
+	)
+	await _free_scene(card)
 
 
 ## The shelves are generated, so a game gets a card per item — and a place to

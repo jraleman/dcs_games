@@ -32,7 +32,7 @@ theme_override_constants/margin_bottom = 54
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="Header" type="HBoxContainer" parent="Margins/Layout"]
+[node name="Header" type="BoxContainer" parent="Margins/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 24
@@ -47,16 +47,23 @@ theme_override_font_sizes/font_size = 56
 text = "Store"
 autowrap_mode = 3
 
-[node name="Balance" type="Label" parent="Margins/Layout/Header"]
+[node name="HeaderActions" type="HBoxContainer" parent="Margins/Layout/Header"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 24
+
+[node name="Balance" type="Label" parent="Margins/Layout/Header/HeaderActions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_colors/font_color = Color(1, 0.831373, 0.360784, 1)
 theme_override_font_sizes/font_size = 30
 text = "0 Points"
 horizontal_alignment = 2
 
-[node name="BackButton" type="Button" parent="Margins/Layout/Header"]
+[node name="BackButton" type="Button" parent="Margins/Layout/Header/HeaderActions"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -98,4 +105,4 @@ layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/separation = 22
 
-[connection signal="pressed" from="Margins/Layout/Header/BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="Margins/Layout/Header/HeaderActions/BackButton" to="." method="_on_back_pressed"]

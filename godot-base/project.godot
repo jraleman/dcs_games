@@ -34,12 +34,15 @@ config/name.antichess="Anti-Chess"
 config/custom_user_dir_name.antichess="DeskCanSaw Games/Anti-Chess"
 config/name.anticheckers="Anti Checkers"
 config/custom_user_dir_name.anticheckers="DeskCanSaw Games/Anti Checkers"
+config/name.creep_code="Creep Code"
+config/custom_user_dir_name.creep_code="DeskCanSaw Games/Creep Code"
+config/icon.creep_code="res://games/creep_code/assets/game-icon.svg"
 
 [audio]
 
+general/text_to_speech=true
 driver/enable_input=true
 driver/enable_input.lazer_nfc=false
-general/text_to_speech=true
 driver/mix_rate.lazer_nfc=44100
 driver/output_latency.lazer_nfc=15
 
@@ -64,6 +67,7 @@ build/single_game_id.cp="chicken_pit"
 build/single_game_id.lazer_nfc="lazer_nfc"
 build/single_game_id.antichess="anti_chess"
 build/single_game_id.anticheckers="anti_checkers"
+build/single_game_id.creep_code="creep_code"
 
 [display]
 
@@ -86,7 +90,7 @@ movie_writer/mjpeg_quality=0.95
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://games/lazer_nfc/android/plugin.cfg")
+enabled=PackedStringArray("res://games/lazer_nfc/android/plugin.cfg", "res://games/lazer_nfc/ios/plugin.cfg")
 
 [gui]
 
@@ -155,8 +159,8 @@ sensors/enable_magnetometer.lazer_nfc=false
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-environment/defaults/default_clear_color=Color(0.054902, 0.082353, 0.098039, 1)
 textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(0.054902, 0.082353, 0.098039, 1)
 
 [share]
 

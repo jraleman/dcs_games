@@ -1,8 +1,8 @@
 extends SceneTree
 
 ## Regression checks for the base-game (Triangle Rush) triangle options exposed
-## under Settings → Game, and for the Handicap tab that owns the next-round
-## assists.
+## under Settings → Game, for the Handicap tab that owns the next-round
+## assists, and for the achievements this game awards.
 
 var _failures := PackedStringArray()
 var _original_values: Dictionary = {}
@@ -20,6 +20,7 @@ func _run() -> void:
 		await _finish(settings)
 		return
 
+	_test_race_condition_achievement()
 	_test_defaults()
 	var values := _test_values()
 	for key: String in values:
@@ -46,6 +47,41 @@ func _test_values() -> Dictionary:
 		Settings.TARGET_SIZE_KEY: 1.0,
 		Settings.EXTRA_ROUND_TIME_KEY: 0.0,
 	}
+
+
+## Race condition is earned in a Triangle Rush versus round, so this game
+## declares it. The id is a save key in `user://achievements.cfg`: it moved
+## here from Desk-Can-Saw's manifest when that game was ungated, so its
+## spelling must not drift or everyone who earned it loses it.
+func _test_race_condition_achievement() -> void:
+	var manifest := GameCatalog.get_manifest(TriangleRushOptions.GAME_ID)
+	if manifest == null:
+		_failures.append("Triangle Rush must be in the catalog.")
+		return
+
+	var achievement: Dictionary = manifest.achievements.get("race_condition", {})
+	_expect(
+		not achievement.is_empty(),
+		"Triangle Rush must declare the Race condition achievement it awards."
+	)
+	_expect(
+		str(achievement.get("description", "")).contains(
+			str(TriangleRushOptions.RACE_CONDITION_SCORE)
+		),
+		"Race condition must name the score Player 2 has to reach."
+	)
+
+	# Two manifests declaring one id would register the same achievement twice
+	# and leave the second definition's wording to load order.
+	var declarers := PackedStringArray()
+	for candidate in GameCatalog.all():
+		if candidate.achievements.has("race_condition"):
+			declarers.append(candidate.id)
+	_expect(
+		declarers.size() == 1 and declarers[0] == TriangleRushOptions.GAME_ID,
+		"Only Triangle Rush may declare Race condition; found: %s."
+		% ", ".join(declarers)
+	)
 
 
 func _test_defaults() -> void:

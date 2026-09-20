@@ -11,61 +11,23 @@ func _init() -> void:
 
 func _run() -> void:
 	var session := get_root().get_node_or_null("GameSession")
-	var achievement_manager := get_root().get_node_or_null("AchievementManager")
-	if session == null or achievement_manager == null:
-		_failures.append(
-			"GameSession and AchievementManager autoloads are required for scene tests."
-		)
+	if session == null:
+		_failures.append("The GameSession autoload is required for scene tests.")
 		await _finish()
 		return
 
-	var original_progress: Dictionary = achievement_manager.call(
-		"game_progress", "desk_can_saw"
-	)
-	await _test_slice_mode_access(session, achievement_manager)
-	achievement_manager.set("_progression", _slice_progress(true, true))
+	await _test_both_modes_available()
 	await _test_slice_mode_flow(session)
-	achievement_manager.set("_progression", original_progress)
 	await _test_single_player_scene(session)
 	await _test_multiplayer_isolation(session)
 	await _finish()
 
 
-func _test_slice_mode_access(
-	session: Node,
-	achievement_manager: Node
-) -> void:
+## Desk-Can-Saw ships ungated, so both routes are open from the first launch.
+## The screen used to narrow itself to whichever route a partial Triangle Rush
+## qualification had earned; nothing may narrow it now.
+func _test_both_modes_available() -> void:
 	GameCatalog.select("desk_can_saw")
-	await _assert_slice_mode_access(
-		achievement_manager,
-		true,
-		false,
-		"solo-only unlock"
-	)
-	await _assert_slice_mode_access(
-		achievement_manager,
-		false,
-		true,
-		"multiplayer-only unlock"
-	)
-	await _assert_slice_mode_access(
-		achievement_manager,
-		true,
-		true,
-		"dual unlock"
-	)
-
-
-func _assert_slice_mode_access(
-	achievement_manager: Node,
-	single_player_unlocked: bool,
-	multiplayer_unlocked: bool,
-	context: String
-) -> void:
-	achievement_manager.set(
-		"_progression",
-		_slice_progress(single_player_unlocked, multiplayer_unlocked)
-	)
 	var menu := _instantiate_scene("res://scenes/menus/mode_select.tscn")
 	if menu == null:
 		return
@@ -76,79 +38,27 @@ func _assert_slice_mode_access(
 	) as Control
 	var multiplayer_card := menu.get_node("%Multiplayer") as Control
 	_expect(
-		single_player_card.visible == single_player_unlocked,
-		"Mode selection must match single-player access for %s." % context
+		single_player_card.visible and multiplayer_card.visible,
+		"An ungated Desk-Can-Saw must offer both of its modes."
 	)
 	_expect(
-		multiplayer_card.visible == multiplayer_unlocked,
-		"Mode selection must match multiplayer access for %s." % context
-	)
-
-	# One unlocked mode is not a choice, so the screen skips its own first step
-	# rather than showing a grid holding a single card.
-	var both_unlocked := single_player_unlocked and multiplayer_unlocked
-	var confirm_step := menu.get_node("%ConfirmStep") as Control
-	var stepper := menu.get_node("Margins/Layout/Stepper") as Control
-	var unlocked_mode: int = (
-		GAME_SESSION_SCRIPT.GameMode.SINGLE_PLAYER
-		if single_player_unlocked
-		else GAME_SESSION_SCRIPT.GameMode.MULTIPLAYER
+		bool(menu.get("_player_count_offered")),
+		"With both modes open the player-count step is a real question."
 	)
 	_expect(
-		bool(menu.get("_player_count_offered")) == both_unlocked,
-		"The player-count step is only a question when both modes are open for %s." % context
+		(menu.get_node("Margins/Layout/Stepper") as Control).visible,
+		"The stepper belongs on screen while the player-count step is asked."
 	)
 	_expect(
-		stepper.visible == both_unlocked,
-		"The stepper is shown only while the player-count step is for %s." % context
-	)
-	_expect(
-		confirm_step.visible != both_unlocked,
-		"A lone unlocked mode opens straight on its confirmation for %s." % context
+		menu.get("first_focus") == menu.get_node("%SinglePlayerButton"),
+		"Mode selection must focus an available choice."
 	)
 
-	if both_unlocked:
-		_expect(
-			menu.get("first_focus") == menu.get_node("%SinglePlayerButton"),
-			"Mode selection must focus an available choice for %s." % context
-		)
-	else:
-		_expect(
-			int(menu.get("_pending_mode")) == unlocked_mode,
-			"The collapsed step must pend the unlocked mode for %s." % context
-		)
-		var focus_target := menu.get("first_focus") as Control
-		_expect(
-			focus_target != null and confirm_step.is_ancestor_of(focus_target),
-			"The collapsed step must focus a usable confirmation control for %s." % context
-		)
-
-	# Skipping ahead to a confirmation must not become a way in through the
-	# back: a locked mode's handler still has to refuse, so the pending mode
-	# is what proves the refusal once the confirmation is already on screen.
-	if not single_player_unlocked:
-		menu.call("_on_single_player_pressed")
-		await process_frame
-		_expect(
-			int(menu.get("_pending_mode")) == unlocked_mode,
-			"A hidden single-player mode must not be activatable for %s." % context
-		)
-	if not multiplayer_unlocked:
-		menu.call("_on_multiplayer_pressed")
-		await process_frame
-		_expect(
-			int(menu.get("_pending_mode")) == unlocked_mode,
-			"A hidden multiplayer mode must not be activatable for %s." % context
-		)
-
-	if single_player_unlocked:
-		menu.call("_on_single_player_pressed")
-	else:
-		menu.call("_on_multiplayer_pressed")
+	menu.call("_on_single_player_pressed")
 	await process_frame
 	_expect(
-		confirm_step.visible,
-		"An unlocked mode must remain activatable for %s." % context
+		(menu.get_node("%ConfirmStep") as Control).visible,
+		"Choosing a mode must reach its confirmation."
 	)
 	await _free_scene(menu)
 
@@ -164,7 +74,7 @@ func _test_slice_mode_flow(session: Node) -> void:
 	var title := menu.get_node("Margins/Layout/Header/Title") as Label
 	_expect(
 		title.text == GameCatalog.get_manifest("desk_can_saw").title,
-		"The unlocked menu flow must identify Desk-Can-Saw."
+		"The menu flow must identify Desk-Can-Saw."
 	)
 	menu.call("_on_multiplayer_pressed")
 	await process_frame
@@ -200,16 +110,6 @@ func _test_slice_mode_flow(session: Node) -> void:
 		"Multiplayer instructions must advertise Player 2 arrow-key input."
 	)
 	await _free_scene(instructions)
-
-
-func _slice_progress(
-	single_player_unlocked: bool,
-	multiplayer_unlocked: bool
-) -> Dictionary:
-	return DeskCanSawUnlockRules.normalized_state({
-		DeskCanSawUnlockRules.SOLO_QUALIFIED_KEY: single_player_unlocked,
-		DeskCanSawUnlockRules.MULTIPLAYER_QUALIFIED_KEY: multiplayer_unlocked,
-	})
 
 
 func _test_single_player_scene(session: Node) -> void:

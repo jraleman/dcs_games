@@ -37,6 +37,7 @@ var _actions: VBoxContainer
 var _buy_button: Button
 var _slot_buttons: Array[Button] = []
 var _preview_instance: Control
+var _ui_scale := 1.0
 
 
 func _init() -> void:
@@ -144,6 +145,31 @@ func set_preview_running(running: bool) -> void:
 		_preview_instance.call("set_preview_running", running)
 
 
+## Scale actual type and spacing, not a rasterized Control, when a phone
+## stretches a large project canvas. New purchase/equip buttons retain the scale.
+func set_ui_scale(value: float) -> void:
+	var next := maxf(1.0, value)
+	if is_equal_approx(_ui_scale, next):
+		return
+	_ui_scale = next
+	custom_minimum_size.x = MIN_WIDTH * _ui_scale
+	_preview.custom_minimum_size.y = PREVIEW_HEIGHT * _ui_scale
+	_badge.add_theme_font_size_override("font_size", roundi(34 * _ui_scale))
+	_title.add_theme_font_size_override("font_size", roundi(26 * _ui_scale))
+	_description.add_theme_font_size_override("font_size", roundi(18 * _ui_scale))
+	_status.add_theme_font_size_override("font_size", roundi(20 * _ui_scale))
+	(get_node("Layout") as VBoxContainer).add_theme_constant_override(
+		"separation", roundi(10 * _ui_scale)
+	)
+	_actions.add_theme_constant_override("separation", roundi(6 * _ui_scale))
+	var style := get_theme_stylebox("panel") as StyleBoxFlat
+	_scale_style(style)
+	if _buy_button != null:
+		_scale_button(_buy_button)
+	for button in _slot_buttons:
+		_scale_button(button)
+
+
 func _apply_preview(item: Dictionary) -> void:
 	var color: Color = item.get("color", PLATE_COLOR)
 	_plate.color = color.darkened(0.55)
@@ -232,6 +258,7 @@ func _apply_actions(
 		_buy_button.accessibility_description = _buy_button.tooltip_text
 		_buy_button.pressed.connect(_on_buy_pressed)
 		_actions.add_child(_buy_button)
+		_scale_button(_buy_button)
 		return
 
 	# A game with one wearer gets one plain Equip button; a game with several
@@ -260,6 +287,7 @@ func _apply_actions(
 		else:
 			button.pressed.connect(_on_equip_pressed.bind(slot_id))
 		_actions.add_child(button)
+		_scale_button(button)
 		_slot_buttons.append(button)
 
 
@@ -283,13 +311,22 @@ func _on_unequip_pressed(slot_id: String) -> void:
 	unequip_requested.emit(slot_id)
 
 
+func _scale_button(button: Button) -> void:
+	button.add_theme_font_size_override("font_size", roundi(28 * _ui_scale))
+	button.custom_minimum_size.y = 60 * _ui_scale
+
+
+func _scale_style(box: StyleBoxFlat) -> void:
+	box.set_corner_radius_all(roundi(14 * _ui_scale))
+	box.set_content_margin_all(16 * _ui_scale)
+	box.set_border_width_all(roundi(2 * _ui_scale))
+
+
 ## Worn items get an accent border, so the grid answers "what am I wearing?"
 ## at a glance rather than only in the status line.
 func _card_style(equipped := false, accent: Color = PLATE_COLOR) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color(0.0784314, 0.121569, 0.145098, 0.92)
-	box.set_corner_radius_all(14)
-	box.set_content_margin_all(16)
-	box.set_border_width_all(2)
+	_scale_style(box)
 	box.border_color = accent if equipped else Color(0.290196, 0.352941, 0.4, 0.55)
 	return box

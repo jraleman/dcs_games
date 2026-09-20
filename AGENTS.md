@@ -9,7 +9,7 @@ plus the games built on it. The base ships everything a game needs *before* it
 is a game: studio sting, intro, main menu, persistent settings, credits, pause
 overlay, achievements, responsive UI, share-image generation and audio.
 
-Seven games currently live in it:
+Eight games currently live in it:
 
 | Game | ID | Folder | Control style |
 | --- | --- | --- | --- |
@@ -20,6 +20,7 @@ Seven games currently live in it:
 | Anti-Chess | `anti_chess` | `godot-base/games/anti_chess/` | `custom_keys` |
 | Anti Checkers | `anti_checkers` | `godot-base/games/anti_checkers/` | `custom_keys` |
 | LaZer NFC | `lazer_nfc` | `godot-base/games/lazer_nfc/` | `custom_keys` |
+| Creep Code | `creep_code` | `godot-base/games/creep_code/` | `custom_keys` |
 
 > Anti-Chess and Anti Checkers are giveaway board games. They set
 > `uses_shell_round_rules = false` — they end by their own rules, not on the
@@ -30,10 +31,9 @@ Seven games currently live in it:
 > either teach the framework a genre it should know nothing about or create a
 > game-to-game dependency. Keep them separate.
 
-> LaZer NFC is the portrait/mobile game. It is the only one that overrides
-> display size, orientation, sensors and audio driver through `.lazer_nfc`
-> feature tags in `project.godot`, and the only one that ships an Android
-> export plugin.
+> LaZer NFC is a portrait/mobile game, with its own
+> display/orientation and audio-input feature overrides and a game-owned Android
+> export plugin. It also enables motion sensors.
 
 
 > Chicken Pit is a real 3D toy-farm tug-of-war, mounted in an isolated
@@ -88,9 +88,9 @@ godot-base/
                            #   asset lives in that game's own folder
 ```
 
-Five game folders are **Git submodules** (`anti_checkers`, `anti_chess`,
-`chicken_pit`, `dead_metal_jam`, `lazer_nfc`); `desk_can_saw` and
-`triangle_rush` are plain folders in this repository. Clone with
+Six game folders are **Git submodules** (`anti_checkers`, `anti_chess`,
+`chicken_pit`, `creep_code`, `dead_metal_jam`, `lazer_nfc`); `desk_can_saw`
+and `triangle_rush` are plain folders in this repository. Clone with
 `git clone --recurse-submodules`, or run `git submodule update --init` in an
 existing checkout. A change that spans a submodule and the host is two commits:
 one inside the game repository, then the updated gitlink here.
@@ -137,6 +137,7 @@ games grow — enumerate the folder rather than trusting a number here:
 | `anti_checkers` | 4 | rules, CPU, scene |
 | `desk_can_saw` | 2 | round logic, scene |
 | `triangle_rush` | 1 | declared options |
+| `creep_code` | 5 | pure puzzles, toy geometry, expedition, outfit store, 3D layout |
 
 Run everything (PowerShell), skipping `*_fixture.gd`, which are helpers rather
 than suites:
@@ -151,12 +152,13 @@ Get-ChildItem tests\*.gd, games\*\tests\*.gd |
   }
 ```
 
-**Four suites require a real graphics window and exit 1 under `--headless`**
+**Five suites require a real graphics window and exit 1 under `--headless`**
 by design — they guard `DisplayServer.get_name() == "headless"` and say so.
 Run them without `--headless`, and do not treat their headless exit code as a
 regression: `anti_chess/tests/board_view_test.gd`,
-`anti_checkers/tests/board_view_test.gd`, `chicken_pit/tests/pit_view_test.gd`
-and `lazer_nfc/tests/lazer_nfc_layout_test.gd`.
+`anti_checkers/tests/board_view_test.gd`, `chicken_pit/tests/pit_view_test.gd`,
+`lazer_nfc/tests/lazer_nfc_layout_test.gd` and
+`creep_code/tests/observatory_view_test.gd`.
 
 `tests/game_shell_test.gd` iterates `GameCatalog.all()`, so every game is
 covered automatically — do not add a per-game copy of it. `tests/game_options_test.gd`
@@ -237,10 +239,11 @@ add data to `GameManifest` instead.
 | `supports_multiplayer`, `supports_cpu_opponent` | Mode availability |
 
 `tunables` and `control_bindings` are declared in a constants-only
-`games/<id>/<prefix>_options.gd` — one per game, all seven of them
+`games/<id>/<prefix>_options.gd` — one per game, all eight of them
 (`TriangleRushOptions`, `DeskCanSawOptions`, `DmjOptions`, `ChickenPitOptions`,
-plus `anti_chess_options.gd`, `anti_checkers_options.gd` and
-`lazer_nfc_options.gd`, which are loaded by path rather than `class_name`) — so
+plus `anti_chess_options.gd`, `anti_checkers_options.gd`,
+`lazer_nfc_options.gd` and `creep_code_options.gd`, which are loaded by path
+rather than `class_name`) — so
 headless tests can import the keys without touching an
 autoload. The game's scenes read the same constants back through `Settings`.
 A game's store catalogue lives there too, for the same reason —
@@ -409,7 +412,7 @@ does not match, so a game that copies an abbreviated one will not load.
 | `_configure_mode_ui() -> void` | Extra 1P/2P/CPU HUD wiring (call `super()`) |
 | `_on_player_labels_changed() -> void` / `_on_controls_changed() -> void` | React to accessibility settings |
 | `_on_game_setting_changed(key: String, value: Variant) -> void` | React to one of the game's tunables changing live |
-| `_set_reduced_motion_enabled(value: bool) -> void` | Park the game's own ambient motion. **Call `super(value)`** — all seven games override this, and skipping `super()` leaves the shared HUD animating |
+| `_set_reduced_motion_enabled(value: bool) -> void` | Park the game's own ambient motion. **Call `super(value)`** — all eight games override this, and skipping `super()` leaves the shared HUD animating |
 | `_set_intense_effects_enabled(value: bool) -> void` | Suppress the game's own flashes/shake. **Call `super(value)`** |
 | `_reset_reduced_motion_state() -> void` | Park decorative animation at its resting frame. Only reached when reduced motion is *on*; prefer `_set_reduced_motion_enabled` when the reaction depends on the direction of the change |
 | `_lose_life(player_index: int, amount := 1) -> void` / `_player_is_out(player_index: int) -> bool` | Report a mistake / skip an eliminated player. No-ops in timer mode |
@@ -447,7 +450,7 @@ Shell notes:
 - `project.godot` `[editor_plugins] enabled` points at
   `res://games/lazer_nfc/android/plugin.cfg`. That key is not
   feature-tag-overridable, so every editor session and every export loads it,
-  including builds that do not ship LaZer NFC — and a clone without
+  including builds that do not ship that game — and a clone without
   `--recurse-submodules` will error on open. Godot offers no per-game plugin
   mechanism; relocating it to a framework-owned `addons/` path that reads its
   per-game config from the manifest is the fix if it ever becomes worth doing.
@@ -507,7 +510,7 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   `project.godot` *before* it ships; a tag-less standalone export silently
   shares `DeskCanSaw Games/DCS Base Game` with the collection and with every
   other tag-less build. Current tags: `collection`, `dmj`, `tr`, `dcs`, `cp`,
-  `lazer_nfc`, `antichess`, `anticheckers`.
+  `lazer_nfc`, `antichess`, `anticheckers`, `creep_code`.
 - Renaming a settings key is a migration, not an edit. `Settings.load_settings()`
   ends in `_adopt_renamed_keys()`, which reads the old key only when the new one
   is absent and leaves the old one on disk for older builds sharing a `user://`.
@@ -541,7 +544,8 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   likewise avoid autoload instances — that is why every `<prefix>_options.gd`
   (one per game: `triangle_rush_options.gd`, `desk_can_saw_options.gd`,
   `dmj_options.gd`, `chicken_pit_options.gd`, `anti_chess_options.gd`,
-  `anti_checkers_options.gd`, `lazer_nfc_options.gd`) is
+  `anti_checkers_options.gd`, `lazer_nfc_options.gd`,
+  `creep_code_options.gd`) is
   constants-only. `GameShell` is
   the other side of this rule: it *does* use autoload instances, so a test must
   never name `GameShell` (no `is GameShell`, no typed parameter). Load the

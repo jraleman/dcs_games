@@ -7,6 +7,9 @@
 [submodule "godot-base/games/chicken_pit"]
 	path = godot-base/games/chicken_pit
 	url = git@github.com:jraleman/chicken_pit.git
+[submodule "godot-base/games/creep_code"]
+	path = godot-base/games/creep_code
+	url = git@github.com:jraleman/creep_code.git
 [submodule "godot-base/games/dead_metal_jam"]
 	path = godot-base/games/dead_metal_jam
 	url = git@github.com:jraleman/dead_metal_jam.git

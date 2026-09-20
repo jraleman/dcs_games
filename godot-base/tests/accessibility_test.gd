@@ -1144,11 +1144,11 @@ func _test_triangle_rush(session: Node, settings: Node) -> void:
 		and str(caption.call("caption_text")) == "3 seconds remaining",
 		"Triangle Rush must caption its final countdown."
 	)
-	game.call("_celebrate_level_unlock", "Desk-Can-Saw")
+	game.call("_celebrate_level_unlock", "A Gated Game")
 	_expect(
 		caption != null
 		and str(caption.call("caption_text")).contains("unlocked"),
-		"Triangle Rush must caption the Desk-Can-Saw unlock cue."
+		"The shell must caption a game-unlock cue for any game that gates one."
 	)
 
 	game.set("_ambient_time", PI / 22.0)
