@@ -76,6 +76,11 @@ const PLAYER_TWO_ACTIONS := [
 	&"player_two_target_2",
 	&"player_two_target_3",
 ]
+const PLAYER_THREE_ACTIONS := [
+	&"player_three_target_1",
+	&"player_three_target_2",
+	&"player_three_target_3",
+]
 const CONTROL_ACTIONS := [
 	&"player_one_target_1",
 	&"player_one_target_2",
@@ -91,6 +96,9 @@ const CONTROL_SETTING_KEYS := {
 	&"player_two_target_1": "controls/player_two_target_1",
 	&"player_two_target_2": "controls/player_two_target_2",
 	&"player_two_target_3": "controls/player_two_target_3",
+	&"player_three_target_1": "controls/player_three_target_1",
+	&"player_three_target_2": "controls/player_three_target_2",
+	&"player_three_target_3": "controls/player_three_target_3",
 }
 const RESERVED_CONTROL_KEYS := [KEY_ESCAPE, KEY_F11]
 const CONTROLLER_TARGET_KEYS := [
@@ -165,6 +173,9 @@ const DEFAULTS := {
 	"controls/player_two_target_1": KEY_7,
 	"controls/player_two_target_2": KEY_8,
 	"controls/player_two_target_3": KEY_9,
+	"controls/player_three_target_1": KEY_4,
+	"controls/player_three_target_2": KEY_5,
+	"controls/player_three_target_3": KEY_6,
 	"controls/controller_target_1": JOY_BUTTON_A,
 	"controls/controller_target_2": JOY_BUTTON_B,
 	"controls/controller_target_3": JOY_BUTTON_X,
@@ -502,10 +513,11 @@ func _register_options() -> void:
 ## game keeps the six target keys without saying so.
 func _register_control_bindings() -> void:
 	var built_in_targets: Array[Dictionary] = []
-	for index in CONTROL_ACTIONS.size():
-		var action: StringName = CONTROL_ACTIONS[index]
+	var actions := CONTROL_ACTIONS + PLAYER_THREE_ACTIONS
+	for index in actions.size():
+		var action: StringName = actions[index]
 		var setting_key := str(CONTROL_SETTING_KEYS[action])
-		var player := 0 if index < PLAYER_ONE_ACTIONS.size() else 1
+		var player := index / PLAYER_ONE_ACTIONS.size()
 		var definition := {
 			"key": setting_key,
 			"action": action,
@@ -546,9 +558,9 @@ func _register_control_bindings() -> void:
 func control_bindings_for_game(game_id: String) -> Array[Dictionary]:
 	_ensure_registered()
 	var result: Array[Dictionary] = []
+	var manifest := GameCatalog.get_manifest(game_id)
 	var source: Array = _bindings_by_game.get(game_id, [])
 	if source.is_empty():
-		var manifest := GameCatalog.get_manifest(game_id)
 		var style := (
 			manifest.control_style
 			if manifest
@@ -556,6 +568,8 @@ func control_bindings_for_game(game_id: String) -> Array[Dictionary]:
 		)
 		source = _bindings_by_style.get(style, [])
 	for definition: Dictionary in source:
+		if int(definition.get("player", -1)) >= (manifest.max_local_players if manifest else 2):
+			continue
 		result.append(definition)
 	return result
 
@@ -775,10 +789,23 @@ func _scope_containing(setting_key: String) -> Array[Dictionary]:
 			if str(definition["key"]) == setting_key:
 				return _bindings_by_game[game_id]
 	for style: String in _bindings_by_style:
-		for definition: Dictionary in _bindings_by_style[style]:
+		var bindings := _style_control_bindings(style)
+		for definition: Dictionary in bindings:
 			if str(definition["key"]) == setting_key:
-				return _bindings_by_style[style]
+				return bindings
 	return []
+
+
+func _style_control_bindings(style: String) -> Array[Dictionary]:
+	var capacity := 2
+	for manifest in GameCatalog.all():
+		if manifest.control_style == style:
+			capacity = maxi(capacity, manifest.max_local_players)
+	var result: Array[Dictionary] = []
+	for definition: Dictionary in _bindings_by_style.get(style, []):
+		if int(definition.get("player", -1)) < capacity:
+			result.append(definition)
+	return result
 
 
 func controller_target_button(target_index: int) -> int:
@@ -1227,7 +1254,7 @@ func _repair_control_values() -> bool:
 	var repaired := false
 	var scopes: Array[Array] = []
 	for style: String in _bindings_by_style:
-		scopes.append(_bindings_by_style[style])
+		scopes.append(_style_control_bindings(style))
 	for game_id: String in _bindings_by_game:
 		scopes.append(_bindings_by_game[game_id])
 

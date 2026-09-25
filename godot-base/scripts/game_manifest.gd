@@ -63,6 +63,34 @@ var hidden_until_unlocked := false
 ## Whether the mode-select screen offers local multiplayer.
 var supports_multiplayer := true
 
+## Maximum human seats offered by local setup. Existing games keep two.
+var max_local_players := 2
+
+## Local players take complete turns and share the first player's keyboard
+## bindings. Games still own their turn rules; the shell only describes setup.
+var local_multiplayer_turns := false
+
+## Selectable characters, in default seat order:
+## [{"id": String, "title": String, "description": String}].
+## Optional requires_achievement and locked_description gate a choice.
+## An optional icon, a texture path, is shown beside the title in the setup
+## row and its list; a missing file warns and leaves a text row.
+## Selection is session-local and independent for each player.
+var characters: Array[Dictionary] = []
+
+## Optional levels, shared by all players in a round. Entries use the same
+## id, title, description, icon and achievement-gate fields as characters.
+## Games own the level geometry and completion rules.
+var levels: Array[Dictionary] = []
+
+## Optional Control scene with configure(Dictionary). The dictionary contains
+## the character entry, player_index, multiplayer and player_color.
+## The setup screen stands it on a plinth, in a 1.7:1 rect twice the plinth's
+## radius wide whose bottom edge sits just in front of the plinth's centre, so
+## frame the subject to stand on that edge. The screen sets it to ignore the
+## mouse. Empty keeps the generic numbered player portrait.
+var character_preview_scene_path := ""
+
 ## Whether the mode-select screen offers the shared "Player 2 is the CPU"
 ## multiplayer picker.
 ##
@@ -137,15 +165,16 @@ var menu_order := 0
 
 ## Screen copy the shared menus render for this game. Missing keys fall back to
 ## the framework's neutral wording, so a manifest only overrides what it needs.
-## Recognised keys: `mode_select_intro`, `mode_select_hint`,
+## Recognised keys: `mode_select_title`, `mode_select_intro`, `mode_select_hint`,
+## `level_label`, `character_label`,
 ## `single_player_description`, `single_player_roster`,
 ## `single_player_selection_summary`, `multiplayer_description`,
-## `player_one_control_description`, `player_two_control_description`,
+## `player_one_control_description`, `player_two_control_description`, `player_three_control_description`,
 ## `solo_confirm_title`, `solo_confirm_description`, `versus_confirm_title`,
 ## `versus_confirm_description`, `instructions_headline`, `instructions_rules`,
 ## `instructions_demo_prompt`, `instructions_solo_summary`,
 ## `instructions_versus_summary`, `instructions_player_one_controls`,
-## `instructions_player_two_controls`, `cpu_opponent_description`,
+## `instructions_player_two_controls`, `instructions_player_three_controls`, `cpu_opponent_description`,
 ## `instructions_cpu_summary`, `instructions_cpu_controls`.
 ##
 ## Custom-key games supply action descriptions, not literal key names: the

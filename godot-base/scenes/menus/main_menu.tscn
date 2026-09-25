@@ -1,17 +1,38 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scenes/menus/main_menu.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
 [ext_resource type="Texture2D" path="res://assets/images/dcs_logo.png" id="3_logo"]
+[ext_resource type="Script" path="res://ui/components/cartridge_console.gd" id="4_console"]
+[ext_resource type="Texture2D" path="res://assets/images/chevron_right.svg" id="5_chevron"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_logo_body"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_label"]
 albedo_color = Color(0.0784314, 0.113725, 0.137255, 1)
-metallic = 0.65
-roughness = 0.24
+metallic = 0.12
+roughness = 0.62
 
-[sub_resource type="BoxMesh" id="BoxMesh_logo_body"]
-material = SubResource("StandardMaterial3D_logo_body")
-size = Vector3(3.28, 3.28, 0.22)
+[sub_resource type="BoxMesh" id="BoxMesh_label"]
+material = SubResource("StandardMaterial3D_label")
+size = Vector3(2.5, 2.24, 0.025)
+
+[sub_resource type="Environment" id="Environment_studio"]
+background_mode = 0
+ambient_light_source = 3
+ambient_light_color = Color(0.7, 0.74, 0.8, 1)
+ambient_light_energy = 0.5
+reflected_light_source = 2
+tonemap_mode = 0
+
+[sub_resource type="Gradient" id="Gradient_shade"]
+offsets = PackedFloat32Array(0, 0.42, 1)
+colors = PackedColorArray(0.015, 0.025, 0.04, 0.65, 0.015, 0.025, 0.04, 0.35, 0.015, 0.025, 0.04, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_shade"]
+gradient = SubResource("Gradient_shade")
+width = 256
+height = 16
+fill_from = Vector2(0, 0)
+fill_to = Vector2(1, 0)
 
 [node name="MainMenu" type="Control"]
 anchors_preset = 15
@@ -20,69 +41,94 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
+margin_ratio = Vector2(0.07, 0.09)
 
 [node name="Background" parent="." instance=ExtResource("2_background")]
+
+[node name="MenuShade" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_shade")
+expand_mode = 1
 
 [node name="LogoShowcase" type="SubViewportContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
-anchor_left = 0.53
-anchor_top = 0.08
-anchor_right = 0.98
-anchor_bottom = 0.92
+anchor_left = 0.44
+anchor_top = 0.055
+anchor_right = 1.0
+anchor_bottom = 0.96
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 stretch = true
 
 [node name="LogoViewport" type="SubViewport" parent="LogoShowcase"]
+unique_name_in_owner = true
+own_world_3d = true
 transparent_bg = true
 gui_disable_input = true
-size = Vector2i(720, 720)
+msaa_3d = 1
+size = Vector2i(960, 900)
 render_target_update_mode = 4
 
-[node name="Camera3D" type="Camera3D" parent="LogoShowcase/LogoViewport"]
-position = Vector3(0, 0, 6.5)
-fov = 34.0
+[node name="WorldEnvironment" type="WorldEnvironment" parent="LogoShowcase/LogoViewport"]
+environment = SubResource("Environment_studio")
+
+[node name="ShowcaseCamera" type="Camera3D" parent="LogoShowcase/LogoViewport"]
+unique_name_in_owner = true
+position = Vector3(6.2, 5.0, 10.5)
+projection = 1
+size = 7.2
 current = true
 
 [node name="KeyLight" type="DirectionalLight3D" parent="LogoShowcase/LogoViewport"]
 unique_name_in_owner = true
-rotation_degrees = Vector3(-28, -32, 0)
+rotation_degrees = Vector3(-38, -26, 0)
 light_color = Color(0.788235, 0.921569, 0.956863, 1)
 light_energy = 1.5
 shadow_enabled = true
 
 [node name="FillLight" type="OmniLight3D" parent="LogoShowcase/LogoViewport"]
 unique_name_in_owner = true
-position = Vector3(-2.4, 1.8, 3.2)
+position = Vector3(-4.5, 3.5, 3.5)
 light_color = Color(0.686275, 0.866667, 0.917647, 1)
-light_energy = 4.0
-omni_range = 8.0
+light_energy = 2.0
+omni_range = 12.0
 
-[node name="LogoRig" type="Node3D" parent="LogoShowcase/LogoViewport"]
-unique_name_in_owner = true
+[node name="RimLight" type="OmniLight3D" parent="LogoShowcase/LogoViewport"]
+position = Vector3(2, 5.5, -3.5)
+light_color = Color(0.85, 0.78, 0.67, 1)
+light_energy = 3.4
+omni_range = 10.0
 
-[node name="Body" type="MeshInstance3D" parent="LogoShowcase/LogoViewport/LogoRig"]
+[node name="Console" type="Node3D" parent="LogoShowcase/LogoViewport" node_paths=PackedStringArray("cartridge")]
 unique_name_in_owner = true
-mesh = SubResource("BoxMesh_logo_body")
+script = ExtResource("4_console")
+cartridge = NodePath("LogoRig")
 
-[node name="Face" type="Sprite3D" parent="LogoShowcase/LogoViewport/LogoRig"]
+[node name="LogoRig" type="Node3D" parent="LogoShowcase/LogoViewport/Console"]
 unique_name_in_owner = true
-position = Vector3(0, 0, 0.116)
+position = Vector3(0, 3.35, -0.41)
+
+[node name="Body" type="MeshInstance3D" parent="LogoShowcase/LogoViewport/Console/LogoRig"]
+unique_name_in_owner = true
+position = Vector3(0, 0.04, 0.279)
+mesh = SubResource("BoxMesh_label")
+
+[node name="Face" type="Sprite3D" parent="LogoShowcase/LogoViewport/Console/LogoRig"]
+unique_name_in_owner = true
+position = Vector3(0, 0.04, 0.297)
 texture = ExtResource("3_logo")
-pixel_size = 0.00338
-
-[node name="FocusAccent" type="ColorRect" parent="."]
-unique_name_in_owner = true
-layout_mode = 0
-offset_right = 5.0
-offset_bottom = 48.0
-mouse_filter = 2
-modulate = Color(1, 1, 1, 0)
-color = Color(0.686275, 0.866667, 0.917647, 1)
+pixel_size = 0.0023
 
 [node name="Margins" type="MarginContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -91,36 +137,31 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 theme_override_constants/margin_left = 134
-theme_override_constants/margin_top = 54
+theme_override_constants/margin_top = 97
 theme_override_constants/margin_right = 134
-theme_override_constants/margin_bottom = 54
+theme_override_constants/margin_bottom = 97
 
 [node name="Layout" type="VBoxContainer" parent="Margins"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="SpacerHead" type="Control" parent="Margins/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-
 [node name="Header" type="VBoxContainer" parent="Margins/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 16
 
 [node name="Title" type="Label" parent="Margins/Layout/Header"]
-theme_type_variation = &"MenuHeading"
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"MenuHeading"
 theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
-theme_override_font_sizes/font_size = 88
+theme_override_font_sizes/font_size = 60
 text = "DCS Base Game"
 autowrap_mode = 3
 
 [node name="Rule" type="ColorRect" parent="Margins/Layout/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(150, 5)
+custom_minimum_size = Vector2(92, 3)
 layout_mode = 2
 size_flags_horizontal = 0
 mouse_filter = 2
@@ -128,85 +169,127 @@ color = Color(0.686275, 0.866667, 0.917647, 1)
 
 [node name="Tagline" type="Label" parent="Margins/Layout/Header"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
-theme_override_font_sizes/font_size = 28
 text = "A DeskCanSaw Games production"
 autowrap_mode = 3
 
+[node name="ShowcaseSpace" type="Control" parent="Margins/Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+
 [node name="SpacerTop" type="Control" parent="Margins/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MenuScroll" type="ScrollContainer" parent="Margins/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-size_flags_stretch_ratio = 0.7
-mouse_filter = 2
+horizontal_scroll_mode = 0
+follow_focus = true
 
-[node name="ButtonRow" type="HBoxContainer" parent="Margins/Layout"]
+[node name="ButtonRow" type="HBoxContainer" parent="Margins/Layout/MenuScroll"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
 
-[node name="Buttons" type="VBoxContainer" parent="Margins/Layout/ButtonRow"]
+[node name="Buttons" type="VBoxContainer" parent="Margins/Layout/MenuScroll/ButtonRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(520, 0)
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 
-[node name="PlayButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+[node name="PlayButton" type="Button" parent="Margins/Layout/MenuScroll/ButtonRow/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Play"
+icon = ExtResource("5_chevron")
+alignment = 0
+icon_alignment = 2
 
-[node name="SettingsButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+[node name="SettingsButton" type="Button" parent="Margins/Layout/MenuScroll/ButtonRow/Buttons"]
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Settings"
+icon = ExtResource("5_chevron")
+alignment = 0
+icon_alignment = 2
 
-[node name="StoreButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+[node name="StoreButton" type="Button" parent="Margins/Layout/MenuScroll/ButtonRow/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Store"
+icon = ExtResource("5_chevron")
+alignment = 0
+icon_alignment = 2
 
-[node name="GalleryButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+[node name="GalleryButton" type="Button" parent="Margins/Layout/MenuScroll/ButtonRow/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Gallery"
+icon = ExtResource("5_chevron")
+alignment = 0
+icon_alignment = 2
 
-[node name="CreditsButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+[node name="CreditsButton" type="Button" parent="Margins/Layout/MenuScroll/ButtonRow/Buttons"]
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Credits"
+icon = ExtResource("5_chevron")
+alignment = 0
+icon_alignment = 2
 
-[node name="QuitButton" type="Button" parent="Margins/Layout/ButtonRow/Buttons"]
+[node name="QuitButton" type="Button" parent="Margins/Layout/MenuScroll/ButtonRow/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Quit"
-
-[node name="SpacerBottom" type="Control" parent="Margins/Layout"]
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
+icon = ExtResource("5_chevron")
+alignment = 0
+icon_alignment = 2
 
 [node name="Footer" type="HBoxContainer" parent="Margins/Layout"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 18
 
 [node name="FooterLeft" type="Label" parent="Margins/Layout/Footer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.454902, 0.529412, 0.568627, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.654902, 0.705882, 0.768627, 1)
+theme_override_font_sizes/font_size = 16
 text = "DeskCanSaw Games"
+autowrap_mode = 3
 
 [node name="FooterRight" type="Label" parent="Margins/Layout/Footer"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.454902, 0.529412, 0.568627, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.654902, 0.705882, 0.768627, 1)
+theme_override_font_sizes/font_size = 16
 text = "v0.1.0"
 horizontal_alignment = 2
 
-[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/PlayButton" to="." method="_on_play_pressed"]
-[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/SettingsButton" to="." method="_on_settings_pressed"]
-[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/StoreButton" to="." method="_on_store_pressed"]
-[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/GalleryButton" to="." method="_on_gallery_pressed"]
-[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/CreditsButton" to="." method="_on_credits_pressed"]
-[connection signal="pressed" from="Margins/Layout/ButtonRow/Buttons/QuitButton" to="." method="_on_quit_pressed"]
+[node name="FocusAccent" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_right = 4.0
+offset_bottom = 72.0
+mouse_filter = 2
+color = Color(0.686275, 0.866667, 0.917647, 1)
+
+[connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/PlayButton" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/SettingsButton" to="." method="_on_settings_pressed"]
+[connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/StoreButton" to="." method="_on_store_pressed"]
+[connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/GalleryButton" to="." method="_on_gallery_pressed"]
+[connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/CreditsButton" to="." method="_on_credits_pressed"]
+[connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/QuitButton" to="." method="_on_quit_pressed"]

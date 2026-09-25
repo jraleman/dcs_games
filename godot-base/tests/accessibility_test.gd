@@ -29,6 +29,8 @@ func _run() -> void:
 	_test_settings_helpers(settings)
 	_test_controller_bindings(settings)
 	_test_persistence()
+	_test_menu_toggle_theme()
+	await _test_menu_toggle_input()
 	await _test_settings_menu(settings)
 	await _test_audio_captions(settings, audio_manager)
 	await _test_background_motion(settings)
@@ -338,11 +340,105 @@ func _assert_gamepad_rows_hidden(menu: Node) -> void:
 	)
 
 
+## A menu role must survive an ordinary game-owned CheckButton skin without
+## mutating that skin or relying on a fixed blue icon for its selected state.
+func _test_menu_toggle_theme() -> void:
+	var base := ThemeDB.get_project_theme()
+	var presentations: Array[GameTheme] = [GameTheme.studio_default()]
+	for manifest in GameCatalog.all():
+		if manifest.theme != null:
+			presentations.append(manifest.theme)
+	var icons := {
+		"checked": "toggle_on.svg",
+		"unchecked": "toggle_off.svg",
+		"checked_disabled": "toggle_on_disabled.svg",
+		"unchecked_disabled": "toggle_off_disabled.svg",
+	}
+	for presentation in presentations:
+		var skin := presentation.ui_theme
+		var toggle := CheckButton.new()
+		toggle.theme = presentation.restyle(base)
+		toggle.theme_type_variation = &"MenuToggle"
+		get_root().add_child(toggle)
+		var accent := (
+			skin.get_color("button_checked_color", "MenuToggle")
+			if skin != null and skin.has_color("button_checked_color", "MenuToggle")
+			else presentation.accent
+		)
+		_expect(toggle.get_theme_color("button_checked_color").is_equal_approx(accent),
+			"Menu switches must follow the game's accent or its explicit role override.")
+		for key: String in icons:
+			var path := "res://assets/images/" + str(icons[key])
+			for suffix: String in ["", "_mirrored"]:
+				if skin != null and skin.has_icon(key + suffix, "MenuToggle"):
+					continue
+				var icon := toggle.get_theme_icon(key + suffix)
+				_expect(icon != null and icon.resource_path == path
+					and icon.get_size() == Vector2(72, 40),
+					"Every toggle state must retain the shared art and stable dimensions.")
+		for state: String in ["normal", "pressed"]:
+			if skin == null or not skin.has_stylebox(state, "MenuToggle"):
+				_expect(toggle.get_theme_stylebox(state) is StyleBoxEmpty,
+					"Ordinary game skins must not add filled wrappers to menu switches.")
+		if skin == null or not skin.has_stylebox("focus", "MenuToggle"):
+			var focus := toggle.get_theme_stylebox("focus") as StyleBoxFlat
+			_expect(focus != null and not focus.draw_center and focus.border_width_left >= 2,
+				"Toggle focus must remain a visible border, not cover its state.")
+		toggle.free()
+
+	var images: Dictionary[String, Image] = {}
+	for key: String in icons:
+		var image := Image.new()
+		var path := "res://assets/images/" + str(icons[key])
+		var error := image.load_svg_from_string(FileAccess.get_file_as_string(path))
+		_expect(error == OK, "Toggle art must be valid SVG: " + path)
+		if error != OK:
+			return
+		images[key] = image
+	_expect(images["checked"].get_pixel(52, 10).a > 0.9
+		and images["unchecked"].get_pixel(52, 10).a < 0.2
+		and images["unchecked"].get_pixel(20, 10).a > 0.7
+		and images["checked"].get_pixel(20, 10).a < 0.2,
+		"On and Off must remain distinguishable by thumb position without colour.")
+	_expect(images["checked_disabled"].get_pixel(52, 10).a < 0.5
+		and images["unchecked_disabled"].get_pixel(20, 10).a < 0.5,
+		"Disabled switches must have visibly dimmer state indicators.")
+
+
+func _test_menu_toggle_input() -> void:
+	var toggle := CheckButton.new()
+	toggle.theme_type_variation = &"MenuToggle"
+	get_root().add_child(toggle)
+	await process_frame
+	toggle.grab_focus()
+	_press_toggle_accept()
+	_expect(toggle.button_pressed, "The styled switch must still accept keyboard/controller input.")
+	toggle.disabled = true
+	_press_toggle_accept()
+	_expect(toggle.button_pressed, "Disabled switches must not change state.")
+	toggle.disabled = false
+	toggle.grab_focus()
+	_press_toggle_accept()
+	_expect(not toggle.button_pressed, "The styled switch must be switchable back off.")
+	await _free_scene(toggle)
+
+
+func _press_toggle_accept() -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventAction.new()
+		event.action = &"ui_accept"
+		event.pressed = pressed
+		get_root().push_input(event, true)
+
+
 func _test_settings_menu(settings: Node) -> void:
 	var menu := _instantiate_scene("res://scenes/menus/settings_menu.tscn")
 	if menu == null:
 		return
 	await process_frame
+	for toggle: CheckButton in menu.find_children("*", "CheckButton", true, false):
+		_expect(toggle.theme_type_variation == &"MenuToggle",
+			"Every authored Settings switch must use the shared menu toggle role.")
 
 	var reduced_motion := menu.get_node_or_null("%ReducedMotionToggle") as CheckButton
 	var audio_captions := menu.get_node_or_null("%AudioCaptionsToggle") as CheckButton
@@ -780,7 +876,8 @@ func _test_reduced_motion_menus(session: Node) -> void:
 			(instructions.get_node("%Card") as Control).scale.is_equal_approx(
 				Vector2.ONE
 			)
-			and instructions.get("_rule_tween") == null,
+			and instructions.get("_entrance_tween") == null
+			and instructions.get_node_or_null("Motion") == null,
 			"Reduced motion must make instructions static."
 		)
 		await _free_scene(instructions)

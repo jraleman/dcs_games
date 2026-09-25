@@ -194,6 +194,7 @@ vertical_alignment = 1
 
 [node name="MuteToggle" type="CheckButton" parent="Margins/Layout/Tabs/Audio/Pad/List/MuteRow"]
 unique_name_in_owner = true
+theme_type_variation = &"MenuToggle"
 layout_mode = 2
 size_flags_horizontal = 0
 
@@ -249,6 +250,7 @@ vertical_alignment = 1
 
 [node name="VSyncToggle" type="CheckButton" parent="Margins/Layout/Tabs/Display/Pad/List/VSyncRow"]
 unique_name_in_owner = true
+theme_type_variation = &"MenuToggle"
 layout_mode = 2
 size_flags_horizontal = 0
 
@@ -288,6 +290,7 @@ vertical_alignment = 1
 
 [node name="ShowFpsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Display/Pad/List/ShowFpsRow"]
 unique_name_in_owner = true
+theme_type_variation = &"MenuToggle"
 layout_mode = 2
 size_flags_horizontal = 0
 
@@ -359,6 +362,7 @@ vertical_alignment = 1
 
 [node name="VisualEffectsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/VisualEffectsRow"]
 unique_name_in_owner = true
+theme_type_variation = &"MenuToggle"
 layout_mode = 2
 size_flags_horizontal = 0
 button_pressed = true
@@ -375,6 +379,7 @@ vertical_alignment = 1
 
 [node name="ReducedMotionToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/ReducedMotionRow"]
 unique_name_in_owner = true
+theme_type_variation = &"MenuToggle"
 layout_mode = 2
 size_flags_horizontal = 0
 
@@ -391,6 +396,7 @@ vertical_alignment = 1
 
 [node name="PlayerLabelsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/PlayerLabelsRow"]
 unique_name_in_owner = true
+theme_type_variation = &"MenuToggle"
 layout_mode = 2
 size_flags_horizontal = 0
 button_pressed = true
@@ -408,6 +414,7 @@ vertical_alignment = 1
 
 [node name="AudioCaptionsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/AudioCaptionsRow"]
 unique_name_in_owner = true
+theme_type_variation = &"MenuToggle"
 layout_mode = 2
 size_flags_horizontal = 0
 
@@ -431,6 +438,7 @@ vertical_alignment = 1
 
 [node name="OneButtonTargetsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Accessibility/Pad/List/OneButtonTargetsRow"]
 unique_name_in_owner = true
+theme_type_variation = &"MenuToggle"
 layout_mode = 2
 size_flags_horizontal = 0
 
@@ -635,6 +643,7 @@ vertical_alignment = 1
 
 [node name="ShowInstructionsToggle" type="CheckButton" parent="Margins/Layout/Tabs/Gameplay/Pad/List/ShowInstructionsRow"]
 unique_name_in_owner = true
+theme_type_variation = &"MenuToggle"
 layout_mode = 2
 size_flags_horizontal = 0
 

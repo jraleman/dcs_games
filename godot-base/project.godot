@@ -37,6 +37,9 @@ config/custom_user_dir_name.anticheckers="DeskCanSaw Games/Anti Checkers"
 config/name.creep_code="Creep Code"
 config/custom_user_dir_name.creep_code="DeskCanSaw Games/Creep Code"
 config/icon.creep_code="res://games/creep_code/assets/game-icon.svg"
+config/name.cube_trials="Cube Trials"
+config/custom_user_dir_name.cube_trials="DeskCanSaw Games/Cube Trials"
+config/icon.cube_trials="res://games/cube_trials/assets/game-icon.png"
 
 [audio]
 
@@ -68,6 +71,7 @@ build/single_game_id.lazer_nfc="lazer_nfc"
 build/single_game_id.antichess="anti_chess"
 build/single_game_id.anticheckers="anti_checkers"
 build/single_game_id.creep_code="creep_code"
+build/single_game_id.cube_trials="cube_trials"
 
 [display]
 
@@ -168,3 +172,4 @@ stats_urls/triangle_rush="https://deskcansaw.com/stats/tr"
 stats_urls/desk_can_saw="https://deskcansaw.com/stats/dcs"
 stats_urls/chicken_pit="https://deskcansaw.com/stats/cp"
 stats_urls/lazer_nfc="https://deskcansaw.com/stats/lz"
+stats_urls/cube_trials="https://deskcansaw.com"

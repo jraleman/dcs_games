@@ -1,42 +1,18 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scenes/menus/mode_select.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+[ext_resource type="Script" path="res://ui/components/setup_stage.gd" id="3_stage"]
 [ext_resource type="Script" path="res://ui/components/player_avatar.gd" id="4_avatar"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_details.svg" id="5_details"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_arrow_left.svg" id="6_back"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_player.svg" id="7_player"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_players.svg" id="8_players"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_player_small.svg" id="9_player_small"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_players_small.svg" id="10_players_small"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_arrow_right.svg" id="11_arrow"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_opponent"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chip_one"]
-content_margin_left = 13.0
-content_margin_top = 3.0
-content_margin_right = 13.0
-content_margin_bottom = 3.0
-bg_color = Color(0.0352941, 0.109804, 0.176471, 0.92)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.301961, 0.639216, 1, 0.85)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chip_two"]
-content_margin_left = 13.0
-content_margin_top = 3.0
-content_margin_right = 13.0
-content_margin_bottom = 3.0
-bg_color = Color(0.176471, 0.0431373, 0.0745098, 0.92)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 0.360784, 0.423529, 0.85)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
 
 [node name="ModeSelect" type="Control"]
 anchors_preset = 15
@@ -46,6 +22,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 back_scene = "res://scenes/menus/main_menu.tscn"
+margin_ratio = Vector2(0.052, 0.06)
 
 [node name="Background" parent="." instance=ExtResource("2_background")]
 
@@ -58,67 +35,84 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
-theme_override_constants/margin_left = 134
-theme_override_constants/margin_top = 54
-theme_override_constants/margin_right = 134
-theme_override_constants/margin_bottom = 54
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 65
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 65
 
 [node name="Layout" type="VBoxContainer" parent="Margins"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 14
 
 [node name="Header" type="HBoxContainer" parent="Margins/Layout"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 16
 
 [node name="Title" type="Label" parent="Margins/Layout/Header"]
-theme_type_variation = &"MenuHeading"
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
-theme_override_font_sizes/font_size = 56
-text = "Set Up Your Game"
+size_flags_vertical = 8
+theme_type_variation = &"SetupEyebrow"
+text = "Players"
+text_overrun_behavior = 3
+uppercase = true
 
-[node name="BackButton" type="Button" parent="Margins/Layout/Header"]
-metadata/ui_sound_handled = true
+[node name="DetailsButton" type="Button" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 66)
 layout_mode = 2
 size_flags_vertical = 4
+tooltip_text = "Show game tips and setup notes."
+theme_type_variation = &"NavigationButton"
+theme_override_constants/icon_max_width = 26
+toggle_mode = true
+text = "Details"
+icon = ExtResource("5_details")
+
+[node name="BackButton" type="Button" parent="Margins/Layout/Header"]
+custom_minimum_size = Vector2(0, 66)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavigationButton"
+theme_override_constants/icon_max_width = 26
 text = "Back"
+icon = ExtResource("6_back")
+metadata/ui_sound_handled = true
 
 [node name="Stepper" type="HBoxContainer" parent="Margins/Layout"]
 layout_mode = 2
-theme_override_constants/separation = 14
-alignment = 1
+theme_override_constants/separation = 6
 
-[node name="StepOneIndicator" type="Label" parent="Margins/Layout/Stepper"]
+[node name="StepOneBar" type="ColorRect" parent="Margins/Layout/Stepper"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 4)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
-theme_override_font_sizes/font_size = 20
-text = "1  PLAYERS"
-
-[node name="Connector" type="ColorRect" parent="Margins/Layout/Stepper"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(110, 3)
-layout_mode = 2
-size_flags_vertical = 4
 mouse_filter = 2
-color = Color(0.686275, 0.866667, 0.917647, 0.22)
+color = Color(0.686275, 0.866667, 0.917647, 1)
 
-[node name="StepTwoIndicator" type="Label" parent="Margins/Layout/Stepper"]
+[node name="StepTwoBar" type="ColorRect" parent="Margins/Layout/Stepper"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(18, 4)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.454902, 0.529412, 0.568627, 1)
-theme_override_font_sizes/font_size = 20
-text = "2  CONFIRM"
+mouse_filter = 2
+color = Color(1, 1, 1, 0.22)
+
+[node name="HeaderRule" type="ColorRect" parent="Margins/Layout"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(76, 4)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+color = Color(0.686275, 0.866667, 0.917647, 1)
 
 [node name="Stage" type="Control" parent="Margins/Layout"]
-custom_minimum_size = Vector2(0, 610)
+custom_minimum_size = Vector2(0, 180)
 layout_mode = 2
 size_flags_vertical = 3
-clip_contents = true
+mouse_filter = 1
 
-[node name="SelectionStep" type="Control" parent="Margins/Layout/Stage"]
+[node name="SelectionStep" type="ScrollContainer" parent="Margins/Layout/Stage"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -126,222 +120,298 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+horizontal_scroll_mode = 0
+follow_focus = true
 
 [node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stage/SelectionStep"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 20
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+theme_override_constants/separation = 12
+
+[node name="StepTitle" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"SetupTitle"
+text = "Select Mode"
+autowrap_mode = 3
 
 [node name="Intro" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 24
-text = "First, choose how many people are playing."
-horizontal_alignment = 1
-autowrap_mode = 2
+theme_type_variation = &"SetupBody"
+text = "Choose how you want to play."
+autowrap_mode = 3
+
+[node name="Spacer" type="Control" parent="Margins/Layout/Stage/SelectionStep/Layout" groups=["setup_scaled"]]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+mouse_filter = 2
 
 [node name="ModeGrid" type="GridContainer" parent="Margins/Layout/Stage/SelectionStep/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/h_separation = 24
-theme_override_constants/v_separation = 24
+size_flags_vertical = 0
+theme_override_constants/h_separation = 44
+theme_override_constants/v_separation = 28
 columns = 2
 
 [node name="SinglePlayer" type="PanelContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_type_variation = &"ModeCard"
 
-[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer"]
+[node name="Content" type="MarginContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer"]
 layout_mode = 2
-theme_override_constants/separation = 16
+mouse_filter = 2
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 46
+theme_override_constants/margin_right = 56
+theme_override_constants/margin_bottom = 40
 
-[node name="Eyebrow" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout"]
+[node name="Row" type="HBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "ONE PLAYER"
+mouse_filter = 2
+theme_override_constants/separation = 24
 
-[node name="Title" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout"]
-theme_type_variation = &"MenuHeading"
-layout_mode = 2
-theme_override_font_sizes/font_size = 38
-text = "Single Player"
-
-[node name="Roster" type="HBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="PlayerOneChip" type="PanelContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout/Roster"]
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_chip_one")
-
-[node name="Label" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout/Roster/PlayerOneChip"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
-theme_override_font_sizes/font_size = 22
-text = "P1"
-
-[node name="SinglePlayerRoster" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout/Roster"]
-unique_name_in_owner = true
+[node name="Text" type="VBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 4
-theme_override_colors/font_color = Color(0.568627, 0.768627, 1, 1)
-theme_override_font_sizes/font_size = 20
-text = "Player 1 plays alone"
-vertical_alignment = 1
-autowrap_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
 
-[node name="Description" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout"]
+[node name="Icon" type="TextureRect" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text" groups=["setup_scaled"]]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("7_player")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text"]
+layout_mode = 2
+theme_type_variation = &"SetupCardTitle"
+text = "Single Player"
+
+[node name="SinglePlayerDescription" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_type_variation = &"SetupBody"
 theme_override_font_sizes/font_size = 22
 text = "Follow Player 1's highlighted target, build a combo and set your best score before time runs out."
-autowrap_mode = 2
+autowrap_mode = 3
 
-[node name="SinglePlayerControls" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.568627, 0.768627, 1, 1)
-theme_override_font_sizes/font_size = 20
-text = "PLAYER 1 KEYS  ·  1  2  3"
-
-[node name="SinglePlayerButton" type="Button" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Choose Single Player"
-
-[node name="SinglePlayerStatus" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout"]
+[node name="SinglePlayerRoster" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
-theme_override_font_sizes/font_size = 17
-text = "SELECTED"
-horizontal_alignment = 1
+theme_type_variation = &"SetupBody"
+theme_override_font_sizes/font_size = 20
+text = "Player 1 plays alone"
+autowrap_mode = 3
+
+[node name="SinglePlayerControls" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"SetupChipLabel"
+text = "PLAYER 1 · KEYS 1  2  3"
+autowrap_mode = 3
+
+[node name="Tags" type="HBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Chip" type="PanelContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text/Tags"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"ModeChip"
+
+[node name="Layout" type="HBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text/Tags/Chip"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Icon" type="TextureRect" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text/Tags/Chip/Layout" groups=["setup_scaled"]]
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("9_player_small")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SinglePlayerChip" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text/Tags/Chip/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"SetupChipLabel"
+text = "1 PLAYER"
+
+[node name="SinglePlayerStatus" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row/Text/Tags"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"ModeStatusChip"
+text = "✔  SELECTED"
+
+[node name="Arrow" type="TextureRect" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Content/Row" groups=["setup_scaled"]]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("11_arrow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SinglePlayerButton" type="Button" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"ModeCardButton"
+accessibility_name = "Single player"
 
 [node name="Multiplayer" type="PanelContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_type_variation = &"ModeCard"
 
-[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer"]
+[node name="Content" type="MarginContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer"]
 layout_mode = 2
-theme_override_constants/separation = 16
+mouse_filter = 2
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 46
+theme_override_constants/margin_right = 56
+theme_override_constants/margin_bottom = 40
 
-[node name="Eyebrow" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout"]
+[node name="Row" type="HBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
-theme_override_font_sizes/font_size = 18
-text = "TWO SIDES"
+mouse_filter = 2
+theme_override_constants/separation = 24
 
-[node name="Title" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout"]
-theme_type_variation = &"MenuHeading"
-layout_mode = 2
-theme_override_font_sizes/font_size = 38
-text = "Multiplayer"
-
-[node name="Roster" type="HBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="PlayerOneChip" type="PanelContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout/Roster"]
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_chip_one")
-
-[node name="Label" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout/Roster/PlayerOneChip"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
-theme_override_font_sizes/font_size = 22
-text = "P1"
-
-[node name="Versus" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout/Roster"]
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 18
-text = "VS"
-
-[node name="PlayerTwoChip" type="PanelContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout/Roster"]
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_chip_two")
-
-[node name="MultiplayerPlayerTwoChip" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout/Roster/PlayerTwoChip"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
-theme_override_font_sizes/font_size = 22
-text = "P2"
-
-[node name="MultiplayerRoster" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout/Roster"]
-unique_name_in_owner = true
+[node name="Text" type="VBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 4
-theme_override_colors/font_color = Color(1, 0.65098, 0.690196, 1)
-theme_override_font_sizes/font_size = 20
-text = "Player 2 is a human or the CPU"
-vertical_alignment = 1
-autowrap_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
 
-[node name="Description" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout"]
+[node name="Icon" type="TextureRect" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text" groups=["setup_scaled"]]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("8_players")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text"]
+layout_mode = 2
+theme_type_variation = &"SetupCardTitle"
+text = "Multiplayer"
+
+[node name="MultiplayerDescription" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_type_variation = &"SetupBody"
 theme_override_font_sizes/font_size = 22
 text = "Race a CPU rival or share the keyboard with Player 2."
-autowrap_mode = 2
+autowrap_mode = 3
 
-[node name="MultiplayerControls" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.65098, 0.690196, 1)
-theme_override_font_sizes/font_size = 20
-text = "P1  ·  1  2  3     P2  ·  7  8  9"
-
-[node name="MultiplayerButton" type="Button" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Choose Multiplayer"
-
-[node name="MultiplayerStatus" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout"]
+[node name="MultiplayerRoster" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
-theme_override_font_sizes/font_size = 17
-text = "SELECTED"
-horizontal_alignment = 1
+theme_type_variation = &"SetupBody"
+theme_override_font_sizes/font_size = 20
+text = "Player 2 is a human or the CPU"
+autowrap_mode = 3
+
+[node name="MultiplayerControls" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"SetupChipLabel"
+text = "P1 · 1  2  3     P2 · 7  8  9"
+autowrap_mode = 3
+
+[node name="Tags" type="HBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Chip" type="PanelContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text/Tags"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"ModeChip"
+
+[node name="Layout" type="HBoxContainer" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text/Tags/Chip"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Icon" type="TextureRect" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text/Tags/Chip/Layout" groups=["setup_scaled"]]
+custom_minimum_size = Vector2(23, 18)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("10_players_small")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MultiplayerChip" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text/Tags/Chip/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"SetupChipLabel"
+text = "2 PLAYERS"
+
+[node name="MultiplayerStatus" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row/Text/Tags"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"ModeStatusChip"
+text = "✔  SELECTED"
+
+[node name="Arrow" type="TextureRect" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Content/Row" groups=["setup_scaled"]]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("11_arrow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MultiplayerButton" type="Button" parent="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"ModeCardButton"
+accessibility_name = "Multiplayer"
 
 [node name="SelectionSummary" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 1)
-theme_override_font_sizes/font_size = 21
-text = "Single Player selected - Player 1 only."
-horizontal_alignment = 1
-autowrap_mode = 2
+theme_type_variation = &"SetupBody"
+theme_override_font_sizes/font_size = 22
+text = "Selected: Single Player - only Player 1 takes part."
+autowrap_mode = 3
 
 [node name="SelectionHint" type="Label" parent="Margins/Layout/Stage/SelectionStep/Layout"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(0.454902, 0.529412, 0.568627, 1)
+theme_type_variation = &"SetupBody"
 theme_override_font_sizes/font_size = 20
-text = "You will confirm the controller setup next."
-horizontal_alignment = 1
+text = "You will confirm the player controls next."
+autowrap_mode = 3
 
 [node name="ConfirmStep" type="Control" parent="Margins/Layout/Stage"]
 unique_name_in_owner = true
@@ -352,6 +422,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 1
 
 [node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep"]
 layout_mode = 1
@@ -360,271 +431,318 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 20
 
-[node name="ConfirmPanel" type="PanelContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout"]
+[node name="Body" type="BoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 56
 
-[node name="Body" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel"]
+[node name="Setup" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Scroll" type="ScrollContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body"]
+[node name="ConfirmTitle" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"SetupTitle"
+text = "Ready to play?"
+autowrap_mode = 3
+
+[node name="ConfirmSubtitle" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"SetupBody"
+autowrap_mode = 3
+
+[node name="ConfirmDescription" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"SetupBody"
+theme_override_font_sizes/font_size = 22
+text = "Only Player 1 enters the arena."
+autowrap_mode = 3
+
+[node name="SetupScroll" type="ScrollContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 follow_focus = true
 
-[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll"]
+[node name="SetupColumn" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 11
+theme_override_constants/separation = 10
 
-[node name="ModeEyebrow" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
-theme_override_font_sizes/font_size = 18
-text = "SINGLE PLAYER"
-horizontal_alignment = 1
-
-[node name="ConfirmTitle" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 38
-text = "Ready for a solo run?"
-horizontal_alignment = 1
-
-[node name="ConfirmDescription" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 21
-text = "Only Player 1 enters the arena."
-horizontal_alignment = 1
-autowrap_mode = 2
-
-[node name="Rule" type="ColorRect" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout"]
-custom_minimum_size = Vector2(0, 3)
-layout_mode = 2
-mouse_filter = 2
-color = Color(0.686275, 0.866667, 0.917647, 0.24)
-
-[node name="SoloSetupChoices" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout"]
+[node name="SoloSetupChoices" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
-[node name="ControllerGrid" type="GridContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout"]
+[node name="PlayersLabel" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/h_separation = 18
-theme_override_constants/v_separation = 18
-columns = 2
+theme_type_variation = &"SetupSectionLabel"
+text = "Player"
+uppercase = true
 
-[node name="PlayerOneControl" type="PanelContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid"]
+[node name="ControllerGrid" type="GridContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+
+[node name="PlayerOneControl" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+theme_override_constants/separation = 10
 
-[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/PlayerOneControl"]
+[node name="Line" type="BoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/PlayerOneControl"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
+vertical = true
 
-[node name="Identity" type="HBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/PlayerOneControl/Layout"]
+[node name="Row" type="PanelContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/PlayerOneControl/Line"]
 layout_mode = 2
-theme_override_constants/separation = 12
+size_flags_horizontal = 3
+theme_type_variation = &"SetupRowPanel"
 
-[node name="PlayerOneAvatar" type="Control" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/PlayerOneControl/Layout/Identity"]
+[node name="Identity" type="HBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/PlayerOneControl/Line/Row"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="PlayerOneAvatar" type="Control" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/PlayerOneControl/Line/Row/Identity" groups=["setup_scaled"]]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(64, 64)
+custom_minimum_size = Vector2(58, 58)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 script = ExtResource("4_avatar")
 
-[node name="Title" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/PlayerOneControl/Layout/Identity"]
+[node name="Names" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/PlayerOneControl/Line/Row/Identity"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/PlayerOneControl/Line/Row/Identity/Names"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
 text = "PLAYER 1"
 
-[node name="PlayerOneRole" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/PlayerOneControl/Layout/Identity"]
+[node name="PlayerOneControlKeys" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/PlayerOneControl/Line/Row/Identity/Names"]
 unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"SetupBody"
+theme_override_font_sizes/font_size = 22
+text = "KEYS 1 · 2 · 3"
+autowrap_mode = 3
+
+[node name="PlayerOneRole" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/PlayerOneControl/Line/Row/Identity"]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"ModeStatusChip"
 text = "HUMAN"
 
-[node name="PlayerOneControlKeys" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/PlayerOneControl/Layout"]
+[node name="PlayerOneControlDescription" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/PlayerOneControl"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
-theme_override_font_sizes/font_size = 27
-text = "KEYS  1  ·  2  ·  3"
-
-[node name="Description" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/PlayerOneControl/Layout"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"SetupBody"
+theme_override_font_sizes/font_size = 20
 text = "Follow Player 1's highlighted target."
+autowrap_mode = 3
 
-[node name="OpponentControl" type="PanelContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid"]
+[node name="OpponentControl" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+theme_override_constants/separation = 10
 
-[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/OpponentControl"]
+[node name="Line" type="BoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/OpponentControl"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
+vertical = true
 
-[node name="Identity" type="HBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/OpponentControl/Layout"]
+[node name="Row" type="PanelContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/OpponentControl/Line"]
 layout_mode = 2
-theme_override_constants/separation = 12
+size_flags_horizontal = 3
+theme_type_variation = &"SetupRowPanel"
 
-[node name="OpponentAvatar" type="Control" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/OpponentControl/Layout/Identity"]
+[node name="Identity" type="HBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/OpponentControl/Line/Row"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="OpponentAvatar" type="Control" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/OpponentControl/Line/Row/Identity" groups=["setup_scaled"]]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(64, 64)
+custom_minimum_size = Vector2(58, 58)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 script = ExtResource("4_avatar")
 
-[node name="OpponentControlTitle" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/OpponentControl/Layout/Identity"]
-unique_name_in_owner = true
+[node name="Names" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/OpponentControl/Line/Row/Identity"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
-theme_override_font_sizes/font_size = 22
-text = "CPU OPPONENT"
+theme_override_constants/separation = 2
 
-[node name="OpponentRole" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/OpponentControl/Layout/Identity"]
+[node name="OpponentControlTitle" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/OpponentControl/Line/Row/Identity/Names"]
 unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "PLAYER 2"
+autowrap_mode = 3
+
+[node name="OpponentControlKeys" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/OpponentControl/Line/Row/Identity/Names"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"SetupBody"
+theme_override_font_sizes/font_size = 22
+text = "KEYS 7 · 8 · 9"
+autowrap_mode = 3
+
+[node name="OpponentRole" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/OpponentControl/Line/Row/Identity"]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"ModeStatusChip"
 text = "CPU"
 
-[node name="OpponentControlKeys" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/OpponentControl/Layout"]
+[node name="OpponentControlDescription" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/ControllerGrid/OpponentControl"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
-theme_override_font_sizes/font_size = 27
-text = "AUTO PILOT"
-
-[node name="OpponentControlDescription" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/ControllerGrid/OpponentControl/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 18
-text = "Player 2 plays automatically."
-
-[node name="OpponentSelector" type="PanelContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="Layout" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="Caption" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_type_variation = &"SetupBody"
 theme_override_font_sizes/font_size = 20
-text = "WHO PLAYS AS PLAYER 2?"
+text = "Player 2 plays automatically."
+autowrap_mode = 3
 
-[node name="Options" type="HBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout"]
+[node name="OpponentSelector" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Caption" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector"]
+layout_mode = 2
+theme_type_variation = &"SetupSectionLabel"
+text = "Who plays as Player 2?"
+uppercase = true
+
+[node name="OpponentOptions" type="BoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="HumanOptionButton" type="Button" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout/Options"]
+[node name="HumanOptionButton" type="Button" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector/OpponentOptions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(0, 66)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"SetupChoice"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_opponent")
 text = "A Second Player"
+text_overrun_behavior = 3
 
-[node name="CpuOptionButton" type="Button" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout/Options"]
+[node name="CpuOptionButton" type="Button" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector/OpponentOptions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(0, 66)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"SetupChoice"
 toggle_mode = true
 button_pressed = true
 button_group = SubResource("ButtonGroup_opponent")
 text = "The CPU"
+text_overrun_behavior = 3
 
-[node name="OpponentChoiceHint" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 18
-text = "Player 2 is driven by the CPU."
-autowrap_mode = 2
-
-[node name="CpuDifficultyPanel" type="HBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout"]
+[node name="OpponentChoiceHint" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_constants/separation = 18
-
-[node name="Caption" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout/CpuDifficultyPanel"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 1
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_type_variation = &"SetupBody"
 theme_override_font_sizes/font_size = 20
-text = "CPU DIFFICULTY"
-vertical_alignment = 1
+text = "Player 2 is driven by the CPU."
+autowrap_mode = 3
 
-[node name="CpuDifficulty" type="OptionButton" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout/CpuDifficultyPanel"]
+[node name="CpuDifficultyPanel" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(360, 0)
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Caption" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector/CpuDifficultyPanel"]
+layout_mode = 2
+theme_type_variation = &"SetupSectionLabel"
+text = "CPU difficulty"
+uppercase = true
+
+[node name="CpuDifficulty" type="OptionButton" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector/CpuDifficultyPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+theme_type_variation = &"SetupRow"
+text_overrun_behavior = 3
+fit_to_longest_item = false
+
+[node name="ConfirmHint" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"SetupBody"
+theme_override_font_sizes/font_size = 20
+text = "Player 1 uses keys 1, 2 and 3."
+autowrap_mode = 3
+
+[node name="SetupStage" type="Control" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body"]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("3_stage")
 
-[node name="ConfirmHint" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body"]
+[node name="Actions" type="HBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.784314, 0.341176, 1)
-theme_override_font_sizes/font_size = 19
-text = "Player 1 uses keys 1, 2 and 3 or Controller 1 buttons A, B and X."
-horizontal_alignment = 1
-autowrap_mode = 2
-
-[node name="Actions" type="HFlowContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout"]
-layout_mode = 2
-theme_override_constants/h_separation = 18
-theme_override_constants/v_separation = 18
-alignment = 1
+theme_override_constants/separation = 18
+alignment = 2
 
 [node name="PreviousButton" type="Button" parent="Margins/Layout/Stage/ConfirmStep/Layout/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 0)
+visible = false
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Change Mode"
 
 [node name="ConfirmButton" type="Button" parent="Margins/Layout/Stage/ConfirmStep/Layout/Actions"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(430, 0)
+custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
-theme_type_variation = &"PrimaryButton"
+theme_type_variation = &"AccentButton"
 text = "Start Single Player"
+icon = ExtResource("11_arrow")
+icon_alignment = 2
 
 [connection signal="pressed" from="Margins/Layout/Header/BackButton" to="." method="_on_back_pressed"]
-[connection signal="pressed" from="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/Layout/SinglePlayerButton" to="." method="_on_single_player_pressed"]
-[connection signal="pressed" from="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/Layout/MultiplayerButton" to="." method="_on_multiplayer_pressed"]
-[connection signal="pressed" from="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout/Options/HumanOptionButton" to="." method="_on_opponent_option_pressed"]
-[connection signal="pressed" from="Margins/Layout/Stage/ConfirmStep/Layout/ConfirmPanel/Body/Scroll/Layout/OpponentSelector/Layout/Options/CpuOptionButton" to="." method="_on_opponent_option_pressed"]
+[connection signal="toggled" from="Margins/Layout/Header/DetailsButton" to="." method="_update_details_visibility"]
+[connection signal="pressed" from="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/SinglePlayer/SinglePlayerButton" to="." method="_on_single_player_pressed"]
+[connection signal="pressed" from="Margins/Layout/Stage/SelectionStep/Layout/ModeGrid/Multiplayer/MultiplayerButton" to="." method="_on_multiplayer_pressed"]
+[connection signal="pressed" from="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector/OpponentOptions/HumanOptionButton" to="." method="_on_opponent_option_pressed"]
+[connection signal="pressed" from="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn/OpponentSelector/OpponentOptions/CpuOptionButton" to="." method="_on_opponent_option_pressed"]
 [connection signal="pressed" from="Margins/Layout/Stage/ConfirmStep/Layout/Actions/PreviousButton" to="." method="_on_previous_pressed"]
 [connection signal="pressed" from="Margins/Layout/Stage/ConfirmStep/Layout/Actions/ConfirmButton" to="." method="_on_confirm_pressed"]

@@ -78,11 +78,13 @@ func _drive(manifest: GameManifest) -> void:
 	)
 	# Esc and the gamepad Back button already pause, so the HUD button is only
 	# earning its space on a device that has neither.
-	_expect(
-		(game.get_node("%PauseButton") as Button).visible
-		== DisplayServer.is_touchscreen_available(),
-		"%s must only show the HUD pause button on a touchscreen." % manifest.id
-	)
+	var pause_button := game.get_node("%PauseButton") as Button
+	# A game that moves the button into its own HUD also owns its presentation.
+	if pause_button.get_parent() == game.get_node("HUD/Overlay/Margins/Layout/TopBar"):
+		_expect(
+			pause_button.visible == DisplayServer.is_touchscreen_available(),
+			"%s must only show the default HUD pause button on a touchscreen." % manifest.id
+		)
 
 	var store := get_root().get_node_or_null("Store")
 	var banked := int(store.call("points", manifest.id)) if store != null else 0

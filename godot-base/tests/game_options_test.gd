@@ -208,6 +208,9 @@ func _test_menu_for_game(settings: Node, manifest: GameManifest) -> void:
 
 	for key: String in options:
 		var control := options[key] as Control
+		if control is CheckButton:
+			_expect(control.theme_type_variation == &"MenuToggle",
+				"Game option '%s' must use the shared menu toggle style." % key)
 		_expect(
 			control != null
 			and not control.tooltip_text.is_empty()

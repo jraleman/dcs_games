@@ -28,7 +28,7 @@ enum MenuMotion { SPRING, FIRM }
 ## Backdrop materials use the menu uniform contract, frozen at speed zero.
 @export var style_share_card := false
 
-## Logo shown on the rotating plaque. A single-colour silhouette works best:
+## Logo shown on the menu cartridge. A single-colour silhouette works best:
 ## it is tinted with [member logo_color], so it suits any theme. A texture with
 ## its own colours should leave that tint white.
 @export_file("*.png", "*.svg", "*.webp") var logo_texture_path := ""
@@ -36,14 +36,14 @@ enum MenuMotion { SPRING, FIRM }
 ## Multiplied over the logo. White leaves a full-colour logo alone.
 @export var logo_color := Color.WHITE
 
-## Albedo of the slab the logo sits on.
+## Albedo of the cartridge label. The plaque_* names remain stable for games.
 @export var plaque_color := Color("141d23")
 
 ## The highlight: menu background glow, focus bar, and the fill light on the
-## plaque. This is the colour a player would name if asked about the game.
+## cartridge. This is the colour a player would name if asked about the game.
 @export var accent := Color("afddea")
 
-## Key light on the plaque. Usually a paler relative of [member accent], since
+## Key light on the cartridge. Usually a paler relative of [member accent], since
 ## it is standing in for the lamp lighting the logo rather than the brand.
 @export var light := Color("c9ebf4")
 
@@ -69,7 +69,7 @@ static func studio_default() -> GameTheme:
 
 ## The logo, or null when the theme declares none or the file is missing.
 ## Callers keep whatever their scene was authored with in that case, so a bad
-## path costs a warning rather than an empty plaque.
+## path costs a warning rather than an empty cartridge label.
 func logo_texture() -> Texture2D:
 	var path := logo_texture_path.strip_edges()
 	if path.is_empty():

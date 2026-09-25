@@ -28,6 +28,7 @@ const ROW_SEPARATION := 24
 const HEADING_FONT_SIZE := 22
 const HEADING_COLOR := Color(0.301961, 0.639216, 1, 1)
 const PLAYER_TWO_HEADING_COLOR := Color(1, 0.360784, 0.423529, 1)
+const Identity = preload("res://scripts/player_identity.gd")
 const VALUE_COLOR := Color(0.686275, 0.866667, 0.917647, 1)
 const REBIND_HELP := "Select, then press a key. Reusing a key swaps the bindings."
 
@@ -212,6 +213,8 @@ func _build_binding_rows(manifest: GameManifest) -> void:
 ## Player 2's heading keeps its own colour so the two blocks stay
 ## distinguishable without relying on reading the words.
 func _heading_color(definition: Dictionary) -> Color:
+	if int(definition.get("player", -1)) == 2:
+		return Identity.color(2)
 	return (
 		PLAYER_TWO_HEADING_COLOR
 		if int(definition.get("player", -1)) == 1
@@ -249,6 +252,7 @@ func _make_option_row(definition: Dictionary) -> HBoxContainer:
 	match Settings.option_type(key):
 		GameManifest.OPTION_TOGGLE:
 			var toggle := CheckButton.new()
+			toggle.theme_type_variation = &"MenuToggle"
 			toggle.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 			toggle.toggled.connect(_on_option_toggled.bind(key))
 			row.add_child(toggle)

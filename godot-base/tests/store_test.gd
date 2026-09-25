@@ -234,6 +234,11 @@ func _test_payout(store: Node, manifest: GameManifest) -> void:
 		"%s must pay the best score on the mat, with no win bonus in a duel."
 		% manifest.id
 	)
+	var three_players := {"player_scores": [40, 60, 100]}
+	_expect(
+		int(store.call("default_round_points", manifest.id, three_players)) == expected,
+		"%s must include a third player's best score in the shared payout." % manifest.id
+	)
 
 	var beat_cpu := {
 		"single_player": false, "vs_cpu": true,
@@ -300,11 +305,9 @@ func _test_buying(store: Node, manifest: GameManifest) -> void:
 	var item_id := str(target["id"])
 	var price := int(target["price"])
 
-	var opening := int(store.call("points", manifest.id))
-	if opening >= price:
-		# A wallet left full by an earlier run would skip the "cannot afford"
-		# half of this check, so it is spent down first.
-		(store.get("_points") as Dictionary)[manifest.id] = 0
+	# Partial balances also affect the exact grant asserted below. The backed-up
+	# wallet is restored on exit, so start this purchase case from a known zero.
+	(store.get("_points") as Dictionary)[manifest.id] = 0
 	_expect(
 		not bool(store.call("purchase", manifest.id, item_id)),
 		"%s must refuse a purchase nobody can afford yet." % manifest.id

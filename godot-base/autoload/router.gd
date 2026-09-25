@@ -137,7 +137,8 @@ func start_selected_game(mode_scene: String, instructions_scene: String) -> void
 	var manifest := GameCatalog.current()
 	var solo_setup := (
 		manifest != null and GameSession.single_player_offered()
-		and not manifest.solo_setup_choices.is_empty()
+		and (not manifest.solo_setup_choices.is_empty() or not manifest.characters.is_empty()
+			or not manifest.levels.is_empty())
 	)
 	if GameSession.multiplayer_offered() or solo_setup:
 		goto(mode_scene)

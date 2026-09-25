@@ -1,20 +1,26 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scenes/menus/game_select.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
 [ext_resource type="PackedScene" path="res://ui/components/game_card.tscn" id="3_card"]
+[ext_resource type="Script" path="res://ui/components/cartridge_shelf.gd" id="4_shelf"]
+[ext_resource type="Texture2D" path="res://assets/images/chevron_left.svg" id="5_left"]
+[ext_resource type="Texture2D" path="res://assets/images/chevron_right.svg" id="6_right"]
 
 [node name="GameSelect" type="Control"]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
-back_scene = "res://scenes/menus/main_menu.tscn"
 card_scene = ExtResource("3_card")
+back_scene = "res://scenes/menus/main_menu.tscn"
 
 [node name="Background" parent="." instance=ExtResource("2_background")]
+unique_name_in_owner = true
+layout_mode = 1
 
 [node name="Margins" type="MarginContainer" parent="."]
 unique_name_in_owner = true
@@ -25,48 +31,67 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
-theme_override_constants/margin_left = 134
+theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 54
-theme_override_constants/margin_right = 134
+theme_override_constants/margin_right = 0
 theme_override_constants/margin_bottom = 54
 
 [node name="Layout" type="VBoxContainer" parent="Margins"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="Header" type="HBoxContainer" parent="Margins/Layout"]
+[node name="HeaderPad" type="MarginContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 134
+theme_override_constants/margin_right = 134
+
+[node name="Header" type="HBoxContainer" parent="Margins/Layout/HeaderPad"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="Title" type="Label" parent="Margins/Layout/Header"]
-theme_type_variation = &"MenuHeading"
+[node name="TitleBox" type="VBoxContainer" parent="Margins/Layout/HeaderPad/Header"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
-theme_override_font_sizes/font_size = 56
-text = "Choose a Game"
-autowrap_mode = 3
-
-[node name="BackButton" type="Button" parent="Margins/Layout/Header"]
-layout_mode = 2
 size_flags_vertical = 4
-text = "Back"
-metadata/ui_sound_handled = true
+theme_override_constants/separation = 12
 
-[node name="Intro" type="Label" parent="Margins/Layout"]
+[node name="Title" type="Label" parent="Margins/Layout/HeaderPad/Header/TitleBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
-theme_override_font_sizes/font_size = 24
-text = "Every preview below is a real round. Pick one to play."
-horizontal_alignment = 1
-autowrap_mode = 2
+theme_type_variation = &"MenuHeading"
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 56
+text = "Games"
+text_overrun_behavior = 3
+
+[node name="Rule" type="ColorRect" parent="Margins/Layout/HeaderPad/Header/TitleBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(92, 3)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+color = Color(0.686275, 0.866667, 0.917647, 1)
+
+[node name="BackButton" type="Button" parent="Margins/Layout/HeaderPad/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 66)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavigationButton"
+text = "Back"
+icon = ExtResource("5_left")
+metadata/ui_sound_handled = true
 
 [node name="Empty" type="Label" parent="Margins/Layout"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+size_flags_vertical = 6
 theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
 theme_override_font_sizes/font_size = 24
 text = "This build ships no games yet."
@@ -74,22 +99,194 @@ horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="Scroll" type="ScrollContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+follow_focus = true
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
-[node name="Row" type="CenterContainer" parent="Margins/Layout/Scroll"]
+[node name="Body" type="BoxContainer" parent="Margins/Layout/Scroll"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 24
+alignment = 1
+vertical = true
 
-[node name="Grid" type="GridContainer" parent="Margins/Layout/Scroll/Row"]
+[node name="Stage" type="Control" parent="Margins/Layout/Scroll/Body"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(0, 600)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="ShelfBack" type="Control" parent="Margins/Layout/Scroll/Body/Stage"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_shelf")
+
+[node name="Track" type="Control" parent="Margins/Layout/Scroll/Body/Stage"]
+unique_name_in_owner = true
+clip_contents = true
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 540.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="ShelfFront" type="Control" parent="Margins/Layout/Scroll/Body/Stage"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_shelf")
+layer = 1
+
+[node name="PrevButton" type="Button" parent="Margins/Layout/Scroll/Body/Stage"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 72.0
+offset_bottom = 72.0
+focus_mode = 0
+theme_type_variation = &"NavigationButton"
+icon = ExtResource("5_left")
+icon_alignment = 1
+
+[node name="NextButton" type="Button" parent="Margins/Layout/Scroll/Body/Stage"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 72.0
+offset_bottom = 72.0
+focus_mode = 0
+theme_type_variation = &"NavigationButton"
+icon = ExtResource("6_right")
+icon_alignment = 1
+
+[node name="DetailsPad" type="MarginContainer" parent="Margins/Layout/Scroll/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Details" type="BoxContainer" parent="Margins/Layout/Scroll/Body/DetailsPad"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Info" type="VBoxContainer" parent="Margins/Layout/Scroll/Body/DetailsPad/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="GameTitle" type="Label" parent="Margins/Layout/Scroll/Body/DetailsPad/Details/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MenuHeading"
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 40
+text = "Game"
+text_overrun_behavior = 3
+
+[node name="GameRule" type="ColorRect" parent="Margins/Layout/Scroll/Body/DetailsPad/Details/Info"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 3)
 layout_mode = 2
 size_flags_horizontal = 0
-theme_override_constants/h_separation = 24
-theme_override_constants/v_separation = 24
-columns = 2
+mouse_filter = 2
+color = Color(0.686275, 0.866667, 0.917647, 1)
 
-[connection signal="pressed" from="Margins/Layout/Header/BackButton" to="." method="_on_back_pressed"]
+[node name="GameTagline" type="Label" parent="Margins/Layout/Scroll/Body/DetailsPad/Details/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.807843, 0.85098, 0.878431, 1)
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 3
+text_overrun_behavior = 3
+max_lines_visible = 2
+
+[node name="GameModes" type="Label" parent="Margins/Layout/Scroll/Body/DetailsPad/Details/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+theme_override_font_sizes/font_size = 18
+text_overrun_behavior = 3
+
+[node name="GameStatus" type="Label" parent="Margins/Layout/Scroll/Body/DetailsPad/Details/Info"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.654902, 0.705882, 0.768627, 1)
+theme_override_font_sizes/font_size = 18
+text_overrun_behavior = 3
+
+[node name="PlayButton" type="Button" parent="Margins/Layout/Scroll/Body/DetailsPad/Details"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 72)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 4
+theme_type_variation = &"NavigationButton"
+text = "Play"
+icon = ExtResource("6_right")
+alignment = 0
+icon_alignment = 2
+
+[node name="FooterPad" type="MarginContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 134
+theme_override_constants/margin_right = 134
+
+[node name="Footer" type="HBoxContainer" parent="Margins/Layout/FooterPad"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="FooterLeft" type="Label" parent="Margins/Layout/FooterPad/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.654902, 0.705882, 0.768627, 1)
+theme_override_font_sizes/font_size = 16
+text = "DeskCanSaw Games"
+text_overrun_behavior = 3
+
+[node name="FooterRight" type="Label" parent="Margins/Layout/FooterPad/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.654902, 0.705882, 0.768627, 1)
+theme_override_font_sizes/font_size = 16
+text = "v0.1.0"
+horizontal_alignment = 2
+
+[node name="FocusAccent" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_right = 4.0
+offset_bottom = 72.0
+mouse_filter = 2
+color = Color(0.686275, 0.866667, 0.917647, 1)
+
+[connection signal="pressed" from="Margins/Layout/HeaderPad/Header/BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="Margins/Layout/Scroll/Body/Stage/PrevButton" to="." method="_on_prev_pressed"]
+[connection signal="pressed" from="Margins/Layout/Scroll/Body/Stage/NextButton" to="." method="_on_next_pressed"]
+[connection signal="pressed" from="Margins/Layout/Scroll/Body/DetailsPad/Details/PlayButton" to="." method="_on_play_pressed"]

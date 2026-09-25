@@ -1,87 +1,53 @@
 extends MenuScreen
 
-## A museum for a game's models: pick an exhibit, then turn and zoom it.
-##
-## Everything on the plinths comes from a [GameManifest], so a new game — or a
-## new model — appears here without this screen changing. The split is the same
-## one the store uses for its cards: **this screen owns the room**, the game owns
-## what is standing in it. The framework never learns what a chicken looks like;
-## it only knows how to light a list, drive an orbit and word a caption.
-##
-## There is no Gallery autoload because a gallery saves nothing. A store has a
-## wallet to protect; a museum has an opening time and a door.
-##
-## Which game it exhibits follows the same rule as the Settings screen's
-## Controls and Game tabs, and the store's shelves: a standalone build adopts the
-## only game it ships, and a collection is told by the pause menu which game is
-## running, because a collection's main menu has not chosen a game yet.
+## An asset-first museum: the manifest owns the exhibits and the game owns the
+## stage. Direct manipulation replaces the toolbar; descriptions remain in
+## tooltips and accessibility text instead of taking space from the model.
 
-## Game whose models this screen shows. Empty resolves in [method
-## _resolve_game_context]; assign it before `add_child()`, since `_ready()` is
-## what builds the room.
+## Assign before add_child(). A standalone build adopts its only game.
 var game_context_id := ""
 
-## Orbit limits. Pitch stops short of the poles because an orbit camera looking
-## straight down has no idea which way "up" is, and the view rolls.
 const PITCH_MIN := -1.0472
 const PITCH_MAX := 1.2566
 const ZOOM_MIN := 0.55
 const ZOOM_MAX := 3.2
-
-## Rates are per second, and a tap on a button is worth [constant STEP_SECONDS]
-## of holding one, so tapping and holding cannot disagree about how fast the
-## model turns.
 const YAW_RATE := 1.5708
 const PITCH_RATE := 0.9599
 const ZOOM_RATE := 2.1
 const STEP_SECONDS := 0.22
-## How long a button is held before it starts repeating, so a tap is one step.
-const HOLD_DELAY := 0.32
-## A slow turntable: fast enough to show every side inside a few seconds of
-## looking, slow enough not to fight a player reaching for the mouse.
 const SPIN_RATE := 0.3665
-
 const DRAG_YAW := 0.009
 const DRAG_PITCH := 0.007
-
 const AXIS_YAW := 0
 const AXIS_PITCH := 1
 const AXIS_ZOOM := 2
-
-const MIN_LIST_WIDTH := 268.0
-const MAX_LIST_WIDTH := 360.0
-const MIN_VIEWER_HEIGHT := 240.0
-const HEADING_FONT_SIZE := 22
-const HEADING_COLOR := Color(0.686275, 0.866667, 0.917647, 1.0)
+const MIN_LIST_WIDTH := 260.0
+const MAX_LIST_WIDTH := 330.0
+const TOUCH_TAP_MSEC := 350
+const TOUCH_TAP_SLOP := 12.0
 
 @onready var _margins: MarginContainer = %Margins
 @onready var _title: Label = %Title
 @onready var _body: BoxContainer = %Body
 @onready var _list_column: VBoxContainer = %ListColumn
 @onready var _stage_column: VBoxContainer = %StageColumn
-@onready var _intro: Label = %Intro
 @onready var _sections: VBoxContainer = %Sections
+@onready var _list_scroll: ScrollContainer = %ListScroll
 @onready var _viewer: Control = %Viewer
+@onready var _viewer_focus: Control = %ViewerFocus
 @onready var _stage_host: Control = %StageHost
 @onready var _placeholder: Label = %Placeholder
 @onready var _exhibit_title: Label = %ExhibitTitle
-@onready var _exhibit_description: Label = %ExhibitDescription
-@onready var _facts: Label = %Facts
-@onready var _controls: HFlowContainer = %Controls
-@onready var _hint: Label = %Hint
-@onready var _spin_toggle: CheckButton = %SpinToggle
-@onready var _reset_button: Button = %ResetButton
 @onready var _empty: Label = %Empty
 @onready var _back_button: Button = %BackButton
 
 var _exhibits: Array[Dictionary] = []
 var _buttons: Array[Button] = []
-var _stage: Node = null
+var _headings: Array[Label] = []
+var _navigation_styles: Dictionary[StringName, StyleBox] = {}
+var _stage: Node
 var _stage_orbits := false
 var _stage_spins := false
-## A stage scene is game-supplied data, so every call into it is optional. A
-## stage that cannot draw an exhibit falls back to the badge placeholder rather
-## than raising inside the menu.
 var _stage_configures := false
 var _selected := -1
 var _yaw := 0.0
@@ -90,7 +56,13 @@ var _zoom := 1.0
 var _auto_spin := true
 var _dragging := false
 var _reduced_motion := false
-var _nudges: Array[Dictionary] = []
+var _ui_scale := 1.0
+var _full_title := "Gallery"
+var _pad_orbit := Vector2.ZERO
+var _touches: Dictionary[int, Vector2] = {}
+var _touch_started := 0
+var _touch_travel := 0.0
+var _touch_max_count := 0
 
 
 func _ready() -> void:
@@ -100,19 +72,17 @@ func _ready() -> void:
 	_resolve_game_context()
 	_build_stage()
 	_build_list()
-	_wire_controls()
+	_viewer.gui_input.connect(_on_viewer_gui_input)
+	_viewer.focus_entered.connect(_on_viewer_focus_entered)
+	_viewer.focus_exited.connect(_on_viewer_focus_exited)
+	get_window().focus_exited.connect(_cancel_gestures)
 	Settings.changed.connect(_on_setting_changed)
 	AchievementManager.unlocked.connect(_on_achievement_unlocked)
 	super()
 
 
-## Adopts the only game in a standalone build, so its models are reachable from
-## the main menu rather than only from a paused round — the same rule, and the
-## same reasoning, as `settings_menu.gd` and `store.gd`.
 func _resolve_game_context() -> void:
-	if not game_context_id.is_empty():
-		return
-	if GameCatalog.is_single_game_build():
+	if game_context_id.is_empty() and GameCatalog.is_single_game_build():
 		game_context_id = GameCatalog.current_id()
 
 
@@ -120,27 +90,26 @@ func _manifest() -> GameManifest:
 	return GameCatalog.get_manifest(game_context_id)
 
 
-# --------------------------------------------------------------------------
-# Building the room
-# --------------------------------------------------------------------------
-
-
-## Loads the game's own viewer. A missing or malformed stage is not fatal: the
-## list still works and the placeholder explains itself, because a gallery that
-## cannot draw is still a readable catalogue of what the game contains.
 func _build_stage() -> void:
 	var manifest := _manifest()
-	_title.text = "%s Gallery" % manifest.title if manifest else "Gallery"
+	_full_title = "%s Gallery" % manifest.title if manifest else "Gallery"
+	_title.accessibility_name = _full_title
+	_title.tooltip_text = (
+		manifest.text("gallery_intro", "Explore this game's models.")
+		if manifest else "Gallery"
+	)
+	_title.accessibility_description = _title.tooltip_text
 	if manifest == null or manifest.gallery_stage_scene_path.is_empty():
 		return
 	if not ResourceLoader.exists(manifest.gallery_stage_scene_path):
 		push_warning(
-			"Gallery: %s declares a stage that does not exist (%s)."
+			"Gallery: %s declares a missing stage (%s)."
 			% [manifest.id, manifest.gallery_stage_scene_path]
 		)
 		return
-	var packed: PackedScene = load(manifest.gallery_stage_scene_path)
+	var packed := load(manifest.gallery_stage_scene_path) as PackedScene
 	if packed == null:
+		push_warning("Gallery: %s is not a scene." % manifest.gallery_stage_scene_path)
 		return
 	var stage := packed.instantiate()
 	if stage is not Control:
@@ -158,35 +127,26 @@ func _build_stage() -> void:
 	_stage_configures = _stage.has_method("configure")
 	if not _stage_configures:
 		push_warning(
-			"Gallery: %s has no configure(Dictionary); exhibits will fall back "
+			"Gallery: %s has no configure(Dictionary); showing exhibit badges."
 			% manifest.gallery_stage_scene_path
-			+ "to their badge."
 		)
 
 
-## One button per exhibit, grouped by heading in declaration order — the same
-## contract as the store's shelves, so a game groups its models by writing a
-## `heading` and nothing else.
 func _build_list() -> void:
 	for child in _sections.get_children():
 		_sections.remove_child(child)
 		child.queue_free()
 	_buttons.clear()
+	_headings.clear()
 	_exhibits.clear()
-
 	var manifest := _manifest()
 	if manifest != null:
 		_exhibits.assign(manifest.gallery_exhibits)
 	_empty.visible = _exhibits.is_empty()
 	_body.visible = not _exhibits.is_empty()
-	_intro.text = _intro_copy(manifest)
-	if _exhibits.is_empty():
-		_controls.visible = false
-		_hint.visible = false
-		return
 
 	var group := ButtonGroup.new()
-	var column: VBoxContainer = null
+	var column: VBoxContainer
 	var heading := ""
 	for index in _exhibits.size():
 		var exhibit := _exhibits[index]
@@ -195,7 +155,6 @@ func _build_list() -> void:
 			heading = next_heading
 			column = _add_group(heading)
 		column.add_child(_build_button(exhibit, index, group))
-
 	_select(_first_viewable())
 
 
@@ -207,10 +166,12 @@ func _add_group(heading: String) -> VBoxContainer:
 	if not heading.is_empty():
 		var label := Label.new()
 		label.name = "Heading"
-		label.text = heading
-		label.add_theme_font_size_override("font_size", HEADING_FONT_SIZE)
-		label.add_theme_color_override("font_color", HEADING_COLOR)
+		label.text = heading.to_upper()
+		label.theme_type_variation = &"MenuSectionHeading"
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.add_theme_color_override("font_color", GameCatalog.theme().accent)
 		section.add_child(label)
+		_headings.append(label)
 	var column := VBoxContainer.new()
 	column.name = "Items"
 	column.add_theme_constant_override("separation", 6)
@@ -221,94 +182,88 @@ func _add_group(heading: String) -> VBoxContainer:
 func _build_button(exhibit: Dictionary, index: int, group: ButtonGroup) -> Button:
 	var button := Button.new()
 	button.name = "Exhibit_%s" % str(exhibit.get("id", index))
+	button.theme_type_variation = &"NavigationButton"
 	button.text = _exhibit_title_of(exhibit)
+	button.accessibility_name = button.text
 	button.toggle_mode = true
 	button.button_group = group
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	var accent := exhibit.get("color", Color.TRANSPARENT) as Color
-	if accent.a > 0.0:
-		# A tint, not the only signal: the title carries the meaning.
-		button.add_theme_color_override("font_hover_color", accent.lightened(0.35))
 	var reason := _locked_reason(exhibit)
-	if not reason.is_empty():
-		button.disabled = true
-		button.text = "%s  (locked)" % button.text
-		button.tooltip_text = reason
-	else:
-		button.tooltip_text = str(exhibit.get("description", ""))
+	button.disabled = not reason.is_empty()
+	if button.disabled:
+		button.text = "Locked: %s" % button.text
+	button.tooltip_text = _describe_exhibit(exhibit)
+	if button.disabled:
+		button.tooltip_text = "%s\n%s" % [reason, button.tooltip_text]
 	button.accessibility_description = button.tooltip_text
 	button.pressed.connect(_on_exhibit_pressed.bind(index))
 	_buttons.append(button)
 	return button
 
 
-## Wires every nudge control to an axis and a direction, so the orbit has one
-## implementation and the buttons are just another way to reach it.
-##
-## Positive yaw walks the camera anticlockwise around the model, which is what a
-## drag to the right does — so ▶ carries +1 and the two cannot disagree.
-func _wire_controls() -> void:
-	_add_nudge(%TurnLeft, AXIS_YAW, -1.0)
-	_add_nudge(%TurnRight, AXIS_YAW, 1.0)
-	_add_nudge(%TiltUp, AXIS_PITCH, 1.0)
-	_add_nudge(%TiltDown, AXIS_PITCH, -1.0)
-	_add_nudge(%ZoomOut, AXIS_ZOOM, -1.0)
-	_add_nudge(%ZoomIn, AXIS_ZOOM, 1.0)
-	_viewer.gui_input.connect(_on_viewer_gui_input)
-	# A stage that cannot orbit gets no orbit controls, rather than buttons that
-	# quietly do nothing.
-	_controls.visible = _stage_orbits and not _exhibits.is_empty()
-	_hint.visible = _controls.visible
-	_refresh_spin_toggle()
-	set_process(_stage_orbits)
-
-
-func _add_nudge(button: Button, axis: int, direction: float) -> void:
-	_nudges.append({"button": button, "axis": axis, "dir": direction, "held": 0.0})
-	button.button_down.connect(_on_nudge_down.bind(axis, direction))
-
-
-# --------------------------------------------------------------------------
-# Layout
-# --------------------------------------------------------------------------
-
-
 func _on_layout_changed(size: Vector2) -> void:
 	var portrait := Responsive.is_portrait(size)
-	# The list reads as a sidebar in landscape and a drawer under the model in
-	# portrait, where there is no room for two columns worth of words.
+	var preference := float(Settings.get_value("ui/scale", 1.0))
+	_ui_scale = maxf(1.0, size.x * preference / maxf(get_window().size.x, 1.0) / 1.5)
 	_body.vertical = portrait
 	_body.move_child(_stage_column, 0 if portrait else 1)
-	# Whichever way round they sit, exactly one of the two is allowed to grow:
-	# in landscape the model takes the space, and in portrait the list does,
-	# because a viewer that expanded downwards would push the list off a phone.
-	_stage_column.size_flags_vertical = (
-		Control.SIZE_FILL if portrait else Control.SIZE_EXPAND_FILL
-	)
-	_viewer.size_flags_vertical = (
-		Control.SIZE_FILL if portrait else Control.SIZE_EXPAND_FILL
-	)
+	_body.add_theme_constant_override("separation", roundi(20.0 * _ui_scale))
+	_stage_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_viewer.custom_minimum_size.y = 180.0 * _ui_scale
 	_list_column.size_flags_horizontal = (
 		Control.SIZE_EXPAND_FILL if portrait else Control.SIZE_FILL
 	)
-	_list_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_list_column.size_flags_vertical = (
+		Control.SIZE_FILL if portrait else Control.SIZE_EXPAND_FILL
+	)
 	_list_column.custom_minimum_size = Vector2(
-		0.0 if portrait else clampf(size.x * 0.24, MIN_LIST_WIDTH, MAX_LIST_WIDTH),
-		190.0 if portrait else 0.0
+		0.0 if portrait else clampf(
+			size.x * 0.2, MIN_LIST_WIDTH * _ui_scale, MAX_LIST_WIDTH * _ui_scale
+		),
+		minf(size.y * 0.24, 200.0 * _ui_scale) if portrait else 0.0
 	)
-	_viewer.custom_minimum_size.y = maxf(
-		MIN_VIEWER_HEIGHT, size.y * (0.34 if portrait else 0.46)
-	)
-	_title.add_theme_font_size_override(
-		"font_size", int(clampf(minf(size.x, size.y) * 0.055, 32.0, 56.0))
-	)
+	_title.text = "Gallery" if portrait else _full_title
+	_title.add_theme_font_size_override("font_size", roundi(
+		(36.0 if portrait else 44.0) * _ui_scale
+	))
+	_exhibit_title.add_theme_font_size_override("font_size", roundi(24.0 * _ui_scale))
+	_empty.add_theme_font_size_override("font_size", roundi(24.0 * _ui_scale))
+	_placeholder.add_theme_font_size_override("font_size", roundi(28.0 * _ui_scale))
+	_sections.add_theme_constant_override("separation", roundi(18.0 * _ui_scale))
+	for heading in _headings:
+		heading.add_theme_font_size_override("font_size", roundi(18.0 * _ui_scale))
+	for button in _buttons:
+		button.custom_minimum_size.y = 66.0 * _ui_scale
+		button.add_theme_font_size_override("font_size", roundi(22.0 * _ui_scale))
+	_back_button.custom_minimum_size.y = 66.0 * _ui_scale
+	_back_button.add_theme_font_size_override("font_size", roundi(24.0 * _ui_scale))
+	for frame: Control in [_viewer, _viewer_focus]:
+		var border := frame.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+		var width := 3.0 if frame == _viewer_focus else 1.5
+		border.set_border_width_all(roundi(width * _ui_scale))
+		frame.add_theme_stylebox_override("panel", border)
+	_scale_navigation_styles()
 
 
-# --------------------------------------------------------------------------
-# Choosing an exhibit
-# --------------------------------------------------------------------------
+func _scale_navigation_styles() -> void:
+	if _navigation_styles.is_empty():
+		for state: StringName in [&"normal", &"hover", &"pressed", &"disabled", &"focus"]:
+			_navigation_styles[state] = get_theme_stylebox(state, &"NavigationButton")
+	for state: StringName in _navigation_styles:
+		var original := _navigation_styles[state]
+		var scaled := original.duplicate() as StyleBox
+		for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+			scaled.set_content_margin(side, original.get_content_margin(side) * _ui_scale)
+		if state == &"focus" and scaled is StyleBoxFlat:
+			scaled.set_border_width_all(roundi(3.0 * _ui_scale))
+		if state == &"pressed" and scaled is StyleBoxFlat:
+			scaled.border_width_left = roundi(4.0 * _ui_scale)
+		_back_button.add_theme_stylebox_override(state, scaled)
+		for button in _buttons:
+			button.add_theme_stylebox_override(state, scaled)
 
 
 func _first_viewable() -> int:
@@ -319,49 +274,42 @@ func _first_viewable() -> int:
 
 
 func _select(index: int) -> void:
+	_cancel_gestures()
 	_selected = index
-	if index < 0 or index >= _exhibits.size():
-		_show_placeholder(
-			"Nothing on display yet."
-			if _exhibits.is_empty()
-			else "Keep playing to open the rest of the collection."
-		)
-		return
-	var exhibit := _exhibits[index]
-	# The group only unpresses the old button when a real press went through it,
-	# so a selection made in code — including the one this screen opens on —
-	# has to clear the others itself.
 	for other in _buttons.size():
 		_buttons[other].set_pressed_no_signal(other == index)
+	if index < 0 or index >= _exhibits.size():
+		_selected = -1
+		_exhibit_title.text = ""
+		_exhibit_title.tooltip_text = ""
+		_exhibit_title.accessibility_description = ""
+		_viewer.accessibility_name = "Gallery"
+		_viewer.accessibility_description = ""
+		_show_placeholder("No exhibits yet." if _exhibits.is_empty() else "Exhibits are locked.")
+		_sync_interaction()
+		return
+	var exhibit := _exhibits[index]
 	_exhibit_title.text = _exhibit_title_of(exhibit)
-	_exhibit_description.text = str(exhibit.get("description", ""))
-	_exhibit_description.visible = not _exhibit_description.text.is_empty()
-	_facts.text = _facts_copy(exhibit)
-	_facts.visible = not _facts.text.is_empty()
-	_reset_view()
+	_viewer.accessibility_name = _exhibit_title.text
 	if _stage == null or not _stage_configures:
 		_show_placeholder(_badge_of(exhibit))
-		return
-	_placeholder.visible = false
-	_stage_host.visible = true
-	_stage.call("configure", exhibit)
-	_apply_view()
+	else:
+		_placeholder.hide()
+		_stage_host.show()
+		_stage.call("configure", exhibit)
+	_reset_view()
+	_sync_interaction()
 
 
-## The viewer still has to say something when there is no stage to draw with, so
-## it falls back to the exhibit's badge — the same "a card always renders"
-## contract the store's item art has.
 func _show_placeholder(text: String) -> void:
 	_placeholder.text = text
-	_placeholder.visible = true
-	_stage_host.visible = false
+	_placeholder.show()
+	_stage_host.hide()
 
 
 func _exhibit_title_of(exhibit: Dictionary) -> String:
 	var title := str(exhibit.get("title", "")).strip_edges()
-	if not title.is_empty():
-		return title
-	return str(exhibit.get("id", "Exhibit")).capitalize()
+	return title if not title.is_empty() else str(exhibit.get("id", "Exhibit")).capitalize()
 
 
 func _badge_of(exhibit: Dictionary) -> String:
@@ -369,15 +317,15 @@ func _badge_of(exhibit: Dictionary) -> String:
 	return badge if not badge.is_empty() else _exhibit_title_of(exhibit)
 
 
-## Facts are the model's specification in words. They exist so the exhibit is
-## never carried by the picture alone, which is also what makes the screen work
-## for a player who cannot see the plinth.
-func _facts_copy(exhibit: Dictionary) -> String:
-	var lines := PackedStringArray()
+func _describe_exhibit(exhibit: Dictionary) -> String:
+	var lines := PackedStringArray([_exhibit_title_of(exhibit)])
+	var description := str(exhibit.get("description", "")).strip_edges()
+	if not description.is_empty():
+		lines.append(description)
 	for fact: Variant in exhibit.get("facts", []):
 		var text := str(fact).strip_edges()
 		if not text.is_empty():
-			lines.append("·  %s" % text)
+			lines.append(text)
 	return "\n".join(lines)
 
 
@@ -390,50 +338,75 @@ func _locked_reason(exhibit: Dictionary) -> String:
 	return "Earn %s to view this." % title if not title.is_empty() else "Locked."
 
 
-## Names the room without the framework knowing what is in it.
-func _intro_copy(manifest: GameManifest) -> String:
-	var fallback := "Turn and zoom the models this game is built from."
-	return manifest.text("gallery_intro", fallback) if manifest else fallback
+func _can_inspect() -> bool:
+	return (
+		is_instance_valid(_stage) and _stage.is_inside_tree()
+		and _stage_configures and _stage_host.visible
+		and _selected >= 0 and _selected < _exhibits.size()
+	)
 
 
-# --------------------------------------------------------------------------
-# Orbit
-# --------------------------------------------------------------------------
+func _can_orbit() -> bool:
+	return _can_inspect() and _stage_orbits
 
 
-func _process(delta: float) -> void:
-	var moved := false
-	for nudge in _nudges:
-		var button := nudge["button"] as Button
-		if button == null or not button.button_pressed:
-			nudge["held"] = 0.0
-			continue
-		nudge["held"] = float(nudge["held"]) + delta
-		if float(nudge["held"]) < HOLD_DELAY:
-			continue
-		_nudge(int(nudge["axis"]), float(nudge["dir"]), delta)
-		moved = true
-	if _spinning():
-		_yaw = wrapf(_yaw + SPIN_RATE * delta, -PI, PI)
-		moved = true
-	if moved:
-		_apply_view()
+func _can_spin() -> bool:
+	return _can_inspect() and (_stage_orbits or _stage_spins)
 
 
 func _spinning() -> bool:
 	return (
-		_auto_spin
-		and not _reduced_motion
-		and not _dragging
-		and _stage != null
-		and _selected >= 0
+		_can_spin() and _auto_spin and not _reduced_motion
+		and not _dragging and _pad_orbit.is_zero_approx()
 	)
 
 
-## A tap is worth [constant STEP_SECONDS] of holding, so the two agree.
-func _on_nudge_down(axis: int, direction: float) -> void:
-	_nudge(axis, direction, STEP_SECONDS)
-	_apply_view()
+func _sync_interaction() -> void:
+	if is_queued_for_deletion() or not is_instance_valid(_viewer_focus):
+		return
+	var interactive := _can_orbit() or _can_spin()
+	_viewer.focus_mode = Control.FOCUS_ALL if interactive else Control.FOCUS_NONE
+	_viewer.mouse_default_cursor_shape = (
+		Control.CURSOR_DRAG if _dragging
+		else Control.CURSOR_POINTING_HAND if interactive else Control.CURSOR_ARROW
+	)
+	_viewer_focus.visible = interactive and _viewer.has_focus()
+	if is_instance_valid(_stage) and _stage.is_inside_tree() and _stage_spins:
+		_stage.call("set_auto_spin", _spinning())
+	set_process(_can_orbit() and (_spinning() or not _pad_orbit.is_zero_approx()))
+	if _selected < 0 or _selected >= _exhibits.size():
+		return
+	var details := _describe_exhibit(_exhibits[_selected])
+	var help := PackedStringArray()
+	if _can_orbit():
+		help.append("Drag to rotate. Scroll to zoom. Double-click to reset.")
+		help.append("Touch: drag, pinch to zoom, double-tap to reset.")
+		help.append("Keyboard: W/A/S/D rotate, +/- zoom, R resets. Tab changes focus.")
+		help.append("Controller: right stick rotates, shoulders zoom, Y resets.")
+	if _can_spin():
+		if _reduced_motion:
+			help.append("Auto-spin is off while Reduced motion is enabled.")
+		else:
+			help.append("Right-click to %s auto-spin." % ("pause" if _auto_spin else "resume"))
+			help.append("Space, controller X or a two-finger tap does the same.")
+	if not help.is_empty():
+		details += "\n\n" + "\n".join(help)
+	_exhibit_title.tooltip_text = details
+	_exhibit_title.accessibility_description = details
+	_viewer.accessibility_description = details
+
+
+func _process(delta: float) -> void:
+	var moved := false
+	if _spinning() and _stage_orbits:
+		_yaw = wrapf(_yaw + SPIN_RATE * delta, -PI, PI)
+		moved = true
+	if _can_orbit() and _viewer.has_focus() and not _pad_orbit.is_zero_approx():
+		_nudge(AXIS_YAW, _pad_orbit.x, delta)
+		_nudge(AXIS_PITCH, -_pad_orbit.y, delta)
+		moved = true
+	if moved:
+		_apply_view()
 
 
 func _nudge(axis: int, direction: float, seconds: float) -> void:
@@ -441,41 +414,197 @@ func _nudge(axis: int, direction: float, seconds: float) -> void:
 		AXIS_YAW:
 			_yaw = wrapf(_yaw + direction * YAW_RATE * seconds, -PI, PI)
 		AXIS_PITCH:
-			_pitch = clampf(
-				_pitch + direction * PITCH_RATE * seconds, PITCH_MIN, PITCH_MAX
-			)
+			_pitch = clampf(_pitch + direction * PITCH_RATE * seconds, PITCH_MIN, PITCH_MAX)
 		AXIS_ZOOM:
 			_zoom = clampf(_zoom * pow(ZOOM_RATE, direction * seconds), ZOOM_MIN, ZOOM_MAX)
 
 
 func _on_viewer_gui_input(event: InputEvent) -> void:
-	if not _stage_orbits:
+	if not (_can_orbit() or _can_spin()):
 		return
 	if event is InputEventMouseButton:
+		if event.device == InputEvent.DEVICE_ID_EMULATION:
+			return
 		var button := event as InputEventMouseButton
+		if button.pressed:
+			_viewer.grab_focus()
 		match button.button_index:
-			MOUSE_BUTTON_WHEEL_UP:
+			MOUSE_BUTTON_RIGHT:
 				if button.pressed:
-					_nudge(AXIS_ZOOM, 1.0, STEP_SECONDS)
-					_apply_view()
-					_viewer.accept_event()
-			MOUSE_BUTTON_WHEEL_DOWN:
-				if button.pressed:
-					_nudge(AXIS_ZOOM, -1.0, STEP_SECONDS)
-					_apply_view()
-					_viewer.accept_event()
+					_toggle_spin()
 			MOUSE_BUTTON_LEFT:
-				_dragging = button.pressed
-				_viewer.accept_event()
-	elif event is InputEventMouseMotion and _dragging:
-		_orbit_by((event as InputEventMouseMotion).relative)
-		_viewer.accept_event()
+				if not _can_orbit():
+					return
+				if button.pressed and button.double_click:
+					_cancel_gestures()
+					_reset_view()
+				else:
+					_dragging = button.pressed
+					_sync_interaction()
+			MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN:
+				if not _can_orbit() or not button.pressed:
+					return
+				var direction := 1.0 if button.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0
+				_nudge(AXIS_ZOOM, direction, STEP_SECONDS * button.factor)
+				_apply_view()
+			_:
+				return
+	elif event is InputEventMouseMotion:
+		var motion := event as InputEventMouseMotion
+		if motion.device == InputEvent.DEVICE_ID_EMULATION or not _dragging:
+			return
+		if not (motion.button_mask & MOUSE_BUTTON_MASK_LEFT):
+			_cancel_gestures()
+			return
+		_orbit_by(motion.relative)
+	elif event is InputEventScreenTouch:
+		_on_touch(event as InputEventScreenTouch)
 	elif event is InputEventScreenDrag:
-		_orbit_by((event as InputEventScreenDrag).relative)
-		_viewer.accept_event()
+		_on_touch_drag(event as InputEventScreenDrag)
+	elif event is InputEventMagnifyGesture and _can_orbit():
+		if _touches.is_empty():
+			_zoom = clampf(_zoom * (event as InputEventMagnifyGesture).factor, ZOOM_MIN, ZOOM_MAX)
+			_apply_view()
+	elif event is InputEventKey:
+		if not _on_viewer_key(event as InputEventKey):
+			return
+	else:
+		return
+	_viewer.accept_event()
+
+
+func _input(event: InputEvent) -> void:
+	# A release over the sidebar (or another Control) must still end a grab.
+	if event is InputEventMouseButton:
+		var button := event as InputEventMouseButton
+		if button.button_index == MOUSE_BUTTON_LEFT and not button.pressed \
+			and button.device != InputEvent.DEVICE_ID_EMULATION and _dragging:
+			_cancel_gestures()
+	elif event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		if not touch.pressed and _touches.has(touch.index) \
+			and not _viewer.get_global_rect().has_point(touch.position):
+			_cancel_gestures()
+	if _viewer.has_focus() and _on_viewer_pad(event):
+		get_viewport().set_input_as_handled()
+
+
+func _on_viewer_key(event: InputEventKey) -> bool:
+	if not event.pressed:
+		return false
+	var code := event.physical_keycode if event.physical_keycode != 0 else event.keycode
+	if code == KEY_SPACE:
+		if not event.echo:
+			_toggle_spin()
+		return _can_spin()
+	if not _can_orbit():
+		return false
+	match code:
+		KEY_A: _nudge(AXIS_YAW, -1.0, STEP_SECONDS)
+		KEY_D: _nudge(AXIS_YAW, 1.0, STEP_SECONDS)
+		KEY_W: _nudge(AXIS_PITCH, 1.0, STEP_SECONDS)
+		KEY_S: _nudge(AXIS_PITCH, -1.0, STEP_SECONDS)
+		KEY_PLUS, KEY_EQUAL, KEY_KP_ADD: _nudge(AXIS_ZOOM, 1.0, STEP_SECONDS)
+		KEY_MINUS, KEY_KP_SUBTRACT: _nudge(AXIS_ZOOM, -1.0, STEP_SECONDS)
+		KEY_R, KEY_HOME:
+			_reset_view()
+			return true
+		_: return false
+	_apply_view()
+	return true
+
+
+func _on_viewer_pad(event: InputEvent) -> bool:
+	if event is InputEventJoypadMotion and _can_orbit():
+		var motion := event as InputEventJoypadMotion
+		if motion.axis not in [JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y]:
+			return false
+		var value := motion.axis_value
+		var deadzone := Settings.controller_deadzone()
+		value = 0.0 if absf(value) <= deadzone else (
+			signf(value) * (absf(value) - deadzone) / (1.0 - deadzone)
+		)
+		_pad_orbit[0 if motion.axis == JOY_AXIS_RIGHT_X else 1] = value
+		_sync_interaction()
+		return true
+	if event is not InputEventJoypadButton:
+		return false
+	var button := event as InputEventJoypadButton
+	if not button.pressed:
+		return false
+	if button.button_index == JOY_BUTTON_X:
+		_toggle_spin()
+		return _can_spin()
+	if not _can_orbit():
+		return false
+	match button.button_index:
+		JOY_BUTTON_LEFT_SHOULDER: _nudge(AXIS_ZOOM, -1.0, STEP_SECONDS)
+		JOY_BUTTON_RIGHT_SHOULDER: _nudge(AXIS_ZOOM, 1.0, STEP_SECONDS)
+		JOY_BUTTON_Y:
+			_reset_view()
+			return true
+		_: return false
+	_apply_view()
+	return true
+
+
+func _on_touch(event: InputEventScreenTouch) -> void:
+	if event.canceled:
+		_cancel_gestures()
+		return
+	if event.pressed:
+		_viewer.grab_focus()
+		if event.double_tap and _can_orbit():
+			_cancel_gestures()
+			_reset_view()
+			return
+		if _touches.is_empty():
+			_touch_started = Time.get_ticks_msec()
+			_touch_travel = 0.0
+			_touch_max_count = 0
+		_touches[event.index] = event.position
+		_touch_max_count = maxi(_touch_max_count, _touches.size())
+		_dragging = true
+	elif _touches.has(event.index):
+		_touches.erase(event.index)
+		if _touches.is_empty():
+			var tap := _touch_max_count == 2 \
+				and _touch_travel < TOUCH_TAP_SLOP * _ui_scale \
+				and Time.get_ticks_msec() - _touch_started <= TOUCH_TAP_MSEC
+			_dragging = false
+			if tap:
+				_toggle_spin()
+	_sync_interaction()
+
+
+func _on_touch_drag(event: InputEventScreenDrag) -> void:
+	if not _touches.has(event.index):
+		return
+	var previous := _touches[event.index]
+	var before := _pinch_span()
+	_touches[event.index] = event.position
+	_touch_travel += previous.distance_to(event.position)
+	if not _can_orbit():
+		return
+	if _touches.size() == 2 and before > 0.0:
+		_zoom = clampf(_zoom * _pinch_span() / before, ZOOM_MIN, ZOOM_MAX)
+		_apply_view()
+	elif _touches.size() == 1 and _touch_max_count == 1:
+		_orbit_by(event.relative)
+
+
+func _pinch_span() -> float:
+	if _touches.size() != 2:
+		return 0.0
+	var points := _touches.values()
+	var first: Vector2 = points[0]
+	var second: Vector2 = points[1]
+	return first.distance_to(second)
 
 
 func _orbit_by(relative: Vector2) -> void:
+	if not _can_orbit():
+		return
 	_yaw = wrapf(_yaw + relative.x * DRAG_YAW, -PI, PI)
 	_pitch = clampf(_pitch + relative.y * DRAG_PITCH, PITCH_MIN, PITCH_MAX)
 	_apply_view()
@@ -485,70 +614,53 @@ func _reset_view() -> void:
 	_yaw = 0.0
 	_pitch = 0.0
 	_zoom = 1.0
-	_dragging = false
-
-
-func _apply_view() -> void:
-	if _stage != null and _stage_orbits:
-		_stage.call("set_view", _yaw, _pitch, _zoom)
-
-
-## Reduced motion parks the turntable and says so, rather than leaving a toggle
-## that silently does nothing.
-func _refresh_spin_toggle() -> void:
-	_spin_toggle.visible = _stage_spins or _stage_orbits
-	_spin_toggle.disabled = _reduced_motion
-	_spin_toggle.set_pressed_no_signal(_auto_spin and not _reduced_motion)
-	_spin_toggle.tooltip_text = (
-		"Turned off while Reduced motion is on."
-		if _reduced_motion
-		else "Turn the model slowly on its own."
-	)
-	_spin_toggle.accessibility_description = _spin_toggle.tooltip_text
-	if _stage != null and _stage_spins:
-		_stage.call("set_auto_spin", _spinning())
-
-
-# --------------------------------------------------------------------------
-# Signals
-# --------------------------------------------------------------------------
-
-
-func _on_exhibit_pressed(index: int) -> void:
-	if index == _selected:
-		return
-	_select(index)
-
-
-func _on_reset_pressed() -> void:
-	_reset_view()
 	_apply_view()
 
 
-func _on_spin_toggled(enabled: bool) -> void:
-	_auto_spin = enabled
-	_refresh_spin_toggle()
+func _apply_view() -> void:
+	if _can_orbit():
+		_stage.call("set_view", _yaw, _pitch, _zoom)
 
 
-## An exhibit gated behind an achievement can unlock while the screen is open,
-## because the pause overlay sits on top of a round that is still scoring.
+func _toggle_spin() -> void:
+	if _can_spin() and not _reduced_motion:
+		_auto_spin = not _auto_spin
+		_sync_interaction()
+
+
+func _cancel_gestures() -> void:
+	_dragging = false
+	_pad_orbit = Vector2.ZERO
+	_touches.clear()
+	_sync_interaction()
+
+
+func _on_viewer_focus_entered() -> void:
+	_sync_interaction()
+
+
+func _on_viewer_focus_exited() -> void:
+	_cancel_gestures()
+
+
+func _on_exhibit_pressed(index: int) -> void:
+	if index != _selected and not _buttons[index].disabled:
+		_select(index)
+
+
 func _on_achievement_unlocked(_id: String, _achievement: Dictionary) -> void:
 	var previous := _selected
 	_build_list()
 	if previous >= 0 and previous < _exhibits.size():
 		_select(previous)
-	_attach_generated_sounds.call_deferred()
-
-
-func _attach_generated_sounds() -> void:
-	AudioManager.attach_ui_sounds(self)
+	refresh_layout()
+	_attach_sounds.call_deferred()
 
 
 func _on_setting_changed(key: String, value: Variant) -> void:
-	if key != Settings.REDUCED_MOTION_KEY:
-		return
-	_reduced_motion = bool(value)
-	_refresh_spin_toggle()
+	if key == Settings.REDUCED_MOTION_KEY:
+		_reduced_motion = bool(value)
+		_sync_interaction()
 
 
 func _on_back_pressed() -> void:

@@ -315,8 +315,8 @@ func add_points(game_id: String, amount: int) -> int:
 ## The points a finished round pays out under this game's declared rule.
 ##
 ## [param result] is the shell's round summary (`single_player`, `vs_cpu`,
-## `player_one_score`, `player_two_score`). The best score on the mat is what
-## pays, because both seats of a local duel share one keyboard and one wallet.
+## `player_one_score`, `player_two_score`, optional `player_scores`). The best
+## score across all participants pays into the one shared local wallet.
 ## The win bonus needs an opponent worth beating, so it pays only when the
 ## human beat the CPU: in a two-human match somebody always wins, and in a
 ## round with no opponent at all there is nothing to have won.
@@ -327,6 +327,8 @@ func default_round_points(game_id: String, result: Dictionary) -> int:
 	var player_one := int(result.get("player_one_score", 0))
 	var player_two := int(result.get("player_two_score", 0))
 	var best := maxi(maxi(player_one, player_two), 0)
+	for score: Variant in result.get("player_scores", []):
+		best = maxi(best, int(score))
 	var earned := int(roundf(float(best) * float(rule["points_per_score"])))
 	earned += int(rule["round_bonus"])
 	if bool(result.get("vs_cpu", false)) and player_one > player_two:

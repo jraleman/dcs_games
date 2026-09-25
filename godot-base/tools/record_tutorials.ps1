@@ -23,8 +23,14 @@ param(
     [string] $CaptureResolution = '1280x720',
     [string] $OutputScale = '960:540',
     [int]    $Quality = 7,
-    [ValidateSet('triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess', 'lazer_nfc')]
-    [string[]] $Games = @('triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess', 'lazer_nfc'),
+    [ValidateSet(
+        'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
+        'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials'
+    )]
+    [string[]] $Games = @(
+        'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
+        'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials'
+    ),
     [ValidateSet('solo', 'local')]
     [string[]] $Variants = @('solo', 'local')
 )
@@ -40,6 +46,9 @@ $PosterTimes = @{
     anti_chess       = '9.8'
     anti_chess_local = '9.8'
     lazer_nfc       = '5.0'
+    anti_checkers   = '12.6'
+    creep_code      = '5.2'
+    cube_trials     = '7.0'
 }
 
 # Per-game encoder quality, for clips the shared default does not suit. Chicken
@@ -50,6 +59,9 @@ $PosterTimes = @{
 $Qualities = @{
     chicken_pit = 5
     lazer_nfc = 5
+    anti_checkers = 6
+    creep_code = 5
+    cube_trials = 5
 }
 $QualityWasRequested = $PSBoundParameters.ContainsKey('Quality')
 

@@ -20,6 +20,7 @@ godot --path . -- --game=anti_chess
 godot --path . -- --game=anti_checkers
 godot --path . -- --game=lazer_nfc
 godot --path . -- --game=creep_code
+godot --path . -- --game=cube_trials
 godot --path . -- --game=all            # launch the full collection
 ```
 
@@ -44,11 +45,57 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  game_se
 The title screen offers a single **Play** button. Where it lands depends on
 what the build actually has to offer, and the rule is the same one the rest of
 the framework follows: never ask a question with one answer. With more than one
-game available it opens `scenes/menus/game_select.tscn`, which shows a card per
-game with that game's walkthrough clip running as a moving thumbnail. A
-standalone build — or a collection in which everything else is still locked —
-has nothing to pick, so **Play** selects that game and goes straight on to mode
-select or instructions.
+game available it opens `scenes/menus/game_select.tscn`, where every game stands
+as a cartridge in a long console rack, dressed in its own `GameTheme`. The
+cartridge in hand is lifted out of the rack and its label window plays that
+game's walkthrough clip; choosing it seats it in the slot, as the title screen
+seats its own, before the same setup route. A standalone build — or a
+collection in which everything else is still locked — has nothing to pick, so
+**Play** selects that game and goes straight on to mode select or instructions.
+
+The title screen uses the slim, translucent rows and restrained typography from
+`main-menu.png` and `references.png` at the repository root. The right-hand
+showcase is an original 3D console and cartridge, not a background screenshot:
+**Play** seats the branded cartridge before handing off to the same router.
+Navigation is locked during insertion. Reduced motion uses only a short opacity
+fade, including when enabled partway through the animation. The console moves
+above the actions in portrait; short screens scroll the action list with focus.
+Taglines remain in title tooltips and accessibility descriptions rather than
+adding another paragraph. Store and Gallery still appear only for games that
+declare them.
+
+Menu toggles use compact, translucent tracks and square thumbs rather than the
+old bright pills. Thumb position and check/minus marks distinguish On and Off
+without relying on colour; disabled states are dimmed and focus stays outlined.
+The `MenuToggle` theme role keeps authored Settings rows, game-declared boolean
+options and the instructions preference consistent in every build, while its
+active indicator follows the game's accent. No new motion or setting changes
+are involved.
+
+The picker borrows the title screen's look: the same backdrop, heading, slim
+glass buttons and focus bar, with the backdrop's glow, the focus bar and the
+details taking on the accent of the cartridge in hand.
+Its details strip keeps the one-line tagline and mode chips of that one game,
+below the rack or, on a short landscape screen, beside it; the accessible Play
+button names the game it starts, and only the cartridge in hand shows a preview
+badge. Left and right browse from the cartridge or from Play, so a pad player
+never has to leave the button that starts a game; the rack also follows the
+arrow buttons, a sideways drag and the mouse wheel, and stops at either end.
+Mode select takes the same look through two steps. **Select Mode** offers glass
+cards, each with an icon, a one-line description and a player-count chip such as
+**1 PLAYER** or **2–3 PLAYERS**, under the game's name as an accent eyebrow.
+Setup then lists the **Level**, **Player** and character rows, with any
+declared `icon` art beside a title. For a game with a
+`character_preview_scene_path` it stands the pick on a lit plinth
+(`ui/components/setup_stage.gd`) whose ring wears the seat's colour, beside an
+accent **Start** button. Portrait stacks the rows over the plinth and gives the
+rows the height they need. On a header too narrow for the game's whole name,
+**Details** and **Back** fold down to their icons and keep their words as
+accessible names.
+Mode setup keeps player identities, choices and controller bindings visible;
+**Details** reveals the longer game-authored notes without adding another setup
+step or changing any saved options. Both setup steps scroll when needed, and
+touch-target scaling applies even to games without character or level choices.
 
 ## What's in the box
 
@@ -67,18 +114,21 @@ select or instructions.
 | `autoload/store.gd` | Per-game cosmetics store: wallets, purchases, equipped slots and round payouts, persisted to `user://store.cfg`. |
 | `autoload/share_manager.gd` | Renders reusable 1200×630 session cards, downloads them on web and saves them for desktop sharing. |
 | `autoload/router.gd` | `Router.goto(path)` — scene changes with a fade. Owns the top overlay layer (fade + FPS counter). `start_selected_game()` is the single definition of "begin the selected game", shared by the title screen and the picker. |
-| `scenes/menus/game_select.tscn` | The picker the **Play** button opens: one card per available game, built from `GameCatalog.available()`. Reached only when there is more than one game to choose from. |
+| `scenes/menus/game_select.tscn` | The picker the **Play** button opens: a carousel of cartridges in a console rack, one per available game, built from `GameCatalog.available()`, with the chosen one's details and Play beside or below it. Reached only when there is more than one game to choose from. |
 | `scenes/menus/store.tscn` | The shop: one card per item a game declares in `store_items`, grouped by heading. Reached from the title screen in a standalone build and from the pause menu in any build. |
 | `scenes/menus/gallery.tscn` | The museum: one plinth per entry in `gallery_exhibits`, turned and zoomed on a game-owned stage scene. Reached from the same two places as the store. |
 | `ui/menu_screen.gd` | `MenuScreen` base class: UI sounds, focus handling, `ui_cancel` to go back, responsive margins. |
 | `ui/responsive.gd` | Helpers for margins, portrait detection and content width. |
 | `ui/theme/dcs_theme.tres` | Base buttons, panels, sliders and tabs. A standalone `GameTheme` can recolour it and merge a game-owned partial skin. |
 | `ui/components/background.tscn` | Animated gradient backdrop (shader), aspect-corrected and tinted by the current `GameTheme`. |
+| `ui/components/cartridge_console.gd` | Original menu console, cartridge shell and controller meshes. Exposes insertion progress and a stationary reduced-motion pose; the title screen owns navigation. |
 | `ui/components/achievement_toast.tscn` | Small reusable unlock notification used by `AchievementManager`. |
 | `ui/components/audio_caption.tscn` | Reusable gameplay caption panel for important sound-only events. |
-| `ui/components/game_card.tscn` | One game on the picker: looping muted walkthrough clip as a thumbnail, poster fallback, name, tagline and Play button. A view only — it reads no autoload. |
+| `ui/components/game_card.tscn` | One game on the picker, drawn as a cartridge in that game's `GameTheme`: logo, plaque label, mode chips and a label window that shows the poster and plays the looping, muted walkthrough clip only while it is the cartridge in hand. A view only — it reads no autoload. |
+| `ui/components/cartridge_shelf.gd` | The console rack the picker's cartridges stand in, drawn as a layer behind and a layer in front of them: slots lit in each game's accent, an LED pager, and a power light the seating animation switches on. Either end can run off screen. |
 | `ui/components/store_item_card.gd` | One cosmetic on the shop shelf: preview, price, lock reason and a button per slot it can be worn in. A view only — it reads no autoload and moves no money. |
 | `ui/components/player_avatar.gd` | Drawn placeholder for per-player portrait art; set `portrait` to swap in a real texture. |
+| `ui/components/setup_stage.gd` | The lit plinth mode select stands a game's character preview on: drawn floor, turntable and a ring in the seat's colour, plus a caption naming the pick. It places the preview itself and reads no autoload. |
 | `ui/components/share_card.tscn` | Default score/achievement image; swap it or pass another scene to `ShareManager`. |
 | `ui/components/share_preview.tscn` | Modal generated-image preview with close and open-original actions. |
 | `ui/components/splash_motion.gd` | Lightweight animated geometry for logo stings and splash screens. |
@@ -90,6 +140,7 @@ select or instructions.
 | `games/anti_checkers/` | Anti Checkers: untimed 3D English giveaway checkers, compulsory jump chains, crowned kings, a solo CPU or local turn-taking, and an original garnet/ivory table. |
 | `games/lazer_nfc/` | LaZer NFC: real 3D Simon-style memory combat, Android reader-mode NFC, guided tag binding, assisted touch, seven instruments, shades and relaxed timing. |
 | `games/creep_code/` | Creep Code: one evolving 3D ritual stage with Sliding Window, Binary Search and BFS relics, a growing constellation, permanent seals and a game-local Puzzle Manager. |
+| `games/cube_trials/` | Cube Trials: selectable Cube, Sonata and CR-V models over deterministic side-view suspension physics; solo or two/three-player hot seat, five plugs, four checkpoints, crash-only lives and keyboard/gamepad/multitouch controls. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
 | `tools/record_tutorials.ps1` | Records each game's tutorial clip through Godot's Movie Maker and encodes it to that game's own `games/<id>/assets/video/tutorial.ogv` plus a poster frame. |
 | `tools/measure_intro_cues.py` | Development-only: finds the pauses in a narration recording and prints the `cue_times` array a card-based intro needs. |
@@ -108,7 +159,8 @@ space on the other. Layouts are written in those units and adapt at runtime:
   and visual feedback.
 - **Reduced motion** freezes ambient and decorative movement, removes pulses,
   trails, particles, shake and spatial UI animation, parks the game picker's
-  video thumbnails on their poster frames, and keeps opacity-only fades.
+  label-window clip on its poster frame, stops its rack sliding and bobbing,
+  and swaps its cartridge seating for the same opacity-only fade.
   Essential target, can and player-controlled chainsaw movement remains
   active.
 - **Audio captions** identify correct and wrong targets, countdown cues,
@@ -150,8 +202,8 @@ space on the other. Layouts are written in those units and adapt at runtime:
 - **`MenuScreen.refresh_layout()`** recomputes margins from the live viewport
   on every resize and calls `_on_layout_changed(size)`, which screens override.
   The main menu uses it to switch between a left-aligned poster layout in
-  landscape and a centred stack in portrait, and to tighten spacing on short
-  viewports.
+  landscape and a centred console-above-actions stack in portrait. Its action
+  list follows keyboard/gamepad focus when a short viewport needs scrolling.
 - Long content (the settings tabs, the credits roll) lives in `ScrollContainer`s,
   so nothing is ever unreachable on a small screen.
 - The background shader is driven by `UV` and gets the current aspect ratio from
@@ -234,7 +286,8 @@ back with `Store.equipped_id(game_id(), slot_id)`. See *A store of your own*.
 **Add an exhibit** — add a dictionary to your manifest's `gallery_exhibits` with
 an `id`, `title` and a line or two of `facts`, and teach your
 `gallery_stage_scene_path` scene to draw that id. The plinth, the grouped list,
-the caption and the orbit controls all follow. See *A gallery of your own*.
+the short caption, descriptive tooltips and direct inspection gestures all
+follow. See *A gallery of your own*.
 
 **Share a result** — the round-over **See Scores** button opens the
 scorecard, which renders the share card in place with
@@ -386,6 +439,42 @@ that directory at startup, so **no framework file needs to change** to add one.
      second seat, not `GameSession.is_single_player()`. A game can separately own an intrinsic
      solo CPU: Anti-Chess does, while clearing `supports_cpu_opponent` to keep
      its multiplayer mode exclusively local humans.
+   - `max_local_players` — defaults to 2; set 3 to offer a third local human.
+     Capacity is bounded by the shared blue/red/green player palette. CPU
+     sessions remain two-seat and mobile remains solo. `GameSession.player_count()`
+     reports the active count; `configure_multiplayer(controller, difficulty, players)`
+     accepts the new optional count without changing existing two-argument calls.
+   - `local_multiplayer_turns` — marks a hot-seat game, using one shared set of
+     driving/action keys and an ordered roster in setup and instructions. The
+     game owns turn scheduling and calls the shell's `_end_round()` only after
+     all turns; this flag does not create split-screen or run multiple scenes.
+   - `characters` — an optional `Array[Dictionary]` of stable `id`, `title` and
+     `description` entries. Each human gets a character picker in solo or local
+     setup, including solo-only platforms. `GameSession.character_for_player(index)`
+     returns a defensive copy; `set_character_for_player(index, id)` validates
+     the seat, roster ID and optional `requires_achievement` gate. Locked choices
+     stay listed with `locked_description` help; defaults only use unlocked entries.
+     Choices are session-local, independent and may
+     repeat. Optional `character_preview_scene_path` creates a game-owned
+     `Control` with `configure(Dictionary)`; the entry includes `player_index`,
+     `multiplayer` and `player_color` alongside the character data. The setup
+     screen stands it on its plinth. The rect it is given is twice the
+     plinth's radius wide, at a 1.7:1 aspect, and its bottom edge lies 0.2 of
+     that radius in front of the plinth's centre. Frame the subject to stand on
+     that edge with a little floor margin. The screen sets previews to ignore
+     the mouse.
+   - `levels` — optional `Array[Dictionary]` entries with `id`, `title`,
+     `description`, and the same optional achievement gate as characters.
+     Setup offers one shared level in solo or multiplayer.
+     `GameSession.selected_level()` returns a defensive copy and
+     `set_level(id)` rejects locked or unknown IDs. The choice is session-local;
+     achievements persist unlocks. Games still own terrain and completion rules.
+     Levels and characters may each add an optional `icon`, a texture path the
+     setup row and its list show beside the title. A level still or a
+     character badge suits it. A missing file warns and leaves a text row. The
+     `copy` keys `level_label` and `character_label` rename the rows'
+     headings, for example to "Car"; `mode_select_title` renames the first
+     step.
    - `solo_setup_choices` — keys of this game's declared choice tunables to
      offer in the solo confirmation, before play. Settings remains the source
      of truth. These choices keep setup available even on solo-only platforms;
@@ -437,12 +526,14 @@ that directory at startup, so **no framework file needs to change** to add one.
    replay cycle — no edit needed.
 
 The menus need no edit either. The title screen has a single **Play** button,
-and the picker behind it builds one card from `GameCatalog.available()`, in
+and the picker behind it builds one cartridge from `GameCatalog.available()`, in
 `menu_order`, so a new game appears as soon as its manifest does — and
-disappears again behind an `unlock_rule` until earned. The card's moving
-thumbnail is the same `tutorial_video_path` clip the instructions screen uses,
-falling back to `tutorial_poster_path` and then to a labelled placeholder, so a
-game with no recording yet still gets a card of the right shape.
+disappears again behind an `unlock_rule` until earned. The cartridge wears the
+game's `GameTheme` — logo, accent and plaque label — and its label window plays
+the same `tutorial_video_path` clip the instructions screen uses while it is the
+cartridge in hand, falling back to `tutorial_poster_path` and then to a labelled
+placeholder, so a game with no recording yet still gets a cartridge of the right
+shape. Only the cartridge in hand ever decodes its clip.
 
 ### A store of your own
 
@@ -515,11 +606,13 @@ shop is covered the moment the manifest declares it.
 
 ### A gallery of your own
 
-The gallery is a museum for the models a game is made of: a list of exhibits on
-the left, one of them on a turntable on the right, and a written label under it.
-It exists because a game's art is usually only ever seen at gameplay distance,
-moving, half-occluded — and because "what am I actually looking at" is a fair
-question to be able to answer.
+The gallery gives the models a game is made of room to breathe: a grouped
+exhibit list on the left, a large transparent turntable on the right and just
+the selected exhibit's title beneath it. Portrait layouts put the model first
+and a scrollable exhibit drawer below. There is no on-screen manipulation
+toolbar or persistent instruction paragraph. Full descriptions and facts live
+in the exhibit tooltips and accessibility text; the selected title also offers
+input help on hover, without covering a model as the player inspects it.
 
 Like the store it is pure data, and unlike the store it has **no autoload**: a
 shop has a wallet to protect, a museum has an opening time and a door. Two
@@ -527,10 +620,11 @@ manifest fields turn it on, and both are required:
 
 - **`gallery_exhibits`** — what is on the plinths, in order. Each entry needs an
   `id` (unique within the game) and a `title`. Add `description` and `facts` (an
-  array of short specification lines) for the label, `heading` to group
-  consecutive entries under a subtitle, `badge` and `color` for the fallback art
-  and the list accent, and `requires_achievement` to leave an exhibit **listed
-  but not viewable** until it is earned — a collection reads as something to
+  array of short specification lines) for the tooltips and accessibility text,
+  `heading` to group consecutive entries, `badge` for the text-only fallback,
+  optional game-owned rendering metadata such as `color`, and
+  `requires_achievement` to leave an exhibit **listed but not viewable** until
+  it is earned — a collection reads as something to
   finish rather than something the game is hiding.
 - **`gallery_stage_scene_path`** — the `Control` scene that actually draws a
   model. This is the one piece a game writes itself, because only the game knows
@@ -541,22 +635,26 @@ The stage contract mirrors `share_art_scene_path` and `store_preview_scene_path`
 | Method | Required | Meaning |
 | --- | --- | --- |
 | `configure(exhibit: Dictionary)` | expected | Put this exhibit on the plinth. A stage without it is a mistake the screen survives rather than a crash: `gallery.gd` warns once and falls back to the exhibit's badge. |
-| `set_view(yaw: float, pitch: float, zoom: float)` | no | Yaw and pitch are **offsets in radians from the exhibit's own default framing**; `zoom` is a magnification where `1.0` is that framing. Without it the screen hides the whole controls row rather than showing buttons that do nothing. |
+| `set_view(yaw: float, pitch: float, zoom: float)` | no | Yaw and pitch are **offsets in radians from the exhibit's own default framing**; `zoom` is a magnification where `1.0` is that framing. Without it the screen does not advertise or accept orbit/zoom gestures. |
 | `set_auto_spin(enabled: bool)` | no | The screen has already checked reduced motion before calling. |
 
-Positive yaw walks the camera anticlockwise around the model — the same
-direction a drag to the right does, so the buttons and the mouse can never
-disagree. Positive pitch raises the camera.
+Positive yaw walks the camera anticlockwise around the model, matching a drag
+to the right. Positive pitch raises the camera. The shared screen advances yaw
+for automatic rotation; `set_auto_spin` also notifies stages that have their
+own ambient motion. A stage without either motion method has no inspection
+focus stop or dead gesture hints.
 
-Every orbit action has an on-screen button as well as a drag, a wheel notch and
-a touch drag, because the arrow keys are deliberately **not** bound: `ui_left`
-and friends move menu focus, and a viewer that swallowed them would trap
-keyboard and d-pad players inside the picture with no way out.
+All inspection actions are available directly with the mouse: **drag** to
+rotate, **scroll** to zoom, **double-click** to reset and **right-click** to
+pause/resume auto-spin. Touch supports drag, pinch, double-tap reset and a
+two-finger tap for auto-spin. With the viewer focused, keyboard users have
+W/A/S/D, +/-, R (or Home) and Space; controller users have the right stick,
+shoulders, Y and X respectively. Arrows, d-pad and Tab retain ordinary menu
+navigation, and leaving the viewer or window clears held inspection input.
 
-Reduced motion parks the turntable and **disables** the auto-spin toggle with a
-tooltip saying why, rather than leaving a switch that silently does nothing; the
-player can still turn the model by hand. The `facts` lines are the reason an
-exhibit is never carried by the picture alone.
+Reduced motion parks the turntable and prevents auto-spin from being re-enabled
+until that setting is turned off. The title's tooltip and the viewer's
+accessibility description explain this; manual inspection still works.
 
 `games/chicken_pit/ui/gallery_stage.gd` is the worked example: a request-driven
 `SubViewport` turntable that builds every exhibit from the same `ChickenRig` and
@@ -566,8 +664,9 @@ needs no hand-measured camera distance.
 
 The **Gallery** button follows the store's rule exactly: the title screen of a
 standalone build, and the pause overlay of any build while a round with a
-gallery is running. `tests/gallery_test.gd` walks `GameCatalog.all()`, so your
-museum is covered the moment the manifest declares it.
+gallery is running. `tests/gallery_test.gd` walks `GameCatalog.all()` and covers
+declarations, optional stage methods, direct input, responsive asset space,
+focus scrolling, reduced motion, unlocks and both menu entry points.
 
 ### Chicken Pit — 3D inside the shared shell
 
@@ -807,6 +906,111 @@ continue using the common development profile, just like the other games.
 See `games/creep_code/README.md` for all six puzzle designs, the three
 implemented mechanics, extension points and focused regression commands.
 
+### Cube Trials - the very unreasonable commute
+
+`godot --path . -- --game=cube_trials` launches **Cube Trials**, an original
+**2.5D** physics-driving game inspired by elastic-suspension trials games:
+a real 3D environment and car, with the original side-view controls and rules.
+Start with the **Nissan Cube** on **Level 1 - Copper Creek**. Completing it
+unlocks **Level 2 - Sunset Ridge** and the **Hyundai Sonata**; completing Level 2
+unlocks **Level 3 - Alpine Pass** and the **Honda CR-V**. Choose an unlocked
+level and car in the shared setup screen. All three original, unbranded Blender models are
+playable, with their own proportions, five damage stages, working lights and
+real cabins. Engine power, grip, jump and suspension tuning are shared;
+`vehicle_profiles.gd` supplies each car's physical dimensions and contacts.
+The long, low sedan needs a hop over sharp crests. The three handcrafted
+courses have distinct terrain, signs, pickups, checkpoints and garages:
+Copper Creek has six gaps, Sunset Ridge four and Alpine Pass seven.
+All use the unchanged Compatibility renderer. No Elasto Mania levels,
+code, artwork or audio are included, and the models imply no manufacturer
+affiliation or endorsement.
+
+Play solo or select **two or three local humans**. Hot seat runs **P1 -> P2 -> P3**,
+not simultaneous driving: blue, red and green paint identify the current
+driver. Each player chooses a car and gets a complete, independent five-life
+run. Release-gated handoffs freeze the clock, finishers rank by adjusted time,
+and final standings include everyone. The garage pays once after all turns,
+using the best score. Any finisher earns the selected level's completion unlock
+after the final turn; abandoning a match grants no progression.
+Replay restarts the whole roster on the same level, and **Levels & cars** on
+results returns to setup. Solo retains factory
+or purchased paint; wheel finishes work in both modes. Gallery still shows
+the pristine cars once earned, and each preview/share portrait uses the actual selected model.
+
+Collect all **five numbered spark plugs**, then brake inside the garage.
+Checkpoints only activate when all earlier plugs are collected, so
+a recovery cannot strand a missing pickup across the quarry. Roof strikes and
+falls spend one of five lives and recover automatically while lives remain;
+manual recovery costs time but not a life. Pickups survive recovery, which
+adds **five seconds**. The fifth crash ends that driver's run. The clock starts
+on the first drive, tilt or jump input and pauses with the shared shell.
+There is no time limit; the trial owns its crash-only lives rather than using
+the generic arcade pool (`uses_shell_round_rules = false`).
+
+| Input | Action |
+| --- | --- |
+| W / S | Throttle / reverse |
+| A / D | Tilt nose up / down |
+| Space | Jump; release before the next hop |
+| Shift | Brake |
+| R | Recover to the last checkpoint (+5 seconds) |
+| Escape | Shared pause menu |
+| C / camera icon / gamepad R3 | Cycle Side, Chase and actual-cabin Cockpit |
+| Gamepad RT / LT, left stick, A, B, Y, Start | Throttle / reverse, tilt, jump, brake, recover, pause |
+| On-screen pedals, tilt and jump buttons | Mouse or independent simultaneous touch contacts |
+
+Hot-seat drivers share these rebound keys. A seat uses its assigned controller
+when available, otherwise the first pad can be passed between players.
+
+Keyboard bindings are generated from `cube_trials_options.gd` and can be rebound.
+Its **Game** tab exposes live air-control strength, engine sound and day/night toggles.
+Reduced motion parks clouds, water ripples, pickup/flag motion and dust, and
+removes camera smoothing; driving, wheel rotation, suspension travel and
+necessary camera tracking remain. The shallow-angle camera also keeps the
+quarry landing visible. Intense effects independently suppress tire dust.
+Meaningful sounds also have visible feedback and audio captions.
+
+Gold is an adjusted time of **65 seconds or less**, Silver is **95 or less**,
+and any other finish earns Bronze. Each plug scores 1,000 points; finishing
+adds `max(0, 3000 - ceil(adjusted_seconds * 30))`, plus banked flip points.
+Five persistent achievements reward the three level deliveries, a no-recovery
+run and Gold. Assists do not block achievements. Existing Copper Creek completion
+saves already open Level 2 and the Sonata, but not Level 3 or the CR-V.
+Replay starts fresh runs with the same selected level and cars; settings, achievements
+and garage purchases persist between app sessions.
+
+`course.gd` is the single source of all three routes, pickups, checkpoints and unlock milestones.
+`trial_state.gd` integrates suspension, traction, collision impulses and tilt
+at 120 Hz independently of render FPS, unchanged by the 3D upgrade.
+`course_view.gd` owns an isolated `SubViewport`, three camera modes and
+clipped texture without moving the shared HUD. `world/copper_creek.gd`
+extrudes the exact collision profile, including the open quarry gap;
+`world/cube_model.gd` poses the chassis and both complete axles from that state.
+`world/mesh_builder.gd` batches original geometry into lit surfaces, and
+`cube_art.gd` supplies their palette and daylight. No other game's models or
+helpers are imported. The 3D view uses 4x MSAA and caps its render target to
+1920x1600 while matching the window's physical pixel density.
+
+The share card uses the same car in its own 3D studio viewport. Its icon,
+picker poster and the setup screen's level stills are captures of these actual
+meshes and routes, not a second interpretation of the car. Regenerate them with
+a real graphics window, from `godot-base` (append `--only=levels` for just the
+level stills):
+
+```powershell
+godot --path . --script res://games/cube_trials/tools/capture_art.gd -- --game=cube_trials
+```
+
+The capture tool is development-only and excluded from exports. The game owns
+its meshes, synthesized engine/cues, intro, poster, credits and share art.
+Its manifest supplies all registration; no framework game-name branch is needed.
+
+The **Windows - Cube Trials (standalone)** export uses the `cube_trials` feature
+tag and stable `DeskCanSaw Games/Cube Trials` save directory. The collection
+includes it automatically; existing standalone presets exclude it. As with other
+source launches, `--game=cube_trials` selects the catalog, not a separate save
+profile.
+
 ## Shipping one game on its own
 
 The same project produces the collection build *and* a standalone build of any
@@ -957,7 +1161,7 @@ theme.logo_texture_path = "res://games/dead_metal_jam/assets/game-icon.svg"
 theme.logo_color = Color("ffd34e")
 theme.plaque_color = Color("2a2019")
 theme.accent = Color("ffd34e")        # focus rings, sliders, tabs, menu glow
-theme.light = Color("ffe3a8")         # key light on the plaque
+theme.light = Color("ffe3a8")         # key light on the cartridge
 theme.background_top = Color("241a12")
 theme.background_bottom = Color("0b0806")
 game.theme = theme
@@ -969,14 +1173,15 @@ The shared presentation reads it without naming a game:
   follow the game. An optional `background_material` replaces the shader while
   retaining aspect correction and reduced motion. A gameplay scene can override
   its inherited backdrop with its own art instead.
-- `main_menu.gd` — the rotating plaque takes `logo_texture_path`, tinted with
-  `logo_color`, and its lights and slab take `light` and `plaque_color`. The
-  logo is scaled to span the plaque, so any resolution or aspect fits. Optional
-  `plaque_material` and `menu_motion` customize the surface and interaction feel.
+- `main_menu.gd` — the cartridge takes `logo_texture_path`, tinted with
+  `logo_color`; its label and lights take `plaque_color` and `light`. The
+  logo fits the label at any resolution or aspect. The existing `plaque_material`
+  name is retained for compatibility and still accepts game-owned materials.
+  `menu_motion` controls the subtle idle focus response, never a whole-console spin.
 - `router.gd` — at boot it hands `ThemeDB.get_project_theme()` to
   `GameTheme.restyle()` and puts the result on the root window, which every
   Control inherits. That swaps the studio accent for the game's wherever
-  `dcs_theme.tres` uses it — focus rings, sliders, tab underlines — while
+  `dcs_theme.tres` uses it — focus rings, menu toggles, sliders, tab underlines — while
   leaving spacing, fonts and every neutral shade alone unless the game supplies
   a partial `ui_theme`, which is merged last into an independent runtime copy.
 - `menu_screen.gd` and `game_shell.gd` — both call `GameTheme.restyle_tree()`
@@ -995,11 +1200,11 @@ The optional presentation fields are:
 
 | Field | Contract |
 | --- | --- |
-| `ui_theme: Theme` | Partial widget overrides. `MenuHeading` and `MenuSectionHeading` Label variations distinguish UI typography/colour from body text and player identity. Empty styles and border-only overlays retain their transparency. |
+| `ui_theme: Theme` | Partial widget overrides. `MenuHeading` and `MenuSectionHeading` distinguish headings from body text and player identity. `NavigationButton` and `MenuToggle` keep shared menu actions and switches translucent and square-edged independently of ordinary Button/CheckButton skins; games may explicitly override either role. Empty styles and border-only overlays retain their transparency. |
 | `ui_sounds: GameUISoundBank` | `focus`, `click`, `back`, their dB gains, and `focus_cooldown_ms`. A focus `AudioStreamRandomizer` can provide non-repeating variants. All cues use the existing SFX bus. |
 | `background_material: ShaderMaterial` | Supports `top_color`, `bottom_color`, `glow_color`, `aspect`, and `speed`; zero speed must freeze all decorative motion. Materials are duplicated per screen. |
-| `plaque_material: Material` | Duplicated onto the title plaque; a `StandardMaterial3D` also receives `plaque_color`. |
-| `menu_motion: GameTheme.MenuMotion` | `SPRING` retains the studio animation; `FIRM` uses non-overshooting button transitions and restrained plaque feedback. |
+| `plaque_material: Material` | Duplicated onto the cartridge label; a `StandardMaterial3D` also receives `plaque_color`. Existing declarations need no migration. |
+| `menu_motion: GameTheme.MenuMotion` | `SPRING` allows a small idle cartridge tilt; `FIRM` halves that focus response. Both use the same non-overshooting insertion, stationary console and reduced-motion fade. |
 | `style_share_card: bool` | Opts the shared result card into the payload game's logo, palette and frozen backdrop, including in collection builds. Defaults to `false`, preserving existing cards. |
 
 Share artwork remains game-owned through `GameManifest.share_art_scene_path`:
@@ -1019,10 +1224,10 @@ Each game declares its own standalone look, selected automatically by
 
 | Game | Standalone presentation |
 | --- | --- |
-| Triangle Rush | Mint neon over midnight blue, a rushing-triangle logo, chamfered buttons and panels, triangular toggles, a geometric backdrop and an etched plaque. Keeps the springy arcade menu motion. |
-| Desk-Can-Saw | Safety yellow over warm wood and dark steel, a saw-and-can logo, raised workbench controls, mechanical toggles, pegboard and wood-grain scenery, and a timber plaque. Uses firm menu motion. |
+| Triangle Rush | Mint neon over midnight blue, a rushing-triangle logo, chamfered buttons and panels, a geometric backdrop and an etched cartridge label. Uses a gentle cartridge focus tilt. |
+| Desk-Can-Saw | Safety yellow over warm wood and dark steel, a saw-and-can logo, raised workbench controls, pegboard and wood-grain scenery, and a timber cartridge label. Uses firm menu motion. |
 | Dead Metal Jam | Amber stage lights over cold steel, textured metal plates, condensed headings and mechanical menu cues. Uses firm menu motion. |
-| Chicken Pit | Cream and gold over turf shadow, barn-red boards, fairground bunting and an original full-colour toy-farm cover. Its share card uses the same frozen backdrop and portrait with pull/notch captions. Keeps the springy menu motion. |
+| Chicken Pit | Cream and gold over turf shadow, barn-red boards, fairground bunting and an original full-colour toy-farm cover. Its share card uses the same frozen backdrop and portrait with pull/notch captions. Uses a gentle cartridge focus tilt. |
 | Anti-Chess | Jade, parchment and brass, an original chess crest, a restrained checkerboard backdrop and firm menu motion. The short opening teaches the reversed objective; scorecards use its own chess artwork. |
 | Anti Checkers | Garnet, ivory and warm brass, original turned-checker artwork, a subdued checkered backdrop and firm menu motion. Its opening explains forced jumps and crowning; scorecards show both sides' giveaway totals. |
 
@@ -1185,16 +1390,25 @@ all drawn procedurally. Chainsaw motors, startup revs, cuts and dropped-can
 clatter are synthesized at runtime and routed through the existing SFX bus.
 
 Mode selection uses a two-step setup: choose single player or multiplayer, then
-confirm the controller assignment. Each mode card names its roster with labelled
-`P1`/`P2`/`CPU` chips, the chosen card keeps a **SELECTED** badge and a one-line
-summary of what pressing Start would launch, and the confirmation step tags both
-seats with a `PlayerAvatar` portrait placeholder plus a **HUMAN**/**CPU** role.
+confirm the roster, any declared level and characters and the controller
+assignment. **Back** on the second step returns to the first.
+Games opt into a third seat with `max_local_players = 3`; the count selector,
+green P3 card, instructions and results appear only for those games. Existing
+games remain two-player by default. Optional third-seat copy uses
+`player_three_control_description` and `instructions_player_three_controls`.
+Each mode card states its player count in a chip, so it never rests on its icon
+alone, and **Details** adds its labelled `P1`/`P2`/`CPU` roster. The chosen
+card keeps a **SELECTED** badge and a one-line summary of what pressing Start
+would launch, and the confirmation step tags every seat with a `PlayerAvatar`
+portrait placeholder plus a **HUMAN**/**CPU** role.
 The Player 2 seat is picked with an explicit two-option control —
 **A Second Player** or **The CPU** — rather than an unlabelled switch. The armed
 option carries a tick in its own label so the answer survives a greyscale screen,
 a sentence underneath restates the choice in plain words, and the target-game
 CPU difficulty row lives inside the same card because it only applies to one
-of the two answers. Multiplayer defaults to the CPU when the manifest offers
+of the two answers. The two options stack on a screen too narrow to show both
+in full with a tick, so arming one never reflows the pair.
+Multiplayer defaults to the CPU when the manifest offers
 one, so a lone player can start without finding a second person first.
 Target-game CPU opponents offer Easy
 (Baby seed), Medium (Hard seed) and Hard (Impossible seed) profiles, which adjust
@@ -1209,30 +1423,63 @@ only. Games may declare `solo_setup_choices` to ask meaningful questions before
 a solo round: Anti-Chess uses this for White/Black without presenting a second
 CPU/human question. Choices remain available when multiplayer is unavailable.
 
+`scripts/player_identity.gd` provides the shared P1/P2/P3 colors and labels.
+`GameSession.player_name(index)`, `player_color(index)` and
+`controller_assignments_changed` expose the same identities and assignments
+to game-owned UI. Opt-in target games get P3's default **4 / 5 / 6** actions;
+legacy target games retain their six actions and saved key bindings.
+`Settings.CONTROL_ACTIONS` remains the original six; use
+`control_actions_for_player(index)` for capacity-aware input.
+
+`GameShell` preserves `PLAYER_COUNT = 2`, the P1/P2 node aliases and existing
+two-score hook signatures for compatibility. New games use
+`_active_player_indices()`, `_active_scores()` and `player_stats_panel(index)`
+instead of assuming that constant describes the current roster. HUD, lives,
+results, statistics, replay and sharing include every active seat. Round/share
+data adds complete `player_scores`/`score_values`, names, colors and count,
+while retaining the original first-two-score fields. The default Store payout
+considers all scores once, rather than awarding one wallet grant per player.
+
 Where the player count has only one answer — a game that clears
 `supports_single_player`, or a gated game with a single unlocked route — the
-step collapses: the screen opens on the confirmation with no stepper and no
-**Change Mode** button, and **Back** leaves for the game picker rather than
-returning to a question with one option. Chicken Pit uses this; both ends of
+step collapses: the screen opens on the confirmation with no stepper, and
+**Back** leaves for the game picker rather than returning to a question with
+one option. Chicken Pit uses this; both ends of
 its rope are always pulled, so only *who plays as Player 2* was ever a choice.
 
-The instructions screen is shown after mode selection by default. Its
-**Show instructions when starting a mode** toggle is persisted, and the same
+The instructions screen is shown after mode selection by default. Its compact
+**Show on start** toggle keeps the existing `game/show_instructions` preference;
+its tooltip and accessibility name retain the full explanation. The same
 preference can be restored under **Settings → Gameplay**.
 
-It leads with a captioned walkthrough clip of a real round of the selected game
-(`games/<id>/assets/video/tutorial.ogv`), which takes roughly two thirds of the body
-width so the round is actually readable, alongside the control cards and rules
-summary. A manifest's optional local video/poster overrides select footage for
+The opening view gives the captioned gameplay walkthrough
+(`games/<id>/assets/video/tutorial.ogv`) the whole content area, fitted at 16:9
+without cropping. Only the game/mode, selected side or level/character roster,
+time and Restart sit around it. **Guide** replaces the video with a scrollable
+briefing containing the complete manifest headline, summary, per-player controls
+and rules; **Watch** returns to the clip. Reading pauses hidden playback and
+returning resumes it only if it was running before and Reduced motion is off.
+An explicit pause stays paused. No game-specific text is discarded or guessed
+from another game's rules.
+Back, Guide/Watch, the preference and Start stay outside the scrolling content.
+Controls and text use physical UI units, including on the expanded phone canvas,
+and still honor the player's UI scale. Player cards stack when space is limited.
+
+All nine current games ship a recording and matching poster. A manifest's
+optional local video/poster overrides select footage for
 human-vs-human play; Anti-Chess uses a separate overhead walkthrough.
 Playback starts automatically and repeats on a loop so a viewer can keep
-watching without hunting for the replay button. It can be paused, restarted or
-toggled by clicking the picture. **Reduced motion** opts out of both: an
+watching without replaying it manually. There are no separate Play/Pause
+buttons: click or tap the picture, or focus it and press keyboard/controller
+confirm, to pause or resume. A focus outline and accessible help make that
+interaction discoverable; **Restart** still rewinds the clip.
+**Reduced motion** opts out of autoplay and looping: an
 endlessly restarting clip is exactly the kind of unrequested repeated movement
 that setting exists to suppress, so the clip parks on its poster with an explicit
 **Watch again** prompt instead. If a
-clip is missing the card disappears and the screen falls back to the static
-explanation, so the scene is safe to ship without the videos.
+clip is missing, the full guide opens immediately and there is no dead Watch
+button, so a game can still be authored without footage. Live Reduced motion
+changes stop automatic playback and cancel a pending resume from the guide.
 
 Each control card is headed by a portrait placeholder
 (`ui/components/player_avatar.gd`) tagged **P1**, **P2** or **CPU**, tinted with
@@ -1244,11 +1491,17 @@ portrait needs and there are no throwaway art files to maintain. Assign the
 component's `portrait` texture — or pass one to `configure()` — once real art
 exists and it renders in the same box; no screen has to change to adopt it. A
 scene that authors its own `custom_minimum_size` keeps it, so the same
-placeholder can sit at 64 px in a mode card and 76 px on an instructions card.
+placeholder can sit at 64 units in a mode card and 48 in the instructions guide.
 The
 tag is drawn onto the placeholder so a card never identifies its player by
 colour alone, and it is mirrored into `accessibility_description` for screen
 readers.
+
+`instructions_video_test.gd` checks the quiet opening, guide disclosure,
+preserved playback state, native mouse/touch/confirm input, missing-media
+fallback and all nine game themes at desktop, phone, short-landscape,
+ultrawide and enlarged-UI sizes. Run it with a real graphics window and
+`--instructions-capture-dir=<absolute directory>` after `--` to save both views.
 
 Re-record the clips after changing gameplay visuals or the tutorial captions:
 
@@ -1280,6 +1533,15 @@ variants become `tutorial.ogv` and `tutorial_local.ogv` in that game's own
 without touching
 other games' clips. The driver uses real legal moves and explicitly labelled
 practice positions to teach compulsory captures, promotion and giveaway wins.
+Anti Checkers, Creep Code and Cube Trials supply the same game-owned driver
+interface. Their takes cover a labelled checkers jump-chain/crowning/giveaway
+lesson, the complete six-relic ritual, and a real driving segment with jumps,
+checkpoints, all three cameras and recovery respectively. Cube Trials demonstrates
+the delivery goal without pretending to complete the course. Drivers feed the
+real scene's input paths and reject takes that miss their required milestones.
+The optional `_set_capture_inset(bottom)` hook reserves room for captions without
+changing normal play. Record only one game's footage with, for example,
+`pwsh tools\record_tutorials.ps1 -Godot godot -Games creep_code`.
 Captures use a unique temporary directory and isolated user profile per recording
 invocation, and only completed encodes replace the shipped media.
 Recording overrides never persist to the player's settings.
@@ -1301,7 +1563,7 @@ purchases out of a shared `user://`. The gallery writes nothing at all — a
 museum has nothing to remember, so its only state is the manifest and whichever
 achievements have opened its gated exhibits.
 
-Focused regression checks can be run headlessly. The **12 framework suites**
+Focused regression checks can be run headlessly. The **14 framework suites**
 in `tests/` cover the shell, the menus and every game the catalog discovers:
 
 ```bash
@@ -1313,17 +1575,29 @@ godot --headless --path . --script res://tests/game_select_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
 godot --headless --path . --script res://tests/instructions_video_test.gd -- --game=all
 godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
+godot --headless --path . --script res://tests/local_players_test.gd -- --game=all
+godot --headless --path . --script res://tests/main_menu_test.gd -- --game=all
 godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
 godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
 godot --headless --path . --script res://tests/store_test.gd -- --game=all
 godot --headless --path . --script res://tests/visual_effects_test.gd -- --game=all
 ```
 
-Each game owns the rest under `games/<id>/tests/` — 45 of them at the time of
-writing, spread across Dead Metal Jam (14), Chicken Pit (9), LaZer NFC (9),
-Anti-Chess (8), Anti Checkers (4), Desk-Can-Saw (2) and Triangle Rush (1).
-Counts drift as games grow, so enumerate the folders rather than trusting a
-list. `*_fixture.gd` files are helpers, not suites:
+Each game owns the rest under `games/<id>/tests/`. Counts drift as games grow,
+so enumerate the folders rather than trusting a list. Cube Trials owns
+`cube_trials_test.gd` (fixed-step physics, recoveries and a complete input-only
+drive), `cube_trials_scene_test.gd` (live rebinding, multitouch, pause, assists,
+results and achievements), `cube_trials_3d_test.gd` (volumetric bodywork, normals,
+wheel/strut poses, exact terrain alignment, 3D pickups and effects),
+`reference_models_test.gd` (all exported model contracts),
+`cube_trials_multiplayer_test.gd` (every playable car, real deliveries,
+independent turns, handoffs, standings and one payout), and the three graphical
+suites below. `cube_trials_levels_test.gd` requires a fresh isolated profile
+and covers new-route drives, geometry, sequential car/level unlocks, failed and
+abandoned runs, hot-seat progression, replay and save reloads.
+`tests/local_players_test.gd` checks opt-in capacity, gated characters and levels,
+controllers, generated P3 UI, key binding compatibility, lives and share data.
+`*_fixture.gd` files are helpers, not suites:
 
 ```powershell
 Get-ChildItem tests\*.gd, games\*\tests\*.gd |
@@ -1342,9 +1616,17 @@ rebound action hints and style-specific controller rows without saving settings;
 it also supports standalone launches. `single_game_test.gd` passes in both,
 so a standalone build can still verify its own path. It exercises each declared
 theme on the real title screen: logo tint, widget skin, flat-button text contrast,
-plaque materials, backdrop aspect correction and the reduced-motion switch.
+cartridge-label materials, backdrop aspect correction and the reduced-motion switch.
+`main_menu_test.gd` checks real menu layouts and 44px touch targets from a
+320px phone to ultrawide, optional setup details, insertion before routing,
+duplicate-input guards, standalone/collection destinations and reduced motion
+both before and during launch. `game_select_test.gd` does the same for the
+picker's rack: a cartridge per available game, browsing by key, pad, arrow,
+drag and wheel that stops at either end, a single live preview, layouts from a
+portrait phone to ultrawide, and a seating (or reduced-motion fade) that starts
+the game exactly once.
 
-Five game-owned suites need a **real graphics window** and deliberately exit 1
+Eight game-owned suites need a **real graphics window** and deliberately exit 1
 under `--headless`, where they guard `DisplayServer.get_name() == "headless"`
 and say so. Run them without `--headless`, and never read their headless exit
 code as a regression:
@@ -1363,6 +1645,18 @@ code as a regression:
   rotating portraits and responsive shop with native-size text/touch controls.
   Optional `--creep-capture-dir=<absolute directory>` saves actual gameplay
   and intro frames.
+- `games/cube_trials/tests/cube_trials_view_test.gd` — actual 3D geometry and brown bodywork,
+  landscape/portrait/ultrawide layouts, minimum physical touch-target sizes,
+  an input-driven quarry jump, results, 3D share art and the standalone title.
+  It also measures the real viewport's 200-draw/120,000-triangle budget.
+  Optional `--cube-capture-dir=<absolute directory>` saves rendered examples.
+- `games/cube_trials/tests/cube_trials_camera_test.gd` — all perspectives,
+  full-course framing, each damaged cockpit and night parking. Run separately
+  with `--cube-vehicle=cube_car`, `cube_sonata` and `cube_crv`. Select a route with
+  `--cube-level=copper_creek`, `sunset_ridge` or `alpine_pass`.
+- `games/cube_trials/tests/cube_trials_multiplayer_view_test.gd` — routed
+  gated level/character selection, blue/red/green car previews, handoffs and complete
+  three-player HUDs, results and share image. Requires a fresh isolated profile.
 
 Run tests sequentially and use an isolated user profile for host tests that
 exercise persistence or complete real rounds.

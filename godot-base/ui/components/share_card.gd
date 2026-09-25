@@ -72,7 +72,9 @@ func configure(data: Dictionary) -> void:
 	_challenge.text = str(
 		data.get("challenge", _challenge_text(data, score))
 	).to_upper()
-	_score_caption.text = str(data.get("score_caption", "FINAL SCORE")).to_upper()
+	var default_caption := "FINAL SCORE / P1 / P2 / P3" \
+		if int(data.get("player_count", 2)) > 2 else "FINAL SCORE"
+	_score_caption.text = str(data.get("score_caption", default_caption)).to_upper()
 	_score.text = score
 	_accuracy.text = str(data.get("accuracy", "0%"))
 	_hits.text = str(data.get("hits", "0"))
@@ -112,7 +114,7 @@ func configure(data: Dictionary) -> void:
 	)
 	_score.add_theme_font_size_override(
 		"font_size",
-		82 if score.length() <= 8 else 66
+		48 if int(data.get("player_count", 2)) > 2 else 82 if score.length() <= 8 else 66
 	)
 	queue_redraw()
 

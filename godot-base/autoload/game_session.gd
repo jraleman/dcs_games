@@ -9,6 +9,10 @@ extends Node
 ## Emitted when the first pad is plugged in or the last one is unplugged, so
 ## screens can add or drop their controller copy without polling.
 signal gamepad_availability_changed(available: bool)
+## Seat assignments can change even while at least one pad remains connected.
+signal controller_assignments_changed
+
+const Identity = preload("res://scripts/player_identity.gd")
 
 enum GameMode { SINGLE_PLAYER, MULTIPLAYER }
 enum PlayerTwoController { HUMAN, CPU }
@@ -49,9 +53,12 @@ const CPU_PROFILES := {
 var game_mode := GameMode.SINGLE_PLAYER
 var player_two_controller := PlayerTwoController.HUMAN
 var cpu_difficulty := CpuDifficulty.MEDIUM
+var multiplayer_player_count := 2
 var _controller_devices: Array[int] = [-1, -1]
 var _controllers_assigned := false
 var _gamepad_available := false
+var _characters_by_game: Dictionary = {}
+var _levels_by_game: Dictionary = {}
 
 
 func _ready() -> void:
@@ -67,7 +74,7 @@ func gamepad_connected() -> bool:
 
 
 ## Plugging a pad in mid-session also re-seats the per-player assignments, so
-## Controller 1 / Controller 2 stay correct without restarting the round.
+## Every declared seat keeps the correct controller without restarting the round.
 func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
 	assign_connected_controllers()
 	var available := gamepad_connected()
@@ -113,12 +120,14 @@ func single_player_offered() -> bool:
 func configure_single_player() -> void:
 	game_mode = GameMode.SINGLE_PLAYER
 	player_two_controller = PlayerTwoController.HUMAN
+	multiplayer_player_count = 2
 	assign_connected_controllers()
 
 
 func configure_multiplayer(
 	controller: int,
-	difficulty: int = CpuDifficulty.MEDIUM
+	difficulty: int = CpuDifficulty.MEDIUM,
+	players: int = 2
 ) -> void:
 	if not multiplayer_available():
 		push_warning("Multiplayer is unavailable on mobile; using single player.")
@@ -129,9 +138,148 @@ func configure_multiplayer(
 		controller = PlayerTwoController.HUMAN
 	game_mode = GameMode.MULTIPLAYER
 	player_two_controller = controller
+	multiplayer_player_count = clampi(players, 2, maximum_local_players())
+	if multiplayer_player_count != players:
+		push_warning("Requested %d players; this game supports up to %d." % [
+			players, maximum_local_players(),
+		])
 	if controller == PlayerTwoController.CPU:
+		if multiplayer_player_count != 2:
+			push_warning("The CPU opponent occupies a two-player session.")
+			multiplayer_player_count = 2
 		cpu_difficulty = _validated_cpu_difficulty(difficulty)
 	assign_connected_controllers()
+
+
+## The base's identity palette and the game's declared capability bound setup.
+func maximum_local_players() -> int:
+	var manifest := GameCatalog.current()
+	return clampi(manifest.max_local_players if manifest else 2, 2, Identity.COLORS.size())
+
+
+## Active seats, while retaining the existing single/multiplayer mode API.
+func player_count() -> int:
+	return clampi(multiplayer_player_count, 2, maximum_local_players()) \
+		if player_two_enabled() else 1
+
+
+## Games may use the shared setup to describe one-at-a-time local play.
+func takes_turns() -> bool:
+	var manifest := GameCatalog.current()
+	return player_two_enabled() and manifest != null and manifest.local_multiplayer_turns
+
+
+## Numbered human identity, or the existing CPU label for the second seat.
+func player_name(player_index: int) -> String:
+	return player_two_name() if player_index == 1 else Identity.name_for(player_index)
+
+
+## A stable tint for each seat, including the green third player.
+func player_color(player_index: int) -> Color:
+	return Identity.color(player_index)
+
+
+## Character entries remain game-owned data, never framework model paths.
+func character_options() -> Array[Dictionary]:
+	var manifest := GameCatalog.current()
+	return manifest.characters if manifest else []
+
+
+func level_options() -> Array[Dictionary]:
+	var manifest := GameCatalog.current()
+	return manifest.levels if manifest else []
+
+
+func setup_option_is_unlocked(option: Dictionary) -> bool:
+	var requirement := str(option.get("requires_achievement", ""))
+	return requirement.is_empty() or AchievementManager.is_unlocked(requirement)
+
+
+func setup_option_requirement(option: Dictionary) -> String:
+	if setup_option_is_unlocked(option):
+		return ""
+	var achievement := AchievementManager.get_achievement(str(option["requires_achievement"]))
+	return str(option.get("locked_description",
+		"Earn %s." % str(achievement.get("title", option["requires_achievement"]))))
+
+
+func selected_level() -> Dictionary:
+	var options := level_options()
+	if options.is_empty():
+		return {}
+	var game := GameCatalog.current_id()
+	var selected := str(_levels_by_game.get(game, ""))
+	var available: Array[Dictionary] = []
+	for option in options:
+		if not setup_option_is_unlocked(option):
+			continue
+		if str(option["id"]) == selected:
+			return option.duplicate(true)
+		available.append(option)
+	if not selected.is_empty():
+		push_warning("Previously selected level '%s' is locked or unavailable." % selected)
+		_levels_by_game.erase(game)
+	if available.is_empty():
+		push_error("The selected game has no unlocked level.")
+		return {}
+	return available[0].duplicate(true)
+
+
+func set_level(level_id: String) -> void:
+	for option in level_options():
+		if str(option["id"]) != level_id:
+			continue
+		if not setup_option_is_unlocked(option):
+			push_warning("Level '%s' is locked. %s" % [level_id, setup_option_requirement(option)])
+			return
+		_levels_by_game[GameCatalog.current_id()] = level_id
+		return
+	push_warning("Unknown level '%s' for the selected game." % level_id)
+
+
+## Returns a copy so preview widgets cannot mutate the manifest's catalogue.
+func character_for_player(player_index: int) -> Dictionary:
+	assert(player_index >= 0 and player_index < maximum_local_players(), "Unknown character seat.")
+	var options := character_options()
+	if options.is_empty():
+		return {}
+	var choices: Dictionary = _characters_by_game.get(GameCatalog.current_id(), {})
+	var selected := str(choices.get(player_index, ""))
+	var available: Array[Dictionary] = []
+	for option: Dictionary in options:
+		if not setup_option_is_unlocked(option):
+			continue
+		if str(option["id"]) == selected:
+			return option.duplicate(true)
+		available.append(option)
+	if not selected.is_empty():
+		push_warning("Previously selected character '%s' is locked or unavailable." % selected)
+		choices.erase(player_index)
+	if available.is_empty():
+		push_error("The selected game has no unlocked character.")
+		return {}
+	return available[mini(player_index, available.size() - 1)].duplicate(true)
+
+
+## Each player may choose any unlocked character, including another player's choice.
+func set_character_for_player(player_index: int, character_id: String) -> void:
+	if player_index < 0 or player_index >= maximum_local_players():
+		push_warning("Unknown character seat %d." % player_index)
+		return
+	for option: Dictionary in character_options():
+		if str(option["id"]) != character_id:
+			continue
+		if not setup_option_is_unlocked(option):
+			push_warning("Character '%s' is locked. %s" % [
+				character_id, setup_option_requirement(option),
+			])
+			return
+		var game := GameCatalog.current_id()
+		var choices: Dictionary = _characters_by_game.get(game, {})
+		choices[player_index] = character_id
+		_characters_by_game[game] = choices
+		return
+	push_warning("Unknown character '%s' for the selected game." % character_id)
 
 
 func multiplayer_available() -> bool:
@@ -155,6 +303,10 @@ func mode_title() -> String:
 		return "Single Player"
 	if player_two_is_cpu():
 		return "Multiplayer vs CPU (%s)" % cpu_difficulty_title()
+	if takes_turns():
+		return "Hot Seat (%d players)" % player_count()
+	if player_count() > 2:
+		return "Local Multiplayer (%d players)" % player_count()
 	return "Local Multiplayer"
 
 
@@ -195,16 +347,19 @@ func controller_player_index(device: int) -> int:
 
 
 func assign_connected_controllers() -> void:
-	for player_index in range(_controller_devices.size()):
-		_controller_devices[player_index] = controller_device_for_player_from_devices(
-			player_index,
-			Input.get_connected_joypads()
-		)
+	var assignments: Array[int] = []
+	var devices := Input.get_connected_joypads()
+	for player_index in maximum_local_players():
+		assignments.append(controller_device_for_player_from_devices(player_index, devices))
+	var changed := assignments != _controller_devices or not _controllers_assigned
+	_controller_devices = assignments
 	_controllers_assigned = true
+	if changed:
+		controller_assignments_changed.emit()
 
 
 func ensure_controller_assignments() -> void:
-	if not _controllers_assigned:
+	if not _controllers_assigned or _controller_devices.size() != maximum_local_players():
 		assign_connected_controllers()
 
 
@@ -232,8 +387,10 @@ static func controller_player_index_from_assignments(
 	device: int,
 	assignments: Array[int]
 ) -> int:
+	if device < 0:
+		return -1
 	var assignment := assignments.find(device)
-	return assignment if assignment == 0 or assignment == 1 else -1
+	return assignment if assignment >= 0 else -1
 
 
 func cpu_profile(difficulty: int = -1) -> Dictionary:

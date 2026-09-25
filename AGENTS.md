@@ -9,7 +9,7 @@ plus the games built on it. The base ships everything a game needs *before* it
 is a game: studio sting, intro, main menu, persistent settings, credits, pause
 overlay, achievements, responsive UI, share-image generation and audio.
 
-Eight games currently live in it:
+Nine games currently live in it:
 
 | Game | ID | Folder | Control style |
 | --- | --- | --- | --- |
@@ -21,6 +21,7 @@ Eight games currently live in it:
 | Anti Checkers | `anti_checkers` | `godot-base/games/anti_checkers/` | `custom_keys` |
 | LaZer NFC | `lazer_nfc` | `godot-base/games/lazer_nfc/` | `custom_keys` |
 | Creep Code | `creep_code` | `godot-base/games/creep_code/` | `custom_keys` |
+| Cube Trials | `cube_trials` | `godot-base/games/cube_trials/` | `custom_keys` |
 
 > Anti-Chess and Anti Checkers are giveaway board games. They set
 > `uses_shell_round_rules = false` — they end by their own rules, not on the
@@ -49,6 +50,30 @@ Eight games currently live in it:
 > from a single bird to the whole showground, all built by the same `ChickenRig`
 > and `Scenery` calls the match uses.
 
+> Cube Trials is an original 2.5D suspension-driving trial with playable
+> Nissan Cube, Hyundai Sonata and Honda CR-V models. It opts into character
+> selection and two/three-human hot seat: complete runs in P1/P2/P3 order,
+> with blue/red/green paint, not simultaneous driving or split-screen.
+> Three handcrafted courses, Copper Creek, Sunset Ridge and Alpine Pass, use a node-free 120 Hz
+> sprung-chassis model and a real, isolated 3D viewport under the shared HUD.
+> Its rounded car model, four tires, animated suspension, terrain, pines, signs,
+> quarry water and service garage are original game-owned meshes; the same car
+> also renders its share portrait and promotional PNGs. It declares
+> `uses_shell_round_rules = false`: collect five spark plugs and park in the
+> garage, with per-route checkpoints, five crash-only lives and a five-second
+> penalty per recovery. Each driver has an independent run; results and one
+> shared payout wait until the final turn. Vehicle profiles change authored
+> dimensions and contacts, not the shared engine, grip, springs or jump tuning.
+> Level 1 completion unlocks Level 2 and the Sonata; Level 2 completion unlocks
+> Level 3 and the CR-V. The shared manifest-driven level/character selectors
+> enforce achievement gates; the game owns route geometry and completion.
+> Keyboard, gamepad and independent multitouch contacts share the same physics.
+> Keep its course, `world/` models, synthesized audio and tests in its own folder.
+> Its `assets/levels/` stills, shown as each level's setup `icon`, are captured
+> from the real routes by `tools/capture_art.gd` (`--only=levels` refreshes them).
+> The renderer is still `gl_compatibility`; do not change the physics or add
+> framework game-name branches to change its presentation.
+
 > Triangle Rush and Desk-Can-Saw were previously `target_rush` and
 > `slice_and_slash`. Those ids are gone — no alias, no migration — so a
 > `user://` written by an older build keeps its progress under the old strings
@@ -73,7 +98,9 @@ godot-base/
                            #   GameTheme, GameShell, ShareQrCode, GameUiSoundBank
                            #   (class_name globals, not autoloads)
   ui/                      # MenuScreen, Responsive, theme, reusable components
-                          #   (incl. GameCard, the picker's video thumbnail)
+                          #   (incl. GameCard, the picker's cartridge,
+                          #   cartridge_shelf.gd, the console rack it stands in,
+                          #   and setup_stage.gd, mode select's preview plinth)
   scenes/boot/             # studio_logo, intro
   scenes/game/             # game_shell.tscn — the round/HUD scene games inherit
   scenes/menus/           # main_menu, game_select, mode_select, instructions,
@@ -88,9 +115,9 @@ godot-base/
                            #   asset lives in that game's own folder
 ```
 
-Six game folders are **Git submodules** (`anti_checkers`, `anti_chess`,
-`chicken_pit`, `creep_code`, `dead_metal_jam`, `lazer_nfc`); `desk_can_saw`
-and `triangle_rush` are plain folders in this repository. Clone with
+Seven game folders are **Git submodules** (`anti_checkers`, `anti_chess`,
+`chicken_pit`, `creep_code`, `cube_trials`, `dead_metal_jam`, `lazer_nfc`);
+`desk_can_saw` and `triangle_rush` are plain folders in this repository. Clone with
 `git clone --recurse-submodules`, or run `git submodule update --init` in an
 existing checkout. A change that spans a submodule and the host is two commits:
 one inside the game repository, then the updated gitlink here.
@@ -108,7 +135,7 @@ godot --headless --path . --import   # reimport assets and refresh the class cac
 ```
 
 Tests are standalone headless `SceneTree` scripts, run one at a time. There are
-**12 framework suites** in `godot-base/tests/`, and every one must exit 0:
+**14 framework suites** in `godot-base/tests/`, and every one must exit 0:
 
 ```bash
 godot --headless --path . --script res://tests/accessibility_test.gd -- --game=all
@@ -119,6 +146,8 @@ godot --headless --path . --script res://tests/game_select_test.gd -- --game=all
 godot --headless --path . --script res://tests/game_shell_test.gd -- --game=all
 godot --headless --path . --script res://tests/instructions_video_test.gd -- --game=all
 godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
+godot --headless --path . --script res://tests/local_players_test.gd -- --game=all
+godot --headless --path . --script res://tests/main_menu_test.gd -- --game=all
 godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
 godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
 godot --headless --path . --script res://tests/store_test.gd -- --game=all
@@ -138,6 +167,7 @@ games grow — enumerate the folder rather than trusting a number here:
 | `desk_can_saw` | 2 | round logic, scene |
 | `triangle_rush` | 1 | declared options |
 | `creep_code` | 5 | pure puzzles, toy geometry, expedition, outfit store, 3D layout |
+| `cube_trials` | 9 | physics/profiles, input/turns, level progression, GLB/3D geometry, rendered layouts/cameras/hot seat |
 
 Run everything (PowerShell), skipping `*_fixture.gd`, which are helpers rather
 than suites:
@@ -152,13 +182,21 @@ Get-ChildItem tests\*.gd, games\*\tests\*.gd |
   }
 ```
 
-**Five suites require a real graphics window and exit 1 under `--headless`**
+**Eight suites require a real graphics window and exit 1 under `--headless`**
 by design — they guard `DisplayServer.get_name() == "headless"` and say so.
 Run them without `--headless`, and do not treat their headless exit code as a
 regression: `anti_chess/tests/board_view_test.gd`,
 `anti_checkers/tests/board_view_test.gd`, `chicken_pit/tests/pit_view_test.gd`,
-`lazer_nfc/tests/lazer_nfc_layout_test.gd` and
-`creep_code/tests/observatory_view_test.gd`.
+`lazer_nfc/tests/lazer_nfc_layout_test.gd`,
+`creep_code/tests/observatory_view_test.gd` and
+`cube_trials/tests/cube_trials_view_test.gd`,
+`cube_trials/tests/cube_trials_camera_test.gd` and
+`cube_trials/tests/cube_trials_multiplayer_view_test.gd`.
+Run the camera suite for `--cube-vehicle=cube_car`, `cube_sonata` and `cube_crv`;
+all three must retain a real, unobstructed cockpit through every damage stage.
+Use `--cube-level=sunset_ridge` or `--cube-level=alpine_pass` for the new routes.
+The level progression and multiplayer view suites require a fresh isolated
+user profile so their initial locked-state assertions remain meaningful.
 
 `tests/game_shell_test.gd` iterates `GameCatalog.all()`, so every game is
 covered automatically — do not add a per-game copy of it. `tests/game_options_test.gd`
@@ -175,16 +213,19 @@ game's Controls and Game tabs, that the credits roll is that game's own
 while a collection build points at each game instead, and that a declared
 `GameTheme` reaches the plaque and the shared theme, plus that the title screen
 keeps its single Play button. `tests/game_select_test.gd` covers the picker
-itself: a card per available game, previews running, reduced motion parking
-them, the responsive grid and the back targets. `tests/store_test.gd` does the
+itself: a cartridge per available game dressed in its own theme, the one in
+hand being the only preview running, reduced motion parking it, browsing by
+key, arrow, drag and wheel, the layouts from portrait phone to ultrawide, the
+back targets, and a seating that routes exactly once. `tests/store_test.gd` does the
 same for the shop: every game's declared catalogue, the wallet, purchase and
 equip rules, achievement gates, `user://store.cfg` round-tripping, the
 round payout, and the Store button on the title and pause menus.
 `tests/gallery_test.gd` does the same for the museum: every game's declared
-exhibits, the stage contract, the generated list and caption, the orbit clamps
-and reset, reduced motion parking the turntable, a gated exhibit staying listed
-but disabled until it unlocks, and the Gallery button on both menus. It pins
-Reduced motion for the duration rather than inheriting whatever the machine has
+exhibits, optional stage methods, the compact list/caption and descriptive
+tooltips, direct mouse/touch/keyboard/controller input, responsive asset space
+and focus scrolling, reduced motion parking the turntable, a gated exhibit
+staying listed but disabled until it unlocks, and the Gallery button on both menus.
+It pins Reduced motion for the duration rather than inheriting whatever the machine has
 saved, because the turntable's behaviour depends on it. Run the suite
 with `--game=all`: several tests assert values that a specific game declares, so
 only `single_game_test.gd` supports a standalone launch.
@@ -231,6 +272,8 @@ add data to `GameManifest` instead.
 | `default_lives_mode` | Default round rule when no choice is saved; true for Desk-Can-Saw and Dead Metal Jam, false for the rest |
 | `uses_shell_round_rules` | False when the game ends by its own rules rather than the shell's countdown or lives pool (Anti-Chess, Anti Checkers, LaZer NFC). Also hides the shell's round/assist rows from Settings |
 | `solo_setup_choices` | Tunable keys whose value the instructions briefing should mention, e.g. which side a solo player takes |
+| `characters`, `character_preview_scene_path` | Per-seat choices and optional live previews, stood on mode select's plinth; `requires_achievement` and `locked_description` gate entries, and an optional `icon` texture path shows beside a title |
+| `levels` | Optional shared level selection with the same achievement gates and optional `icon`; games own geometry and completion rules |
 | `unlock_rule`, `hidden_until_unlocked` | Gate the game behind progress elsewhere |
 | `store_items`, `store_slots`, `store_currency`, `store_preview_scene_path` | The game's cosmetics shop: what it sells, where items are worn, what its points are called, and the scene that draws an item |
 | `gallery_exhibits`, `gallery_stage_scene_path` | The game's museum: what is on the plinths, and the `Control` scene that draws one. `has_gallery()` needs both |
@@ -239,10 +282,11 @@ add data to `GameManifest` instead.
 | `supports_multiplayer`, `supports_cpu_opponent` | Mode availability |
 
 `tunables` and `control_bindings` are declared in a constants-only
-`games/<id>/<prefix>_options.gd` — one per game, all eight of them
+`games/<id>/<prefix>_options.gd` — one per game, all nine of them
 (`TriangleRushOptions`, `DeskCanSawOptions`, `DmjOptions`, `ChickenPitOptions`,
 plus `anti_chess_options.gd`, `anti_checkers_options.gd`,
-`lazer_nfc_options.gd` and `creep_code_options.gd`, which are loaded by path
+`lazer_nfc_options.gd`, `creep_code_options.gd` and `cube_trials_options.gd`,
+which are loaded by path
 rather than `class_name`) — so
 headless tests can import the keys without touching an
 autoload. The game's scenes read the same constants back through `Settings`.
@@ -304,7 +348,7 @@ hardcode one game's rules as another game's briefing.
   and sends the player to each game's own.
 - `GameCatalog.theme()` — never null. The pinned game's `GameTheme` in a
   standalone build, `GameTheme.studio_default()` otherwise. Read by
-  `background.gd` (every screen), `main_menu.gd` (the rotating logo plaque)
+  `background.gd` (every screen), `main_menu.gd` (the branded cartridge)
   and `router.gd`, which restyles the project theme onto the root window so
   every Control inherits the game's accent. `MenuScreen` and `GameShell` also
   call `theme().restyle_tree(self)` in `_ready()`, because a `Theme` cannot
@@ -333,9 +377,12 @@ hardcode one game's rules as another game's briefing.
   `set_view(yaw, pitch, zoom)` and `set_auto_spin(enabled)`; yaw/pitch are
   offsets in radians from the exhibit's own framing. **All three calls are
   optional** — a stage scene is game-supplied data, so a stage without
-  `set_view` gets no orbit controls rather than dead buttons, and one without
+  `set_view` gets no orbit gestures or misleading hints, and one without
   `configure` falls back to the exhibit's badge rather than raising inside the
-  menu.
+  menu. The asset-first viewer has no toolbar: drag rotates, scroll zooms,
+  double-click resets and right-click toggles auto-spin. Equivalent focused
+  keyboard/controller and touch inputs remain available; descriptions and
+  input help live in tooltips and accessibility text.
 - `Settings.tunable(key)` / `.tunable_bool(key)` / `.tunable_choice(key)` /
   `.tunable_min(key)` / `.tunable_max(key)` — read a game-declared option.
   `Settings` never hardcodes a game's numbers.
@@ -356,6 +403,21 @@ and `Router.start_selected_game()` runs — the same "never ask a question with
 one answer" rule that already skips mode select for a solo-only game. A
 standalone build therefore never shows the picker.
 
+Play first seats the title screen's 3D cartridge in its stationary console.
+Keep that animation before the existing route and guard against repeated input;
+reduced motion uses an opacity-only fade, even when toggled during insertion.
+`tests/main_menu_test.gd` covers this flow and the scrolling portrait/short-screen
+layout. The `NavigationButton` theme role gives title actions their slim glass
+rows without replacing game-owned skins on other screens. Setup's **Details**
+toggle reveals longer notes; player identities and control bindings stay visible.
+Mode select is two steps in one scene: glass mode cards with player-count chips,
+then Level / Player / character rows beside `ui/components/setup_stage.gd`,
+the plinth a game's character preview stands on. Its ring takes the seat's
+colour and its caption names the pick. That screen fits its words rather than
+trimming them. A header too narrow for the game's name folds Details and Back
+to icons, and the Player 2 options stack. Keep both rules measuring the
+longest text a control can show, so a toggle never reflows the row.
+
 Beside it, a **Store** button appears only when there is a game whose shop it
 could open: a standalone build's own game on the title screen, or the running
 game from the pause overlay. `pause_menu.gd` sets `store.game_context_id` the
@@ -364,15 +426,24 @@ same way it sets the settings screen's, and both overlays go through one
 next to it under exactly the same rule, and uses the same `game_context_id` and
 overlay machinery.
 
-`game_select.gd` builds one `ui/components/game_card.tscn` per
-`GameCatalog.available()` entry, in `menu_order`, so **a new game needs no
-scene edit here either**. The card's moving thumbnail is the manifest's
-`tutorial_video_path`, falling back to `tutorial_poster_path` and then a
-labelled placeholder. `GameCard` is deliberately a dumb view that touches **no
+`game_select.gd` stands one `ui/components/game_card.tscn` per
+`GameCatalog.available()` entry, in `menu_order`, in a full-bleed console rack
+(`ui/components/cartridge_shelf.gd`), so **a new game needs no scene edit here
+either**. Each cartridge wears its manifest's own `GameTheme` — logo, accent,
+plaque label — even in a collection build, where the screen itself keeps the
+studio theme and only blends its glow and focus bar towards the cartridge in
+hand. That one is lifted out of the rack; its label window shows the
+manifest's `tutorial_poster_path`, then plays `tutorial_video_path`, falling
+back to a labelled placeholder. Focus roves: only the cartridge in hand can take
+it, and left/right browse from it and from Play alike. **Play** (or pressing
+the cartridge in hand) seats it in the slot, then calls
+`Router.start_selected_game()`; guard that against repeated input, and keep the
+reduced-motion swap to an opacity fade, including mid-seat. `GameCard` is
+deliberately a dumb view that touches **no
 autoload instance** — it is a `class_name` script, so a headless test that
 imports it would otherwise fail to compile. The screen, not the card, decides
-whether a clip may run: reduced motion parks every card on its poster, and past
-`MAX_LIVE_PREVIEWS` only the focused card decodes.
+whether a clip may run: only the cartridge in hand ever decodes one, and reduced
+motion parks it on its poster and stops the rack sliding.
 
 ## `GameShell` — the shared round loop
 
@@ -412,7 +483,7 @@ does not match, so a game that copies an abbreviated one will not load.
 | `_configure_mode_ui() -> void` | Extra 1P/2P/CPU HUD wiring (call `super()`) |
 | `_on_player_labels_changed() -> void` / `_on_controls_changed() -> void` | React to accessibility settings |
 | `_on_game_setting_changed(key: String, value: Variant) -> void` | React to one of the game's tunables changing live |
-| `_set_reduced_motion_enabled(value: bool) -> void` | Park the game's own ambient motion. **Call `super(value)`** — all eight games override this, and skipping `super()` leaves the shared HUD animating |
+| `_set_reduced_motion_enabled(value: bool) -> void` | Park the game's own ambient motion. **Call `super(value)`** — all nine games override this, and skipping `super()` leaves the shared HUD animating |
 | `_set_intense_effects_enabled(value: bool) -> void` | Suppress the game's own flashes/shake. **Call `super(value)`** |
 | `_reset_reduced_motion_state() -> void` | Park decorative animation at its resting frame. Only reached when reduced motion is *on*; prefer `_set_reduced_motion_enabled` when the reaction depends on the direction of the change |
 | `_lose_life(player_index: int, amount := 1) -> void` / `_player_is_out(player_index: int) -> bool` | Report a mistake / skip an eliminated player. No-ops in timer mode |
@@ -420,6 +491,19 @@ does not match, so a game that copies an abbreviated one will not load.
 
 Shell notes:
 
+- Player capacity is opt-in: `GameManifest.max_local_players` defaults to 2
+  and currently supports up to 3. `local_multiplayer_turns` changes shared
+  setup/instructions, not game simulation. `characters` and optional
+  `character_preview_scene_path` provide per-seat, session-local character
+  selection. Keep these generic; never branch on a game ID in the framework.
+- Preserve legacy `PLAYER_COUNT = 2`, P1/P2 aliases and two-score hook signatures.
+  Capacity-aware games use `_active_player_indices()`, `_active_scores()` and
+  `player_stats_panel(index)`. The shell's buffers, generated P3 panels, lives,
+  outcomes, replay and complete score arrays handle the active roster.
+  `scripts/player_identity.gd` owns blue/red/green identity colors.
+  `Settings.CONTROL_ACTIONS` stays the original six target actions; use
+  `control_actions_for_player(index)` for extra seats. Unused P3 key defaults
+  must not invalidate a two-player game's saved bindings.
 - The round can run on a countdown or on a pool of lives
   (*Settings → Game → Round mode*, stored as `game/round_mode` +
   `game/starting_lives`). The shell owns the whole pool; a game only reports
@@ -510,7 +594,7 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   `project.godot` *before* it ships; a tag-less standalone export silently
   shares `DeskCanSaw Games/DCS Base Game` with the collection and with every
   other tag-less build. Current tags: `collection`, `dmj`, `tr`, `dcs`, `cp`,
-  `lazer_nfc`, `antichess`, `anticheckers`, `creep_code`.
+  `lazer_nfc`, `antichess`, `anticheckers`, `creep_code`, `cube_trials`.
 - Renaming a settings key is a migration, not an edit. `Settings.load_settings()`
   ends in `_adopt_renamed_keys()`, which reads the old key only when the new one
   is absent and leaves the old one on disk for older builds sharing a `user://`.
@@ -545,7 +629,7 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   (one per game: `triangle_rush_options.gd`, `desk_can_saw_options.gd`,
   `dmj_options.gd`, `chicken_pit_options.gd`, `anti_chess_options.gd`,
   `anti_checkers_options.gd`, `lazer_nfc_options.gd`,
-  `creep_code_options.gd`) is
+  `creep_code_options.gd`, `cube_trials_options.gd`) is
   constants-only. `GameShell` is
   the other side of this rule: it *does* use autoload instances, so a test must
   never name `GameShell` (no `is GameShell`, no typed parameter). Load the

@@ -36,7 +36,10 @@ extends Node2D
 
 const PLAYER_ONE := 0
 const PLAYER_TWO := 1
+const PLAYER_THREE := 2
+## Kept for existing two-seat game implementations; use active indices for new games.
 const PLAYER_COUNT := 2
+const Identity = preload("res://scripts/player_identity.gd")
 const SIDE_CLEARANCE := 38.0
 const TOP_CLEARANCE := 190.0
 const BOTTOM_CLEARANCE := 105.0
@@ -123,6 +126,7 @@ const DANGER_COLOR := Color("ff4964")
 @onready var _share_status: Label = %ShareStatus
 
 var _scores := [0, 0]
+var _player_ui: Array[Dictionary] = []
 var _streaks := [0, 0]
 var _best_streaks := [0, 0]
 var _rng := RandomNumberGenerator.new()
@@ -267,9 +271,10 @@ func _start_round() -> void:
 	_round_id += 1
 	_round_timer.stop()
 	_load_round_settings()
-	_scores = [0, 0]
-	_streaks = [0, 0]
-	_best_streaks = [0, 0]
+	_ensure_player_ui()
+	_scores.fill(0)
+	_streaks.fill(0)
+	_best_streaks.fill(0)
 	_round_achievements.clear()
 	_round_progression_notes.clear()
 	_round_elapsed = 0.0
@@ -332,6 +337,8 @@ func _end_round() -> void:
 	var player_two_total: int = _scores[PLAYER_TWO]
 	_round_player_one_score.text = "%d" % player_one_total
 	_round_player_two_score.text = "%d" % player_two_total
+	for player in range(2, _player_ui.size()):
+		(_player_ui[player]["result_score"] as Label).text = str(_scores[player])
 
 	var outcome := _describe_round_outcome(player_one_total, player_two_total)
 	var result_text := str(outcome.get("result", "DRAW!"))
@@ -367,6 +374,8 @@ func _record_round(player_one_total: int, player_two_total: int) -> String:
 			"single_player": GameSession.is_single_player(),
 			"player_one_score": player_one_total,
 			"player_two_score": player_two_total,
+			"player_count": _active_player_indices().size(),
+			"player_scores": _active_scores(),
 			"multiplayer_result_is_eligible": (
 				GameSession.multiplayer_result_is_eligible()
 			),
@@ -414,6 +423,7 @@ func _round_points_earned(player_one_total: int, player_two_total: int) -> int:
 			"vs_cpu": GameSession.player_two_is_cpu(),
 			"player_one_score": player_one_total,
 			"player_two_score": player_two_total,
+			"player_scores": _active_scores(),
 		}
 	)
 
@@ -445,6 +455,11 @@ func _round_highlight_summary() -> String:
 
 
 func _best_combo_summary() -> String:
+	if GameSession.player_count() > 2:
+		var best := 0
+		for player in _active_player_indices():
+			best = maxi(best, int(_best_streaks[player]))
+		return "Best combo across %d players: x%d" % [GameSession.player_count(), best]
 	var player_one_best: int = _best_streaks[PLAYER_ONE]
 	if GameSession.is_single_player():
 		if player_one_best == 0:
@@ -467,10 +482,16 @@ func _best_combo_summary() -> String:
 
 
 func _active_player_indices() -> Array[int]:
-	var players: Array[int] = [PLAYER_ONE]
-	if GameSession.player_two_enabled():
-		players.append(PLAYER_TWO)
+	var players: Array[int] = []
+	players.assign(range(GameSession.player_count()))
 	return players
+
+
+func _active_scores() -> Array[int]:
+	var scores: Array[int] = []
+	for player in _active_player_indices():
+		scores.append(int(_scores[player]))
+	return scores
 
 
 func _player_name(player_index: int) -> String:
@@ -480,20 +501,22 @@ func _player_name(player_index: int) -> String:
 
 
 func _player_color(player_index: int) -> Color:
+	if player_index >= PLAYER_COUNT:
+		return Identity.color(player_index)
 	return player_two_color if player_index == PLAYER_TWO else player_one_color
 
 
 func _score_label(player_index: int) -> Label:
-	return _player_one_score if player_index == PLAYER_ONE else _player_two_score
+	return _player_ui[player_index]["score"]
 
 
 func _streak_label(player_index: int) -> Label:
-	return _player_one_streak if player_index == PLAYER_ONE else _player_two_streak
+	return _player_ui[player_index]["streak"]
 
 
 func _update_scores() -> void:
-	_player_one_score.text = "%d" % _scores[PLAYER_ONE]
-	_player_two_score.text = "%d" % _scores[PLAYER_TWO]
+	for player in _player_ui.size():
+		_score_label(player).text = str(_scores[player])
 
 
 func _update_streaks() -> void:
@@ -533,7 +556,7 @@ func _update_time(seconds_left: int) -> void:
 ## measuring, and rearms the lives pool.
 func _reset_round_gauge() -> void:
 	if not _uses_shell_round_rules:
-		_lives = [0, 0]
+		_lives.fill(0)
 		_time_caption.text = "MATCH"
 		_time_label.text = "--"
 		_time_progress.hide()
@@ -541,13 +564,13 @@ func _reset_round_gauge() -> void:
 	_time_progress.show()
 	_time_caption.text = "LIVES LEFT" if _lives_mode else "SECONDS LEFT"
 	if _lives_mode:
-		_lives = [_starting_lives, _starting_lives]
+		_lives.fill(_starting_lives)
 		_displayed_seconds = -1
 		_time_progress.max_value = _starting_lives
 		_update_lives()
 		return
 
-	_lives = [0, 0]
+	_lives.fill(0)
 	_time_progress.max_value = _active_round_duration
 	_time_progress.value = _active_round_duration
 	_update_time(int(ceil(_active_round_duration)))
@@ -556,13 +579,12 @@ func _reset_round_gauge() -> void:
 func _update_lives() -> void:
 	if not _lives_mode:
 		return
-	# Two numbers rather than colour-coded pips, so the readout survives the
+	# Numbers rather than colour-coded pips, so the readout survives the
 	# player-labels and colour-blindness cases the rest of the HUD honours.
-	_time_label.text = (
-		"%d" % int(_lives[PLAYER_ONE])
-		if GameSession.is_single_player()
-		else "%d-%d" % [int(_lives[PLAYER_ONE]), int(_lives[PLAYER_TWO])]
-	)
+	var values := PackedStringArray()
+	for player in GameSession.player_count():
+		values.append(str(int(_lives[player])))
+	_time_label.text = "-".join(values)
 	_time_progress.value = _remaining_lives()
 
 
@@ -596,7 +618,7 @@ func _lose_life(player_index: int, amount := 1) -> void:
 func _player_is_out(player_index: int) -> bool:
 	if not _lives_mode:
 		return false
-	if player_index < PLAYER_ONE or player_index >= PLAYER_COUNT:
+	if not _active_player_indices().has(player_index):
 		return false
 	return int(_lives[player_index]) <= 0
 
@@ -730,23 +752,111 @@ func _update_urgency(time_left: float) -> void:
 	_danger_overlay.color = _with_alpha(DANGER_COLOR, pulse * urgency * 0.045)
 
 
-## Shows or hides every second-player widget and titles the round from the
+## Shows the active players' widgets and titles the round from the
 ## manifest. Games override this, call `super()`, then write their own
 ## captions, callout and hint copy.
 func _configure_mode_ui() -> void:
+	_ensure_player_ui()
 	var multiplayer := GameSession.player_two_enabled()
-	var player_two_title := GameSession.player_two_name().to_upper()
 	_mode_title.text = _game_title().to_upper()
 	_player_one_card.size_flags_horizontal = (
 		Control.SIZE_SHRINK_BEGIN if multiplayer else Control.SIZE_EXPAND_FILL
 	)
-	_player_two_card.visible = multiplayer
-	_round_versus.visible = multiplayer
-	_round_player_two_card.visible = multiplayer
-	_round_player_two_caption.text = player_two_title
-	_stats_versus.visible = multiplayer
-	_player_two_stats_card.visible = multiplayer
-	_player_two_stats_title.text = player_two_title
+	var count := GameSession.player_count()
+	_round_versus.visible = count == 2
+	_stats_versus.visible = count == 2
+	for player in _player_ui.size():
+		var ui := _player_ui[player]
+		var active := player < count
+		(ui["card"] as Control).visible = active
+		(ui["result_card"] as Control).visible = active
+		(ui["stats_card"] as Control).visible = active
+		(ui["caption"] as Label).text = _player_name(player).to_upper()
+		(ui["result_caption"] as Label).text = _player_name(player).to_upper()
+		(ui["stats_title"] as Label).text = _player_name(player).to_upper()
+
+
+## Existing scene paths and aliases stay intact; additional seats use the same
+## authored panels with their own labels, resources and identity colours.
+func _ensure_player_ui() -> void:
+	if _player_ui.is_empty():
+		_player_ui.append(_player_panel_references(
+			_player_one_card, _round_player_one_score.get_parent().get_parent(),
+			_player_one_stats_score.get_parent().get_parent(), "PlayerOne"
+		))
+		_player_ui.append(_player_panel_references(
+			_player_two_card, _round_player_two_card, _player_two_stats_card, "PlayerTwo"
+		))
+	while _player_ui.size() < GameSession.player_count():
+		var player := _player_ui.size()
+		var prefix := "Player%d" % (player + 1)
+		var source := _player_ui[0]
+		var card := _clone_player_panel(source["card"], prefix, _player_color(player))
+		var result := _clone_player_panel(source["result_card"], prefix, _player_color(player))
+		var stats := _clone_player_panel(source["stats_card"], prefix, _player_color(player))
+		var references := _player_panel_references(card, result, stats, prefix)
+		for key in ["score", "streak", "result_score"]:
+			(references[key] as Label).add_theme_color_override("font_color", _player_color(player))
+		for key in ["caption", "result_caption", "stats_title"]:
+			(references[key] as Label).add_theme_color_override(
+				"font_color", _player_color(player).lightened(0.25)
+			)
+		(references["stats"]["score"] as Label).add_theme_color_override("font_color", _player_color(player))
+		_player_ui.append(references)
+	var capacity := _player_ui.size()
+	for buffer: Array in [_scores, _streaks, _best_streaks, _lives]:
+		var before := buffer.size()
+		buffer.resize(capacity)
+		for index in range(before, capacity):
+			buffer[index] = 0
+
+
+func _player_panel_references(
+	card: PanelContainer, result: PanelContainer, stats: PanelContainer, prefix: String
+) -> Dictionary:
+	var fields := {"score": stats.get_node("Layout/" + prefix + "StatsScore")}
+	for field in ["Hits", "Misses", "Accuracy", "Streak"]:
+		fields[field.to_lower()] = stats.get_node("Layout/Stats/" + prefix + "Stats" + field)
+	return {
+		"card": card, "score": card.get_node("Layout/" + prefix + "Score"),
+		"caption": card.get_node("Layout/Caption"),
+		"streak": card.get_node("Layout/" + prefix + "Streak"),
+		"result_card": result, "result_score": result.get_node("Layout/Round" + prefix + "Score"),
+		"result_caption": result.get_node("Layout/Caption"),
+		"stats_card": stats, "stats_title": stats.get_node("Layout/Title"), "stats": fields,
+	}
+
+
+func _clone_player_panel(template: PanelContainer, prefix: String, color: Color) -> PanelContainer:
+	var panel := template.duplicate(Node.DUPLICATE_SCRIPTS) as PanelContainer
+	var nodes: Array[Node] = [panel]
+	nodes.append_array(panel.find_children("*", "", true, false))
+	for node: Node in nodes:
+		node.owner = null
+		node.unique_name_in_owner = false
+		node.name = str(node.name).replace("PlayerOne", prefix)
+		if node is Label:
+			var label := node as Label
+			var old := label.get_theme_color("font_color")
+			if Vector3(old.r, old.g, old.b).distance_to(
+				Vector3(player_one_color.r, player_one_color.g, player_one_color.b)
+			) < 0.01:
+				label.add_theme_color_override("font_color", _with_alpha(color, old.a))
+		elif node is ColorRect:
+			(node as ColorRect).color = _with_alpha(color, (node as ColorRect).color.a)
+	var style := template.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+	if style != null:
+		style.bg_color = _with_alpha(color.darkened(0.83), style.bg_color.a)
+		style.border_color = _with_alpha(color, style.border_color.a)
+		style.shadow_color = _with_alpha(color.darkened(0.6), style.shadow_color.a)
+		panel.add_theme_stylebox_override("panel", style)
+	template.get_parent().add_child(panel)
+	return panel
+
+
+## Games may label their own statistics without depending on a two-card layout.
+func player_stats_panel(player_index: int) -> PanelContainer:
+	return _player_ui[player_index]["stats_card"]
 
 
 # --------------------------------------------------------------------------
@@ -766,8 +876,8 @@ func _populate_score_screen(result_text: String, result_color: Color) -> void:
 	_game_hits_stat.text = "%d" % hits
 	_game_accuracy_stat.text = "%d%%" % _accuracy_percent(hits, attempts)
 
-	_populate_player_stats(PLAYER_ONE)
-	_populate_player_stats(PLAYER_TWO)
+	for player in _player_ui.size():
+		_populate_player_stats(player)
 
 
 func _populate_player_stats(player_index: int) -> void:
@@ -777,18 +887,26 @@ func _populate_player_stats(player_index: int) -> void:
 	var misses := "%d" % int(stats.get("misses", 0))
 	var accuracy := "%d%%" % int(stats.get("accuracy", 0))
 	var streak := "x%d" % int(stats.get("streak", 0))
-	if player_index == PLAYER_ONE:
-		_player_one_stats_score.text = score
-		_player_one_stats_hits.text = hits
-		_player_one_stats_misses.text = misses
-		_player_one_stats_accuracy.text = accuracy
-		_player_one_stats_streak.text = streak
-		return
-	_player_two_stats_score.text = score
-	_player_two_stats_hits.text = hits
-	_player_two_stats_misses.text = misses
-	_player_two_stats_accuracy.text = accuracy
-	_player_two_stats_streak.text = streak
+	var fields: Dictionary = _player_ui[player_index]["stats"]
+	var values := {"score": score, "hits": hits, "misses": misses, "accuracy": accuracy, "streak": streak}
+	for key: String in values:
+		(fields[key] as Label).text = values[key]
+	var layout := player_stats_panel(player_index).get_node("Layout") as VBoxContainer
+	var old := layout.get_node_or_null("ExtraStats")
+	if old != null:
+		layout.remove_child(old)
+		old.queue_free()
+	var details: Array = stats.get("details", [])
+	if not details.is_empty():
+		var extra := VBoxContainer.new()
+		extra.name = "ExtraStats"
+		layout.add_child(extra)
+		for detail: Dictionary in details:
+			var label := Label.new()
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			label.add_theme_font_size_override("font_size", 18)
+			label.text = "%s: %s" % [str(detail["label"]), str(detail["value"])]
+			extra.add_child(label)
 
 
 func _accuracy_percent(hits: int, attempts: int) -> int:
@@ -957,9 +1075,14 @@ func _share_payload() -> Dictionary:
 	var achievement_titles := _share_achievement_titles()
 	var achievements_are_new := not _round_achievements.is_empty()
 	var accuracy := _accuracy_percent(hits, attempts)
-	var score_values: Array[int] = [_scores[PLAYER_ONE]]
-	if GameSession.player_two_enabled():
-		score_values.append(_scores[PLAYER_TWO])
+	var score_values := _active_scores()
+	var score_parts := PackedStringArray()
+	var player_names := PackedStringArray()
+	var player_colors: Array[Color] = []
+	for player in _active_player_indices():
+		score_parts.append(str(_scores[player]))
+		player_names.append(_player_name(player))
+		player_colors.append(_player_color(player))
 	return {
 		"game_id": game_id(),
 		"game_title": _game_title(),
@@ -970,15 +1093,14 @@ func _share_payload() -> Dictionary:
 		"result": _result_label.text,
 		"subtitle": _round_subtitle.text,
 		"score_caption": "SOLO SCORE" if GameSession.is_single_player() else "FINAL SCORE",
-		"score": (
-			str(_scores[PLAYER_ONE])
-			if GameSession.is_single_player()
-			else "%d - %d" % [_scores[PLAYER_ONE], _scores[PLAYER_TWO]]
-		),
+		"score": " - ".join(score_parts),
 		"accuracy": "%d%%" % accuracy,
 		"hits": str(hits),
 		"combo": "x%d" % best_combo,
 		"score_values": score_values,
+		"player_count": score_values.size(),
+		"player_names": player_names,
+		"player_colors": player_colors,
 		"accuracy_value": accuracy,
 		"hits_value": hits,
 		"misses_value": maxi(attempts - hits, 0),
@@ -1336,6 +1458,20 @@ func _describe_round_outcome(
 	player_one_total: int,
 	player_two_total: int
 ) -> Dictionary:
+	if GameSession.player_count() > 2:
+		var scores := _active_scores()
+		var best: int = scores.max()
+		var leaders := PackedStringArray()
+		var winner := 0
+		for player in _active_player_indices():
+			if int(_scores[player]) == best:
+				leaders.append(_player_name(player))
+				winner = player
+		return {
+			"result": "%s WINS!" % _player_name(winner).to_upper() if leaders.size() == 1 else "DRAW!",
+			"subtitle": "%s finished on %d points." % [" and ".join(leaders), best],
+			"color": _player_color(winner) if leaders.size() == 1 else StudioInfo.CREAM,
+		}
 	if GameSession.is_single_player():
 		return {
 			"result": "ROUND COMPLETE",
