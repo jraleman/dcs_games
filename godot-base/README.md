@@ -39,6 +39,7 @@ studio_logo  ──►  intro  ──►  main_menu  ──┬──►  game_se
                                            │                                     ▼                   ▼
                                            │                                 gameplay        game's own scene
                                            ├──►  settings_menu
+                                           ├──►  saves          (something saved only)
                                            └──►  credits
 ```
 
@@ -62,7 +63,8 @@ fade, including when enabled partway through the animation. The console moves
 above the actions in portrait; short screens scroll the action list with focus.
 Taglines remain in title tooltips and accessibility descriptions rather than
 adding another paragraph. Store and Gallery still appear only for games that
-declare them.
+declare them. **Saves** appears in any build as soon as a game it offers has
+progress or a backup; see *Saves and backups*.
 
 Menu toggles use compact, translucent tracks and square thumbs rather than the
 old bright pills. Thumb position and check/minus marks distinguish On and Off
@@ -105,6 +107,7 @@ touch-target scaling applies even to games without character or level choices.
 | `scripts/game_manifest.gd` | `GameManifest` resource — everything the framework needs to know about one game (scene, copy, achievements, tunables, share art). |
 | `scripts/game_catalog.gd` | `GameCatalog` static registry — discovers `games/*/game.gd`, skipping `_`- and `.`-prefixed archive/private folders, and tracks the selected game. |
 | `scripts/game_unlock_rule.gd` | `GameUnlockRule` base class for gating a game behind progress in another. |
+| `scripts/game_saves.gd` | `GameSaves` static helper — what one game's save holds (its achievements, store wallet and declared `save_files`), and deleting, backing up and restoring it without touching another game or any option. |
 | `scripts/game_shell.gd` | `GameShell` base class — the shared round loop, HUD, results/stats panels, pause, sharing and accessibility plumbing every game inherits. |
 | `scenes/game/game_shell.tscn` | The matching reusable scene: HUD, results panel, stats panel and an empty `%Playfield` for your game to fill. |
 | `autoload/settings.gd` | Stores, persists (`user://settings.cfg`) and applies player settings, including game-declared tunables. |
@@ -117,6 +120,7 @@ touch-target scaling applies even to games without character or level choices.
 | `scenes/menus/game_select.tscn` | The picker the **Play** button opens: a carousel of cartridges in a console rack, one per available game, built from `GameCatalog.available()`, with the chosen one's details and Play beside or below it. Reached only when there is more than one game to choose from. |
 | `scenes/menus/store.tscn` | The shop: one card per item a game declares in `store_items`, grouped by heading. Reached from the title screen in a standalone build and from the pause menu in any build. |
 | `scenes/menus/gallery.tscn` | The museum: one plinth per entry in `gallery_exhibits`, turned and zoomed on a game-owned stage scene. Reached from the same two places as the store. |
+| `scenes/menus/saves.tscn` | The save manager behind the title screen's **Saves** button: a card per game with progress or a backup — every such game in a collection, only its own in a standalone build — with Back up, Delete save and each backup's Restore and Delete. |
 | `ui/menu_screen.gd` | `MenuScreen` base class: UI sounds, focus handling, `ui_cancel` to go back, responsive margins. |
 | `ui/responsive.gd` | Helpers for margins, portrait detection and content width. |
 | `ui/theme/dcs_theme.tres` | Base buttons, panels, sliders and tabs. A standalone `GameTheme` can recolour it and merge a game-owned partial skin. |
@@ -502,6 +506,10 @@ that directory at startup, so **no framework file needs to change** to add one.
      — a shop where finished rounds buy cosmetics. See *A store of your own*.
    - `gallery_exhibits`, `gallery_stage_scene_path` — a turntable museum of the
      models the game is built from. See *A gallery of your own*.
+   - `save_files` — progress the game keeps in `user://` files of its own, so
+     the Saves screen backs it up, restores it and deletes it with the rest of
+     the save. Achievements and the store wallet are covered already. See
+     *Saves and backups*.
    - `share_art_style`, `stats_url`, `tutorial_video_path`, `tutorial_poster_path`
      — share card and instructions media. `share_art_style` names one of
      `ShareCardArt`'s hand-drawn variants; anything it does not recognise —
@@ -667,6 +675,60 @@ standalone build, and the pause overlay of any build while a round with a
 gallery is running. `tests/gallery_test.gd` walks `GameCatalog.all()` and covers
 declarations, optional stage methods, direct input, responsive asset space,
 focus scrolling, reduced motion, unlocks and both menu entry points.
+
+### Saves and backups
+
+The title screen's **Saves** button opens `scenes/menus/saves.tscn`, where a
+player backs up, restores or deletes one game's progress without touching any
+other. Most games declare nothing for it: a game's save is its share of the
+achievements and store wallet the framework already keeps for it.
+
+- **What a save holds.** The game's unlocked achievements; its store points,
+  purchases and worn items; and the files it lists in `save_files`. Options are
+  never part of a save — `settings.cfg` keeps every game's tunables and key
+  bindings beside the player's display and accessibility choices, and deleting
+  progress is not a request to lose those. Unlock progress toward a *gated*
+  game is left out too: it records play in another game, and an unlock must
+  never regress.
+- **`save_files`** — progress a game keeps in files of its own, each as
+  `{ "path": "user://…", "title": …, "description": … }`. Every entry is named
+  on the card, copied into a backup, put back on restore and deleted with the
+  rest of the save, so list progress only: a calibration, a cache or a log is
+  not something a player expects **Delete save** to take. A path must be a plain
+  file under `user://`; the three shared files, folders and the backups folder
+  are refused with a single warning. Chicken Pit declares its match history and
+  LaZer NFC its tag labels. Dead Metal Jam's microphone calibration is left out
+  on purpose.
+- **Which games are listed** — `GameSaves.managed_games()`: every
+  `GameCatalog.available()` game with progress on this device or a backup to
+  return to, in `menu_order`. A collection (`--game=all`) lists every game with
+  something saved and a standalone build only its own; neither the screen nor
+  the menu asks which kind of build it is. The button hides itself when that
+  list is empty. Unlike Store and Gallery it appears in a collection too,
+  because one screen manages every game, and it is not on the pause overlay, so
+  a restore can never change a save under a running round.
+- **Backups** are one `ConfigFile` per snapshot in
+  `user://save_backups/<game_id>/`, holding only that game's data, listed
+  newest first by the time they were made. **Back up** is the only action that
+  cannot lose progress, so it is the only one that does not ask first.
+  **Delete save**, **Restore** and deleting a backup each confirm, with focus on
+  **Cancel** and Escape closing the question rather than the screen. A restore
+  replaces every part the backup captured — an achievement unlocked since is
+  locked again, a file created since is removed — stages the game's own files
+  beside their targets so a full disk leaves the current save as it was, and
+  never writes a file the game no longer declares. Deleting a save keeps its
+  backups. A backup from a newer build or another game, or a damaged one, stays
+  listed with the reason, so it can still be deleted.
+- **Open save folder** reveals `user://` in the desktop file manager; web and
+  mobile builds hide it.
+
+`AchievementManager` and `Store` each provide the four calls `GameSaves`
+(`scripts/game_saves.gd`) composes — `save_summary`, `export_save`, `erase_save`
+and `import_save`, all taking the game id. Like every other save they merge into
+the stored file, so a restore in one build never deletes another build's keys,
+and a restored achievement raises no toast: it puts old progress back rather
+than earning anything. `tests/saves_test.gd` walks `GameCatalog.all()`, so a
+new declaration is validated as soon as it exists.
 
 ### Chicken Pit — 3D inside the shared shell
 
@@ -1559,11 +1621,13 @@ later matches. Store wallets, purchases and equipped cosmetics live beside them
 in `user://store.cfg`. All three files are written by merging into what is
 already on disk, never by rebuilding them: a standalone build registers only its
 own game's keys and must not delete another build's saved options, unlocks or
-purchases out of a shared `user://`. The gallery writes nothing at all — a
+purchases out of a shared `user://`. The Saves screen's backups live beside
+them in `user://save_backups/<game_id>/`, one file per snapshot holding only
+that game's progress. The gallery writes nothing at all — a
 museum has nothing to remember, so its only state is the manifest and whichever
 achievements have opened its gated exhibits.
 
-Focused regression checks can be run headlessly. The **14 framework suites**
+Focused regression checks can be run headlessly. The **15 framework suites**
 in `tests/` cover the shell, the menus and every game the catalog discovers:
 
 ```bash
@@ -1577,6 +1641,7 @@ godot --headless --path . --script res://tests/instructions_video_test.gd -- --g
 godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
 godot --headless --path . --script res://tests/local_players_test.gd -- --game=all
 godot --headless --path . --script res://tests/main_menu_test.gd -- --game=all
+godot --headless --path . --script res://tests/saves_test.gd -- --game=all
 godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
 godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
 godot --headless --path . --script res://tests/store_test.gd -- --game=all
@@ -1624,7 +1689,13 @@ both before and during launch. `game_select_test.gd` does the same for the
 picker's rack: a cartridge per available game, browsing by key, pad, arrow,
 drag and wheel that stops at either end, a single live preview, layouts from a
 portrait phone to ultrawide, and a seating (or reduced-motion fade) that starts
-the game exactly once.
+the game exactly once. `saves_test.gd` validates every declared `save_files`
+entry, then deletes, backs up and restores one game without touching another,
+refuses newer, foreign and damaged backups, and checks the Saves screen from a
+320px phone to ultrawide, its confirmation's focus and Escape handling, and the
+title-screen entry in collection and standalone builds. It copies every file a
+save can reach first and writes each back byte for byte, and keeps its backups
+in a folder of its own, so a run never changes a player's saves.
 
 Eight game-owned suites need a **real graphics window** and deliberately exit 1
 under `--headless`, where they guard `DisplayServer.get_name() == "headless"`

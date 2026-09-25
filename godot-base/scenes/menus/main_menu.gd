@@ -9,6 +9,7 @@ extends MenuScreen
 @export_file("*.tscn") var settings_scene := "res://scenes/menus/settings_menu.tscn"
 @export_file("*.tscn") var store_scene := "res://scenes/menus/store.tscn"
 @export_file("*.tscn") var gallery_scene := "res://scenes/menus/gallery.tscn"
+@export_file("*.tscn") var saves_scene := "res://scenes/menus/saves.tscn"
 @export_file("*.tscn") var credits_scene := "res://scenes/menus/credits.tscn"
 @export var music: AudioStream
 
@@ -29,6 +30,7 @@ const INSERT_TIME := 0.58
 @onready var _play_button: Button = %PlayButton
 @onready var _store_button: Button = %StoreButton
 @onready var _gallery_button: Button = %GalleryButton
+@onready var _saves_button: Button = %SavesButton
 @onready var _quit_button: Button = %QuitButton
 @onready var _footer_left: Label = %FooterLeft
 @onready var _footer_right: Label = %FooterRight
@@ -72,6 +74,7 @@ func _ready() -> void:
 	_refresh_play_button()
 	_refresh_store_button()
 	_refresh_gallery_button()
+	_refresh_saves_button()
 	AchievementManager.progression_changed.connect(_on_progression_changed)
 	_quit_button.visible = not (OS.has_feature("web") or OS.has_feature("mobile"))
 	if music:
@@ -347,6 +350,10 @@ func _on_gallery_pressed() -> void:
 	_leave_menu(gallery_scene)
 
 
+func _on_saves_pressed() -> void:
+	_leave_menu(saves_scene)
+
+
 func _on_credits_pressed() -> void:
 	_leave_menu(credits_scene)
 
@@ -394,3 +401,20 @@ func _refresh_gallery_button() -> void:
 	if _gallery_button.visible:
 		_gallery_button.tooltip_text = "Explore %s models." % manifest.title
 		_gallery_button.accessibility_description = _gallery_button.tooltip_text
+
+
+## Unlike the store and the gallery, saves are managed per game on one screen,
+## so a collection offers it too. [GameSaves] decides what is listed; with
+## nothing saved and no backup to go back to there is nothing to manage.
+func _refresh_saves_button() -> void:
+	var games := GameSaves.managed_games()
+	_saves_button.visible = not games.is_empty()
+	if not _saves_button.visible:
+		return
+	if games.size() == 1:
+		_saves_button.tooltip_text = (
+			"Back up, restore or delete your %s progress." % games[0].title
+		)
+	else:
+		_saves_button.tooltip_text = "Back up, restore or delete saved progress."
+	_saves_button.accessibility_description = _saves_button.tooltip_text

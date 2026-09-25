@@ -493,6 +493,134 @@ func _achievement_requirement_text(id: String) -> String:
 
 
 # --------------------------------------------------------------------------
+# Saves
+# --------------------------------------------------------------------------
+
+
+## What [param game_id]'s save holds here, for [GameSaves]: `has_store`,
+## `points`, `points_text`, `items_bought`, `items_total`, `customised` and
+## `has_progress`.
+##
+## Every registered game is written to the file, so a key being there proves
+## nothing; progress is judged by content instead. Free defaults are owned and
+## worn from the start, so they are not progress. An owned id this build does
+## not sell still is — somebody paid for it — although only items this build
+## can name are counted in `items_bought`.
+func save_summary(game_id: String) -> Dictionary:
+	var summary := {
+		"has_store": _items.has(game_id),
+		"points": points(game_id),
+		"points_text": "",
+		"items_bought": 0,
+		"items_total": 0,
+		"customised": false,
+		"has_progress": false,
+	}
+	if not _items.has(game_id):
+		return summary
+	var defaults := _default_item_ids(game_id)
+	var unknown_owned := false
+	for raw_id: Variant in _owned.get(game_id, {}):
+		var id := str(raw_id)
+		if defaults.has(id):
+			continue
+		if _find_item(game_id, id).is_empty():
+			unknown_owned = true
+		else:
+			summary["items_bought"] = int(summary["items_bought"]) + 1
+	for item: Dictionary in _items[game_id]:
+		if not bool(item["default"]):
+			summary["items_total"] = int(summary["items_total"]) + 1
+	var equipped: Dictionary = _equipped.get(game_id, {})
+	for slot: Dictionary in _slots[game_id]:
+		var slot_id := str(slot["id"])
+		if str(equipped.get(slot_id, "")) != _default_item_id(game_id, slot_id):
+			summary["customised"] = true
+	summary["points_text"] = format_points(game_id, int(summary["points"]))
+	summary["has_progress"] = (
+		int(summary["points"]) > 0 or int(summary["items_bought"]) > 0
+		or unknown_owned or bool(summary["customised"])
+	)
+	return summary
+
+
+## [param game_id]'s wallet, purchases and worn items, in the shape
+## [method import_save] takes back. Empty when this build sells nothing for it.
+func export_save(game_id: String) -> Dictionary:
+	if not _items.has(game_id):
+		return {}
+	var equipped: Dictionary = _equipped.get(game_id, {})
+	return {
+		"points": points(game_id),
+		"owned": _owned_ids(game_id),
+		"equipped": equipped.duplicate(true),
+	}
+
+
+## Empties [param game_id]'s wallet and leaves it only its free defaults.
+func erase_save(game_id: String) -> Error:
+	return import_save(game_id, {})
+
+
+## Replaces [param game_id]'s wallet, purchases and worn items with [param data],
+## as written by [method export_save]. Free defaults are granted again exactly
+## as at boot, so a restored save cannot leave a slot without its bare look.
+## A game this build sells nothing for is left alone: its entries in the file,
+## if any, belong to a build that knows what they mean.
+func import_save(game_id: String, data: Dictionary) -> Error:
+	if not _items.has(game_id):
+		return OK
+	var config := ConfigFile.new()
+	var err := config.load(SAVE_PATH)
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		# Saving now would replace a file we could not read with one game's keys.
+		push_warning("Could not read the store from %s (error %d)." % [SAVE_PATH, err])
+		return err
+	var balance: Variant = data.get("points", 0)
+	_points[game_id] = (
+		maxi(int(balance), 0) if balance is int or balance is float else 0
+	)
+	var owned: Dictionary = {}
+	var stored_owned: Variant = data.get("owned", PackedStringArray())
+	if stored_owned is PackedStringArray or stored_owned is Array:
+		for raw_id: Variant in stored_owned:
+			owned[str(raw_id)] = true
+	_owned[game_id] = owned
+	var equipped: Dictionary = {}
+	var stored_equipped: Variant = data.get("equipped", {})
+	if typeof(stored_equipped) == TYPE_DICTIONARY:
+		for raw_slot: Variant in stored_equipped:
+			equipped[str(raw_slot)] = str(stored_equipped[raw_slot])
+	_equipped[game_id] = equipped
+	_grant_defaults(game_id)
+	_write_game(config, game_id)
+	err = config.save(SAVE_PATH)
+	if err != OK:
+		push_warning("Could not save the store to %s (error %d)." % [SAVE_PATH, err])
+	points_changed.emit(game_id, points(game_id))
+	for slot: Dictionary in _slots[game_id]:
+		var slot_id := str(slot["id"])
+		equipped_changed.emit(game_id, slot_id, equipped_id(game_id, slot_id))
+	return err
+
+
+func _default_item_ids(game_id: String) -> PackedStringArray:
+	var ids := PackedStringArray()
+	for item: Dictionary in _items.get(game_id, [] as Array[Dictionary]):
+		if bool(item["default"]):
+			ids.append(str(item["id"]))
+	return ids
+
+
+func _owned_ids(game_id: String) -> PackedStringArray:
+	var owned := PackedStringArray()
+	for raw_id: Variant in _owned.get(game_id, {}):
+		owned.append(str(raw_id))
+	owned.sort()
+	return owned
+
+
+# --------------------------------------------------------------------------
 # Persistence
 # --------------------------------------------------------------------------
 
@@ -521,13 +649,14 @@ func _save_state() -> void:
 	# purchases out of a shared `user://`.
 	config.load(SAVE_PATH)
 	for game_id in _game_ids:
-		config.set_value(POINTS_SECTION, game_id, points(game_id))
-		var owned := PackedStringArray()
-		for raw_id: Variant in _owned.get(game_id, {}):
-			owned.append(str(raw_id))
-		owned.sort()
-		config.set_value(OWNED_SECTION, game_id, owned)
-		config.set_value(EQUIPPED_SECTION, game_id, _equipped.get(game_id, {}))
+		_write_game(config, game_id)
 	var err := config.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not save the store to %s (error %d)." % [SAVE_PATH, err])
+
+
+## One game's entries in the file's shape — the only place that shape is written.
+func _write_game(config: ConfigFile, game_id: String) -> void:
+	config.set_value(POINTS_SECTION, game_id, points(game_id))
+	config.set_value(OWNED_SECTION, game_id, _owned_ids(game_id))
+	config.set_value(EQUIPPED_SECTION, game_id, _equipped.get(game_id, {}))

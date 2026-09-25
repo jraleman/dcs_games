@@ -1,0 +1,210 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/menus/saves.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialog"]
+content_margin_left = 32.0
+content_margin_top = 28.0
+content_margin_right = 32.0
+content_margin_bottom = 28.0
+bg_color = Color(0.0784314, 0.121569, 0.145098, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.290196, 0.352941, 0.4, 0.8)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[node name="Saves" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+back_scene = "res://scenes/menus/main_menu.tscn"
+
+[node name="Background" parent="." instance=ExtResource("2_background")]
+
+[node name="Margins" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_constants/margin_left = 134
+theme_override_constants/margin_top = 54
+theme_override_constants/margin_right = 134
+theme_override_constants/margin_bottom = 54
+
+[node name="Layout" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Header" type="BoxContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+theme_type_variation = &"MenuHeading"
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 56
+text = "Saves"
+autowrap_mode = 3
+
+[node name="HeaderActions" type="HBoxContainer" parent="Margins/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 24
+alignment = 2
+
+[node name="FolderButton" type="Button" parent="Margins/Layout/Header/HeaderActions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "Open save folder"
+
+[node name="BackButton" type="Button" parent="Margins/Layout/Header/HeaderActions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "Back"
+metadata/ui_sound_handled = true
+
+[node name="Intro" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 24
+text = "Back up, restore or delete each game's progress on this device."
+autowrap_mode = 2
+
+[node name="Status" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 1)
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 2
+
+[node name="Empty" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 1)
+theme_override_font_sizes/font_size = 24
+text = "Nothing is saved on this device."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Row" type="CenterContainer" parent="Margins/Layout/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Cards" type="VBoxContainer" parent="Margins/Layout/Scroll/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="Confirm" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="Confirm"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0392157, 0.0588235, 0.0705882, 0.82)
+
+[node name="DialogScroll" type="ScrollContainer" parent="Confirm"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Center" type="CenterContainer" parent="Confirm/DialogScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ConfirmPanel" type="PanelContainer" parent="Confirm/DialogScroll/Center"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(620, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dialog")
+
+[node name="Layout" type="VBoxContainer" parent="Confirm/DialogScroll/Center/ConfirmPanel"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="ConfirmTitle" type="Label" parent="Confirm/DialogScroll/Center/ConfirmPanel/Layout"]
+unique_name_in_owner = true
+theme_type_variation = &"MenuHeading"
+layout_mode = 2
+theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
+theme_override_font_sizes/font_size = 34
+text = "Delete save?"
+autowrap_mode = 3
+
+[node name="ConfirmMessage" type="Label" parent="Confirm/DialogScroll/Center/ConfirmPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 3
+
+[node name="ConfirmActions" type="BoxContainer" parent="Confirm/DialogScroll/Center/ConfirmPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 2
+
+[node name="CancelButton" type="Button" parent="Confirm/DialogScroll/Center/ConfirmPanel/Layout/ConfirmActions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancel"
+metadata/ui_sound_handled = true
+
+[node name="ConfirmButton" type="Button" parent="Confirm/DialogScroll/Center/ConfirmPanel/Layout/ConfirmActions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Delete"
+
+[connection signal="pressed" from="Margins/Layout/Header/HeaderActions/FolderButton" to="." method="_on_folder_pressed"]
+[connection signal="pressed" from="Margins/Layout/Header/HeaderActions/BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="Confirm/DialogScroll/Center/ConfirmPanel/Layout/ConfirmActions/CancelButton" to="." method="_on_cancel_pressed"]
+[connection signal="pressed" from="Confirm/DialogScroll/Center/ConfirmPanel/Layout/ConfirmActions/ConfirmButton" to="." method="_on_confirm_pressed"]

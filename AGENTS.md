@@ -95,8 +95,8 @@ godot-base/
                            #   AchievementManager, Store, ShareManager
                            #   (load order matters)
   scripts/                 # StudioInfo, GameManifest, GameCatalog, GameUnlockRule,
-                           #   GameTheme, GameShell, ShareQrCode, GameUiSoundBank
-                           #   (class_name globals, not autoloads)
+                           #   GameTheme, GameShell, GameSaves, ShareQrCode,
+                           #   GameUiSoundBank (class_name globals, not autoloads)
   ui/                      # MenuScreen, Responsive, theme, reusable components
                           #   (incl. GameCard, the picker's cartridge,
                           #   cartridge_shelf.gd, the console rack it stands in,
@@ -104,7 +104,7 @@ godot-base/
   scenes/boot/             # studio_logo, intro
   scenes/game/             # game_shell.tscn — the round/HUD scene games inherit
   scenes/menus/           # main_menu, game_select, mode_select, instructions,
-                          #   settings, credits, store, gallery, pause
+                          #   settings, credits, store, gallery, saves, pause
   games/<id>/              # one folder per game: game.gd manifest, scenes, actors,
                            #   assets (incl. assets/video/tutorial.ogv), tests
   tests/                   # framework-wide headless SceneTree regression scripts
@@ -135,7 +135,7 @@ godot --headless --path . --import   # reimport assets and refresh the class cac
 ```
 
 Tests are standalone headless `SceneTree` scripts, run one at a time. There are
-**14 framework suites** in `godot-base/tests/`, and every one must exit 0:
+**15 framework suites** in `godot-base/tests/`, and every one must exit 0:
 
 ```bash
 godot --headless --path . --script res://tests/accessibility_test.gd -- --game=all
@@ -148,6 +148,7 @@ godot --headless --path . --script res://tests/instructions_video_test.gd -- --g
 godot --headless --path . --script res://tests/lives_mode_test.gd -- --game=all
 godot --headless --path . --script res://tests/local_players_test.gd -- --game=all
 godot --headless --path . --script res://tests/main_menu_test.gd -- --game=all
+godot --headless --path . --script res://tests/saves_test.gd -- --game=all
 godot --headless --path . --script res://tests/share_card_test.gd -- --game=all
 godot --headless --path . --script res://tests/single_game_test.gd -- --game=all
 godot --headless --path . --script res://tests/store_test.gd -- --game=all
@@ -226,7 +227,14 @@ tooltips, direct mouse/touch/keyboard/controller input, responsive asset space
 and focus scrolling, reduced motion parking the turntable, a gated exhibit
 staying listed but disabled until it unlocks, and the Gallery button on both menus.
 It pins Reduced motion for the duration rather than inheriting whatever the machine has
-saved, because the turntable's behaviour depends on it. Run the suite
+saved, because the turntable's behaviour depends on it. `tests/saves_test.gd`
+does the same for the save manager: every game's declared `save_files` passing
+`GameSaves`' path rules, deleting one game's save without touching another's,
+backup/restore round trips, refused (newer, foreign, damaged) backups, the
+screen from a 320px phone to ultrawide, the confirmation's focus and Escape
+handling, and the Saves button in collection and standalone builds. It
+snapshots every file a save can reach and points `GameSaves.backup_root` at a
+folder of its own, so a run never changes a player's saves or backups. Run the suite
 with `--game=all`: several tests assert values that a specific game declares, so
 only `single_game_test.gd` supports a standalone launch.
 
@@ -277,6 +285,7 @@ add data to `GameManifest` instead.
 | `unlock_rule`, `hidden_until_unlocked` | Gate the game behind progress elsewhere |
 | `store_items`, `store_slots`, `store_currency`, `store_preview_scene_path` | The game's cosmetics shop: what it sells, where items are worn, what its points are called, and the scene that draws an item |
 | `gallery_exhibits`, `gallery_stage_scene_path` | The game's museum: what is on the plinths, and the `Control` scene that draws one. `has_gallery()` needs both |
+| `save_files` | Progress the game keeps in `user://` files of its own (`{path, title, description}`), which the Saves screen backs up, restores and deletes with the game's achievements and wallet. Progress only — never options, caches or calibration |
 | `share_art_style`, `stats_url` | Share-card art variant and QR link |
 | `tutorial_video_path`, `tutorial_poster_path` | Instructions-screen media |
 | `supports_multiplayer`, `supports_cpu_opponent` | Mode availability |
@@ -383,6 +392,17 @@ hardcode one game's rules as another game's briefing.
   double-click resets and right-click toggles auto-spin. Equivalent focused
   keyboard/controller and touch inputs remain available; descriptions and
   input help live in tooltips and accessibility text.
+- `GameSaves.managed_games()` / `.summary(m)` / `.has_save(m)` /
+  `.save_files(m)` / `.erase(m)` / `.back_up(m)` / `.restore(m, path)` /
+  `.backups(id)` / `.delete_backup(m, path)` — one game's save as the Saves
+  screen manages it: that game's slice of `achievements.cfg` and `store.cfg`
+  (through the `save_summary` / `export_save` / `erase_save` / `import_save`
+  calls both `AchievementManager` and `Store` provide) plus its declared
+  `save_files`. Static and `class_name`, like `GameCatalog`, so it resolves
+  both autoloads from the tree. `managed_games()` is every
+  `GameCatalog.available()` game with progress or a backup, which is why a
+  collection lists every game with a save and a standalone build only its own
+  without either one asking which kind of build it is.
 - `Settings.tunable(key)` / `.tunable_bool(key)` / `.tunable_choice(key)` /
   `.tunable_min(key)` / `.tunable_max(key)` — read a game-declared option.
   `Settings` never hardcodes a game's numbers.
@@ -425,6 +445,15 @@ same way it sets the settings screen's, and both overlays go through one
 `_open_overlay(path)` so only one can be up at a time. A **Gallery** button sits
 next to it under exactly the same rule, and uses the same `game_context_id` and
 overlay machinery.
+
+A **Saves** button follows a different rule, because one screen manages every
+game: it is on the title screen of *any* build while
+`GameSaves.managed_games()` is non-empty, so `--game=all` manages every game
+with a save or a backup and a standalone build only its own. It is not on the
+pause overlay, so a restore can never change a save under a running round.
+`saves.gd` asks before deleting or overwriting anything, with focus on Cancel
+and Back/Escape closing the question rather than the screen; Back up is the
+one action that cannot lose progress, so it is the one that does not ask.
 
 `game_select.gd` stands one `ui/components/game_card.tscn` per
 `GameCatalog.available()` entry, in `menu_order`, in a full-bleed console rack
@@ -544,7 +573,8 @@ Shell notes:
 `background`, `splash_motion`, `achievement_toast`, `audio_caption`,
 `player_avatar`, `share_preview`, `share_qr_code`, `studio_logo`, `intro`,
 `game_catalog.gd`, `game_manifest.gd`, `game_unlock_rule.gd`, `store.gd` and
-`store.tscn`, `gallery.gd` and `gallery.tscn`, and the
+`store.tscn`, `gallery.gd` and `gallery.tscn`, `game_saves.gd`, `saves.gd` and
+`saves.tscn`, and the
 persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
 
 ## Conventions
@@ -587,6 +617,16 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   shared `user://`. Ownership, like an unlock, must never regress; an equipped
   id the build does not recognise falls back to its slot's `default` instead of
   being dropped.
+- A **save**, as the Saves screen means it, is one game's achievements, its
+  wallet/purchases/equipped items and its declared `save_files` — never options
+  (`settings.cfg` keeps every game's tunables and bindings with the player's
+  display and accessibility choices), and never unlock-rule progression, which
+  records play in *another* game and must not regress. Backups →
+  `user://save_backups/<game_id>/<stamp>.cfg`, one `ConfigFile` per snapshot
+  holding only that game's data; restoring one cannot touch another game, and
+  deleting a save keeps its backups. Bump `GameSaves.BACKUP_FORMAT` when that
+  layout changes in a way an older build cannot read: an older build then lists
+  the backup as unrestorable instead of misreading it.
 - `application/config/custom_user_dir_name` must be unique per derived game and
   then **stable forever** — changing it strands player saves. Every game that
   could ship standalone needs `config/name.<tag>`,
@@ -649,7 +689,15 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   screen's `_option_controls` / `_option_values` / `_binding_buttons`.
   `store.tscn` follows the same rule and builds its shelf in `_ready()`; its
   cards live in `_cards`. `gallery.tscn` does too, and its buttons live in
-  `_buttons` with the loaded stage in `_stage`.
+  `_buttons` with the loaded stage in `_stage`. `saves.tscn` builds its cards
+  in `_ready()` as well, as `%Cards/Card_<game_id>`.
+- A test that backs up or restores must point `GameSaves.backup_root` at a
+  folder of its own and put `GameSaves.DEFAULT_BACKUP_ROOT` back at the end, or
+  it lists, writes and deletes the player's real backups.
+- `AchievementManager` is the exception to "constants are fine": naming it at
+  all, even for `SAVE_PATH`, pulls its toast scene into the pre-autoload
+  compile pass. A `class_name` script or test reads its constants through the
+  tree node's `get_script().get_script_constant_map()`, as `GameSaves` does.
 - `BaseButton.set_pressed_no_signal()` does **not** unpress the rest of its
   `ButtonGroup` — only a real press does. A list that selects in code (the
   gallery's opening exhibit, for one) has to clear the other buttons itself, or

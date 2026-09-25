@@ -338,6 +338,28 @@ var gallery_exhibits: Array[Dictionary] = []
 ## `configure()` and lets the screen hide the controls it cannot use.
 var gallery_stage_scene_path := ""
 
+## Progress this game keeps in files of its own, beyond the achievements and
+## store wallet the framework already saves for it.
+##
+## The Saves screen treats every entry as part of this game's save: it counts
+## it, copies its bytes into a backup, puts them back on restore and deletes the
+## file with the rest of the save. So list progress only — a calibration, a
+## cache or a debug log is not something a player expects "Delete save" to
+## take, and options belong in [member tunables], which a save never touches.
+##
+## A path must be a file under `user://`. The shared `settings.cfg`,
+## `achievements.cfg` and `store.cfg` hold every game's data and are refused,
+## as is anything under the backups folder.
+##
+## [codeblock]
+## {
+##     "path": "user://chicken_pit_history.cfg",  # required
+##     "title": "Match history",    # how the Saves screen names it
+##     "description": "…",          # tooltip and assistive-tech description
+## }
+## [/codeblock]
+var save_files: Array[Dictionary] = []
+
 ## Rebindable keyboard controls this game owns, rendered on the in-game
 ## Settings → Controls tab.
 ##

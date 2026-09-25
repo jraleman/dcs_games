@@ -8,6 +8,7 @@ signal unlocked(id: String, achievement: Dictionary)
 signal progression_changed(key: String, value: bool)
 
 const SAVE_PATH := "user://achievements.cfg"
+const UNLOCKED_SECTION := "unlocked"
 const PROGRESSION_SECTION := "progression"
 const TOAST_LAYER := 120
 const TOAST_SCENE: PackedScene = preload("res://ui/components/achievement_toast.tscn")
@@ -166,6 +167,90 @@ func game_unlocked_modes(game_id: String) -> PackedStringArray:
 	return manifest.unlock_rule.unlocked_modes(_progression)
 
 
+# --- Saves ------------------------------------------------------------------
+# One game's slice of this file, for [GameSaves]. Unlock progress toward a
+# gated game is left out on purpose: it records play in another game, and an
+# unlock never regresses, so deleting a save can never lock a game again.
+
+## How much of [param game_id]'s list is unlocked: `{ "unlocked", "total" }`.
+func save_summary(game_id: String) -> Dictionary:
+	var ids := _game_achievement_ids(game_id)
+	var unlocked := 0
+	for id in ids:
+		if _unlocked.has(id):
+			unlocked += 1
+	return {"unlocked": unlocked, "total": ids.size()}
+
+
+## [param game_id]'s unlocks as `{ achievement_id: unlocked_at }`, the shape
+## [method import_save] takes back.
+func export_save(game_id: String) -> Dictionary:
+	var result: Dictionary = {}
+	for id in _game_achievement_ids(game_id):
+		if _unlocked.has(id):
+			result[id] = str(_unlocked[id])
+	return result
+
+
+## Locks every achievement [param game_id] declares, in memory and on disk.
+func erase_save(game_id: String) -> Error:
+	return _replace_game_unlocks(game_id, {})
+
+
+## Replaces [param game_id]'s unlocks with [param unlocks], as written by
+## [method export_save]. Ids the game does not declare are ignored, and nothing
+## is toasted or signalled: a restore puts old progress back, it earns nothing.
+func import_save(game_id: String, unlocks: Dictionary) -> Error:
+	return _replace_game_unlocks(game_id, unlocks)
+
+
+## The ids [param game_id] declares that registered, in declaration order.
+func _game_achievement_ids(game_id: String) -> Array[String]:
+	var ids: Array[String] = []
+	var manifest := GameCatalog.get_manifest(game_id)
+	if manifest == null:
+		return ids
+	for raw_id: Variant in manifest.achievements:
+		var id := str(raw_id)
+		if _definitions.has(id):
+			ids.append(id)
+	return ids
+
+
+## Rewrites one game's entries exactly — present ones set, the rest erased —
+## and touches memory only once the file is written. [method _save_state] only
+## ever adds keys, so it cannot take an unlock away; every other game's entries,
+## including ones this build does not know, stay as they were.
+func _replace_game_unlocks(game_id: String, unlocks: Dictionary) -> Error:
+	var ids := _game_achievement_ids(game_id)
+	if ids.is_empty():
+		return OK
+	var config := ConfigFile.new()
+	var err := config.load(SAVE_PATH)
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		# Saving now would replace a file we could not read with one game's keys.
+		push_warning("Could not read achievements from %s (error %d)." % [SAVE_PATH, err])
+		return err
+	var next: Dictionary = {}
+	for id in ids:
+		var unlocked_at: Variant = unlocks.get(id, null)
+		if typeof(unlocked_at) == TYPE_STRING:
+			next[id] = unlocked_at
+			config.set_value(UNLOCKED_SECTION, id, unlocked_at)
+		elif config.has_section_key(UNLOCKED_SECTION, id):
+			config.erase_section_key(UNLOCKED_SECTION, id)
+	err = config.save(SAVE_PATH)
+	if err != OK:
+		push_warning("Could not save achievements to %s (error %d)." % [SAVE_PATH, err])
+		return err
+	for id in ids:
+		if next.has(id):
+			_unlocked[id] = next[id]
+		else:
+			_unlocked.erase(id)
+	return OK
+
+
 ## Every progression key declared by any game, used for load and save.
 func _all_progression_keys() -> Array[String]:
 	var keys: Array[String] = []
@@ -233,8 +318,8 @@ func _load_state() -> void:
 		return
 	for raw_id: Variant in _definitions:
 		var id := str(raw_id)
-		if config.has_section_key("unlocked", id):
-			_unlocked[id] = str(config.get_value("unlocked", id))
+		if config.has_section_key(UNLOCKED_SECTION, id):
+			_unlocked[id] = str(config.get_value(UNLOCKED_SECTION, id))
 	for key: String in _all_progression_keys():
 		_progression[key] = bool(
 			config.get_value(PROGRESSION_SECTION, key, false)
@@ -250,7 +335,7 @@ func _save_state() -> void:
 	config.load(SAVE_PATH)
 	for raw_id: Variant in _unlocked:
 		var id := str(raw_id)
-		config.set_value("unlocked", id, _unlocked[raw_id])
+		config.set_value(UNLOCKED_SECTION, id, _unlocked[raw_id])
 	for key: String in _all_progression_keys():
 		config.set_value(PROGRESSION_SECTION, key, bool(_progression.get(key, false)))
 	var err := config.save(SAVE_PATH)

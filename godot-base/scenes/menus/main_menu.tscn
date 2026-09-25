@@ -240,6 +240,15 @@ icon = ExtResource("5_chevron")
 alignment = 0
 icon_alignment = 2
 
+[node name="SavesButton" type="Button" parent="Margins/Layout/MenuScroll/ButtonRow/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"NavigationButton"
+text = "Saves"
+icon = ExtResource("5_chevron")
+alignment = 0
+icon_alignment = 2
+
 [node name="CreditsButton" type="Button" parent="Margins/Layout/MenuScroll/ButtonRow/Buttons"]
 layout_mode = 2
 theme_type_variation = &"NavigationButton"
@@ -291,5 +300,6 @@ color = Color(0.686275, 0.866667, 0.917647, 1)
 [connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/SettingsButton" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/StoreButton" to="." method="_on_store_pressed"]
 [connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/GalleryButton" to="." method="_on_gallery_pressed"]
+[connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/SavesButton" to="." method="_on_saves_pressed"]
 [connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/CreditsButton" to="." method="_on_credits_pressed"]
 [connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/QuitButton" to="." method="_on_quit_pressed"]
