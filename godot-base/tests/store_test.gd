@@ -72,6 +72,8 @@ func _test_declarations(store: Node) -> void:
 		if manifest.store_items.is_empty() and manifest.store_slots.is_empty():
 			continue
 		var kinds := PackedStringArray()
+		# Kinds worn in at least one slot that cannot be left empty.
+		var required_kinds := PackedStringArray()
 		var slot_ids := PackedStringArray()
 		for slot: Dictionary in manifest.store_slots:
 			var slot_id := str(slot.get("id", ""))
@@ -87,6 +89,9 @@ func _test_declarations(store: Node) -> void:
 			var kind := str(slot.get("kind", Store.DEFAULT_KIND))
 			if not kinds.has(kind):
 				kinds.append(kind)
+			var allows_empty := not str(slot.get("empty_title", "")).strip_edges().is_empty()
+			if not allows_empty and not required_kinds.has(kind):
+				required_kinds.append(kind)
 
 		var item_ids := PackedStringArray()
 		var defaults := PackedStringArray()
@@ -126,8 +131,10 @@ func _test_declarations(store: Node) -> void:
 				defaults.append(kind)
 
 		# Without a default, a slot has no look to fall back to when a saved
-		# choice names something this build no longer ships.
-		for kind in kinds:
+		# choice names something this build no longer ships. A slot with an
+		# `empty_title` falls back to being empty instead, so only the kinds
+		# some slot must always wear need one.
+		for kind in required_kinds:
 			_expect(
 				defaults.has(kind),
 				"%s must declare one free default '%s'." % [manifest.id, kind]

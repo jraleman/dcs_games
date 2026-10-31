@@ -19,3 +19,18 @@
 [submodule "godot-base/games/lazer_nfc"]
 	path = godot-base/games/lazer_nfc
 	url = git@github.com:jraleman/lazer_nfc.git
+[submodule "godot-base/games/capitans_walk"]
+	path = godot-base/games/capitans_walk
+	url = git@github.com:jraleman/capitans_walk.git
+[submodule "godot-base/games/dulces_adventure"]
+	path = godot-base/games/dulces_adventure
+	url = git@github.com:jraleman/dulces_adventure.git
+[submodule "godot-base/games/puppy_kraft"]
+	path = godot-base/games/puppy_kraft
+	url = git@github.com:jraleman/puppy_kraft.git
+[submodule "godot-base/games/sailor_man"]
+	path = godot-base/games/sailor_man
+	url = git@github.com:jraleman/sailor_man.git
+[submodule "godot-base/games/tifo_beato"]
+	path = godot-base/games/tifo_beato
+	url = git@github.com:jraleman/tifo_beato.git

@@ -115,8 +115,9 @@ godot-base/
                            #   asset lives in that game's own folder
 ```
 
-Seven game folders are **Git submodules** (`anti_checkers`, `anti_chess`,
-`chicken_pit`, `creep_code`, `cube_trials`, `dead_metal_jam`, `lazer_nfc`);
+Twelve game folders are **Git submodules** (`anti_checkers`, `anti_chess`,
+`capitans_walk`, `chicken_pit`, `creep_code`, `cube_trials`, `dead_metal_jam`,
+`dulces_adventure`, `lazer_nfc`, `puppy_kraft`, `sailor_man`, `tifo_beato`);
 `desk_can_saw` and `triangle_rush` are plain folders in this repository. Clone with
 `git clone --recurse-submodules`, or run `git submodule update --init` in an
 existing checkout. A change that spans a submodule and the host is two commits:

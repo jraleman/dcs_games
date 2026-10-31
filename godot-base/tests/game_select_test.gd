@@ -678,24 +678,35 @@ func _test_back_targets() -> void:
 		)
 		await _close(mode_select)
 
-	# A solo-only game never sees mode select, so the picker is the screen
-	# directly behind its instructions.
+	# A solo-only game with nothing to set up never sees mode select, so the
+	# picker is the screen directly behind its instructions. One with a solo
+	# setup step (levels, characters or solo choices) goes through mode select,
+	# as `Router.start_selected_game()` does, so Back returns there.
 	for manifest in GameCatalog.available():
 		if manifest.supports_multiplayer:
 			continue
+		var solo_setup := not (manifest.levels.is_empty() and manifest.characters.is_empty()
+			and manifest.solo_setup_choices.is_empty())
 		GameCatalog.select(manifest.id)
 		session.call("configure_single_player")
 		var instructions := await _open(INSTRUCTIONS)
 		if instructions == null:
 			continue
-		_expect(
-			str(instructions.get("back_scene")) == GAME_SELECT,
-			(
-				"'%s' skips mode select, so its instructions must return to the "
+		if solo_setup:
+			_expect(
+				str(instructions.get("back_scene")) == MODE_SELECT,
+				"'%s' sets up a solo run on mode select, so its instructions return there."
 				% manifest.id
 			)
-			+ "picker rather than trapping the player in a loop."
-		)
+		else:
+			_expect(
+				str(instructions.get("back_scene")) == GAME_SELECT,
+				(
+					"'%s' skips mode select, so its instructions must return to the "
+					% manifest.id
+				)
+				+ "picker rather than trapping the player in a loop."
+			)
 		await _close(instructions)
 
 
