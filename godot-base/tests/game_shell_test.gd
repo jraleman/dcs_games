@@ -59,6 +59,9 @@ func _drive(manifest: GameManifest) -> void:
 	get_root().add_child(game)
 	await process_frame
 	await process_frame
+	if not bool(game.get("_round_active")):
+		game.call("_on_play_again_pressed")
+		await process_frame
 
 	var timer := game.get_node("%RoundTimer") as Timer
 	timer.stop()
@@ -170,12 +173,15 @@ func _drive(manifest: GameManifest) -> void:
 	var expected_scores := [7, 3] if shared_scores.size() == 2 else [7]
 	_expect(
 		shared_scores == expected_scores
-		and str(payload.get("score", "")) == ("7 - 3" if shared_scores.size() == 2 else "7")
-		and int(payload.get("hits_value", -1)) >= 0
-		and int(payload.get("misses_value", -1)) >= 0
-		and int(payload.get("combo_value", -1)) >= 0,
+		and str(payload.get("score", "")) == ("7 - 3" if shared_scores.size() == 2 else "7"),
 		"%s must report share totals for the finished round." % manifest.id
 	)
+	# Domain-specific statistics need not invent hit/miss or combo counters.
+	for key in ["hits_value", "misses_value", "combo_value"]:
+		_expect(
+			not payload.has(key) or int(payload[key]) >= 0,
+			"%s must not share a negative %s." % [manifest.id, key]
+		)
 	_expect(
 		str(payload.get("stats_url", "")).to_utf8_buffer().size() <= 42,
 		"%s must keep its share QR link scannable." % manifest.id

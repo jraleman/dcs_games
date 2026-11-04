@@ -98,6 +98,7 @@ func _run() -> void:
 	await _test_responsive_layout(exhibiting)
 	await _test_reduced_motion(settings, exhibiting)
 	await _test_locked_exhibits(achievements, exhibiting)
+	await _test_availability(achievements, exhibiting)
 	await _test_empty_screen()
 	await _test_menu_entry_points(exhibiting)
 	# Menu sounds release their stopped playbacks on the mixer thread.
@@ -682,6 +683,40 @@ func _test_locked_exhibits(
 		unlocked_map.erase(gated)
 	else:
 		unlocked_map[gated] = was_unlocked
+
+
+func _test_availability(achievements: Node, exhibiting: Array[GameManifest]) -> void:
+	if exhibiting.is_empty():
+		return
+	var screen := await _open_gallery(exhibiting[0].id)
+	if screen == null:
+		return
+	_expect(str(screen.call("_locked_reason", {})).is_empty(),
+		"Existing exhibits without an availability flag remain open.")
+	_expect(str(screen.call("_locked_reason", {"available": false,
+		"locked_description": "Win this exhibit's challenge."})) == "Win this exhibit's challenge.",
+		"An unavailable exhibit must use its declared reason.")
+	_expect(not str(screen.call("_locked_reason", {"available": false,
+		"locked_description": "  "})).is_empty(),
+		"An unavailable exhibit cannot open just because its reason is blank.")
+	var requirement: String = exhibiting[0].achievements.keys()[0]
+	var unlocked: Dictionary = achievements.get("_unlocked")
+	var previous: Variant = unlocked.get(requirement)
+	unlocked.erase(requirement)
+	_expect(not str(screen.call("_locked_reason", {"available": true,
+		"requires_achievement": requirement})).is_empty(),
+		"Explicit availability never bypasses an achievement gate.")
+	unlocked[requirement] = "now"
+	_expect(str(screen.call("_locked_reason", {"requires_achievement": requirement})).is_empty(),
+		"Existing achievement-only exhibits still open after earning the achievement.")
+	_expect(not str(screen.call("_locked_reason", {"available": false,
+		"requires_achievement": requirement})).is_empty(),
+		"An achievement never bypasses a game's unavailable exhibit.")
+	if previous == null:
+		unlocked.erase(requirement)
+	else:
+		unlocked[requirement] = previous
+	await _free_scene(screen)
 
 
 ## A collection's main menu has not chosen a game, so the screen must say there

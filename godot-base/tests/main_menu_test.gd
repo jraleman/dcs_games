@@ -35,6 +35,7 @@ func _run() -> void:
 	_router.connect("scene_changed", _on_scene_changed)
 	_set_setting("ui/scale", 1.0)
 	_set_setting("accessibility/reduced_motion", true)
+	await _test_release_version()
 	await _test_layouts()
 	await _test_themed_portrait()
 	await _test_reduced_motion()
@@ -59,6 +60,23 @@ func _run() -> void:
 		for failure in _failures:
 			push_error(failure)
 		quit(1)
+
+
+func _test_release_version() -> void:
+	var feature := "editor" if OS.has_feature("editor") else "template"
+	var key := "application/config/version." + feature
+	var existed := ProjectSettings.has_setting(key)
+	var original: Variant = ProjectSettings.get_setting(key) if existed else null
+	ProjectSettings.set_setting(key, "9.8.7")
+	var menu := await _open(MAIN_MENU)
+	if menu != null:
+		_expect((menu.get_node("%FooterRight") as Label).text == "v9.8.7",
+			"The title screen must display the feature-overridden release version.")
+		await _close(menu)
+	if existed:
+		ProjectSettings.set_setting(key, original)
+	else:
+		ProjectSettings.clear(key)
 
 
 func _test_layouts() -> void:

@@ -47,6 +47,14 @@ func _run() -> void:
 	save_timer.process_mode = save_process_mode
 	GameCatalog.select(original_game)
 
+	await create_timer(0.8).timeout
+	var audio_manager := get_root().get_node("AudioManager")
+	for child in audio_manager.find_children("*", "AudioStreamPlayer", true, false):
+		var player := child as AudioStreamPlayer
+		player.stop()
+		player.stream = null
+	await create_timer(0.1).timeout
+
 	if _failures.is_empty():
 		print("Lives mode tests passed.")
 		quit(0)
@@ -321,6 +329,9 @@ func _drive_self_paced_match(manifest: GameManifest) -> void:
 	get_root().add_child(game)
 	await process_frame
 	await process_frame
+	if not bool(game.get("_round_active")):
+		game.call("_on_play_again_pressed")
+		await process_frame
 	var timer := game.get_node("%RoundTimer") as Timer
 	_expect(
 		not bool(game.get("_lives_mode")) and timer.is_stopped()

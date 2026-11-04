@@ -26,7 +26,7 @@ git submodule update --init --recursive
 | `creep_code` | submodule — [jraleman/creep_code](https://github.com/jraleman/creep_code) |
 | `cube_trials` | submodule — [jraleman/cube_trials](https://github.com/jraleman/cube_trials) |
 | `dead_metal_jam` | submodule — [jraleman/dead_metal_jam](https://github.com/jraleman/dead_metal_jam) |
-| `dulces_adventure` | submodule — [jraleman/dulces_adventure](https://github.com/jraleman/dulces_adventure) |
+| `dolces_adventure` | submodule — [jraleman/dolces_adventure](https://github.com/jraleman/dolces_adventure) |
 | `lazer_nfc` | submodule — [jraleman/lazer_nfc](https://github.com/jraleman/lazer_nfc) |
 | `puppy_kraft` | submodule — [jraleman/puppy_kraft](https://github.com/jraleman/puppy_kraft) |
 | `sailor_man` | submodule — [jraleman/sailor_man](https://github.com/jraleman/sailor_man) |

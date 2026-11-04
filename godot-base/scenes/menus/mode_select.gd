@@ -44,10 +44,11 @@ const STEP_BAR_CURRENT := Vector2(56, 4)
 const STEP_BAR_OTHER := Vector2(18, 4)
 const STEP_BAR_IDLE := Color(1, 1, 1, 0.22)
 const HEADER_RULE_SIZE := Vector2(76, 4)
-## Portrait caps in physical pixels, so long labels still fit across a phone.
+## Small-screen caps in physical pixels keep headings from displacing the rows.
 const COMPACT_BUTTON_FONT := 26.0
 const COMPACT_TITLE_FONT := 34.0
 const COMPACT_ROW_ART := 52.0
+const COMPACT_WINDOW_HEIGHT := 480
 ## Dropdown rows show item art no wider than this, before scaling.
 const POPUP_ICON_WIDTH := 96.0
 ## The least room a dropdown leaves beside and between its rows, so art never
@@ -200,6 +201,7 @@ func _ready() -> void:
 	_setup_scroll.resized.connect(_keep_focus_visible, CONNECT_DEFERRED)
 	_confirm_body.resized.connect(_share_portrait_body, CONNECT_DEFERRED)
 	_setup_column.minimum_size_changed.connect(_share_portrait_body, CONNECT_DEFERRED)
+	_setup_column.minimum_size_changed.connect(_keep_focus_visible, CONNECT_DEFERRED)
 	_setup_stage.visibility_changed.connect(_share_portrait_body, CONNECT_DEFERRED)
 	_screen_title.get_parent().resized.connect(_fit_header, CONNECT_DEFERRED)
 	_opponent_options.resized.connect(_fit_opponent_options, CONNECT_DEFERRED)
@@ -331,8 +333,9 @@ func _layout_confirmation(size: Vector2, portrait: bool) -> void:
 	_confirm_button.size_flags_horizontal = (
 		Control.SIZE_EXPAND_FILL if portrait else Control.SIZE_FILL
 	)
-	# In a wide column each seat reads as one line: who plays, then their pick.
-	var inline := not portrait and _pending_mode == GameSession.GameMode.MULTIPLAYER
+	# Only pair identity and picker when two readable form columns fit.
+	var inline := not portrait and _pending_mode == GameSession.GameMode.MULTIPLAYER \
+		and _setup_panel.custom_minimum_size.x >= 2.0 * SOLO_SETUP_BUTTON_MIN_WIDTH * factor
 	for card: Dictionary in _player_setup_cards:
 		(card["line"] as BoxContainer).vertical = not inline
 		var picker := card.get("picker") as Control
@@ -378,7 +381,8 @@ func _apply_setup_readability(size: Vector2) -> void:
 	var preference := float(Settings.get_value("ui/scale", 1.0))
 	var factor := maxf(1.0, size.x * preference / maxf(get_window().size.x, 1.0) / 1.5)
 	var pixel_scale := maxf(float(get_window().size.x) / size.x, 0.01)
-	var compact := Responsive.is_portrait(size)
+	var compact := Responsive.is_portrait(size) \
+		or get_window().size.y < COMPACT_WINDOW_HEIGHT
 	if _setup_metrics.is_empty():
 		_record_setup_metrics()
 	var key := Vector3(factor, pixel_scale, 1.0 if compact else 0.0)
@@ -386,6 +390,8 @@ func _apply_setup_readability(size: Vector2) -> void:
 		return
 	_readability_key = key
 	_layout_scale = factor
+	_confirm_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART \
+		if compact else TextServer.AUTOWRAP_OFF
 	for node: Variant in _setup_metrics.keys():
 		if is_instance_valid(node):
 			var control := node as Control
@@ -1313,9 +1319,9 @@ func _configure_level_setup() -> void:
 	layout.add_child(_setup_section_label(_game_text("level_label", "Level")))
 	_level_choice = _setup_picker("LevelChoice", options)
 	layout.add_child(_level_choice)
-	# The level frames every other choice, so it heads the column.
+	# The level heads the choices, after the scrollable briefing.
 	_setup_column.add_child(layout)
-	_setup_column.move_child(layout, 0)
+	_setup_column.move_child(layout, _confirm_description.get_index() + 1)
 	_level_choice.item_selected.connect(_on_level_selected)
 
 

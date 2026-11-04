@@ -351,6 +351,10 @@ func _test_responsive_body(session: Node, settings: Node) -> void:
 		await _settle_layout()
 		_check_layout(screen, root.size, 1.5)
 		await _capture(manifest.id + "-large-ui-guide")
+		root.size = Vector2i(568, 320)
+		await _settle_layout()
+		_check_layout(screen, root.size, 1.5)
+		await _capture(manifest.id + "-short-large-ui-guide")
 		await _close_screen(screen)
 	_set_ui_scale(settings, original_scale)
 	root.min_size = original_minimum
@@ -372,7 +376,7 @@ func _test_start_preference(session: Node, settings: Node) -> void:
 	var screen := await _open_screen()
 	if screen != null:
 		var toggle := screen.get_node("%ShowAgainToggle") as CheckButton
-		_expect(toggle.text == "Show on start"
+		_expect(toggle.text in ["Show on start", "On start"]
 			and toggle.accessibility_name == "Show instructions when starting a mode",
 			"The short preference caption must keep its complete accessible meaning.")
 		toggle.grab_focus()
@@ -497,9 +501,14 @@ func _check_layout(screen: Node, dimensions: Vector2i, ui_scale: float) -> void:
 			_expect(_native_rect(button).size.y >= 44.0 * ui_scale - 1,
 				"%s must keep a real 44-pixel touch height at %s." % [name, dimensions])
 	var content := _native_rect(guide if guide.visible else screen.get_node("%VideoCard"))
+	_expect(content.size.y >= 32.0 * ui_scale,
+		"%s: instructions need usable content height at %s / %.1f, got %s."
+		% [GameCatalog.current_id(), dimensions, ui_scale, content])
 	_expect(content.position.y >= _native_rect(screen.get_node("%Header")).end.y
 		and content.end.y <= _native_rect(screen.get_node("%Actions")).position.y + 1,
-		"Content must never cover navigation or the always-reachable Start action.")
+		"%s: content must not cover navigation at %s / %.1f (content %s, actions %s)."
+		% [GameCatalog.current_id(), dimensions, ui_scale, content,
+			_native_rect(screen.get_node("%Actions"))])
 	if guide.visible:
 		var label := screen.get_node("%PlayerOneControls") as Label
 		var transform := root.get_final_transform() * label.get_global_transform_with_canvas()

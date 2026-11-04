@@ -74,7 +74,9 @@ const MUTED := Color("93a6b0")
 
 
 static func version() -> String:
-	return str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
+	if not ProjectSettings.has_setting("application/config/version"):
+		return "0.0.0"
+	return str(ProjectSettings.get_setting_with_override("application/config/version"))
 
 
 static func website_label() -> String:

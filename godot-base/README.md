@@ -21,6 +21,10 @@ godot --path . -- --game=anti_checkers
 godot --path . -- --game=lazer_nfc
 godot --path . -- --game=creep_code
 godot --path . -- --game=cube_trials
+godot --path . -- --game=dolces_adventure
+godot --path . -- --game=sailor_man     # toy-canal voice/Remo duel, not the finished voyage
+godot --path . -- --game=capitans_walk  # seeded Park grey box, keyboard/pad/touch; not the finished game
+godot --path . -- --game=tifo_beato     # original terrace rhythm career and two-human hot seat
 godot --path . -- --game=all            # launch the full collection
 ```
 
@@ -98,6 +102,9 @@ Mode setup keeps player identities, choices and controller bindings visible;
 **Details** reveals the longer game-authored notes without adding another setup
 step or changing any saved options. Both setup steps scroll when needed, and
 touch-target scaling applies even to games without character or level choices.
+The whole briefing and Details scroll with the setup choices, keeping focus
+visible after reflow. Narrow identity/picker pairs stack, and short landscape
+windows use the compact heading caps and wrapping Start labels too.
 
 ## What's in the box
 
@@ -145,6 +152,10 @@ touch-target scaling applies even to games without character or level choices.
 | `games/lazer_nfc/` | LaZer NFC: real 3D Simon-style memory combat, Android reader-mode NFC, guided tag binding, assisted touch, seven instruments, shades and relaxed timing. |
 | `games/creep_code/` | Creep Code: one evolving 3D ritual stage with Sliding Window, Binary Search and BFS relics, a growing constellation, permanent seals and a game-local Puzzle Manager. |
 | `games/cube_trials/` | Cube Trials: selectable Cube, Sonata and CR-V models over deterministic side-view suspension physics; solo or two/three-player hot seat, five plugs, four checkpoints, crash-only lives and keyboard/gamepad/multitouch controls. |
+| `games/dolces_adventure/` | Dolce's Adventure: Dolce's side-scrolling run, five timed stages, procedural models, Treats store and gallery. The pre-release rename uses only the new identifiers; older development saves are not migrated. |
+| `games/sailor_man/` | Sailor Man prototype: five free toy-canal skiff-practice arenas, seeded Culebra self-echo or two-human hot seat, weighted judges, per-seat voice profiles, track-driven world ribbons, opt-in microphone, keyboard/gamepad/multitouch Remo, frozen share cards, eleven free gallery exhibits, actual P1/P2 setup launch previews and earned-Balboas toy cosmetics; real voices and the finished voyage remain pending. |
+| `games/tifo_beato/` | Tifo Beato: terrace rhythm career and hot seat, Away days, Derby week, curated Chant Creator, local-midnight Daily Derby and read-only Best Moments; optional microphone/Buttons, original Compatibility toys/audio, store/gallery/frozen shares and tutorial. Hardware and owner review remain pending. |
+| `games/capitans_walk/` | Capitan's Walk grey box: solo, node-free 120 Hz walker/dog/leash physics, sixteen seeded Park templates with puddles/slopes, telegraphed sprinkler/jogger/flock/friendly-dog encounters, safe rings, physical play/greeting sniffs, happiness and banked rhythm points; rebindable keyboard, fixed analogue gamepad, independent multitouch with three handed layouts, classic/Easy legs, four live assists, instant restart and an original keyboard walkthrough. Automated events reach identical shared results through all three adapters; a real motor walk reaches a generated jogger at 52.09 m. Physical hardware and the three-person playtest remain unverified. Pickups, surprise events/bosses, final 3D art and progression remain later work. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
 | `tools/record_tutorials.ps1` | Records each game's tutorial clip through Godot's Movie Maker and encodes it to that game's own `games/<id>/assets/video/tutorial.ogv` plus a poster frame. |
 | `tools/measure_intro_cues.py` | Development-only: finds the pauses in a narration recording and prints the `cue_times` array a card-based intro needs. |
@@ -633,7 +644,11 @@ manifest fields turn it on, and both are required:
   optional game-owned rendering metadata such as `color`, and
   `requires_achievement` to leave an exhibit **listed but not viewable** until
   it is earned — a collection reads as something to
-  finish rather than something the game is hiding.
+  finish rather than something the game is hiding. For progress the game owns
+  outside achievements, `available` defaults to true; explicit `false` leaves
+  the entry locked even with no achievement id or reason. `locked_description`
+  explains the gate, with a generic fallback when absent. Availability and
+  achievement gates both apply; true does not bypass an unmet achievement.
 - **`gallery_stage_scene_path`** — the `Control` scene that actually draws a
   model. This is the one piece a game writes itself, because only the game knows
   what its models are.
@@ -1073,6 +1088,267 @@ includes it automatically; existing standalone presets exclude it. As with other
 source launches, `--game=cube_trials` selects the catalog, not a separate save
 profile.
 
+## Dolce's Adventure
+
+`games/dolces_adventure/` is an original solo side-scrolling platformer for
+Dolce, a small chihuahua mix: run, variable-height jump, stomp pests and eat
+burgers across five biomes. Endless runs use seeded authored chunks; five
+fixed stages end at food trucks and unlock in sequence. Distance is relative
+to the chosen start; stage clear times use model time. Assists do not block
+achievements.
+
+A node-free 120 Hz model drives procedural 3D meshes in an isolated viewport
+under `GameShell`. The game owns its Treats cosmetics, outfit portraits,
+gallery, intro, synthesized cues/captions and real Stage 1 walkthrough. Touch
+supports independent fingers, genuine double-tap sprint and persistent
+one-time Auto-run onboarding. Keyboard actions are rebindable; arrows and
+gamepad controls are fixed extras approved for v1.
+
+Launch with `--game=dolces_adventure`, adding `--dolce-seed=42` to replay an
+endless course. The **Windows - Dolce's Adventure (standalone)** export
+carries `dolces_adventure`, version `1.0.0`, and the approved permanent
+`DeskCanSaw Games/Dolce's Adventure` user directory. Its external EXE/PCK
+pair lives in `build\dolces_adventure`; other games, tests and development
+tools are excluded. The collection includes Dolce; all other standalone
+presets exclude it. Source game selection still shares the host development
+save profile.
+
+Read the game's `AGENTS.md`, `DESIGN.md`, `TODO.md` and `README.md` for
+controls, isolated tests, records and art capture. Its thirteen suites cover
+model rules, fairness, progression, gestures, real gameplay and rendered
+layouts; `dolce_view_test.gd` requires a graphics window. Human/device
+playtests are separate from those automated checks.
+Godot 4.7.2 builds of both presets passed exact-PCK headless/rendered checks
+and native Windows boots. The unsigned standalone distribution is
+`build\dolces_adventure\DolcesAdventure-v1.0.0-windows-x86_64.zip`.
+Its feature-specific version also reaches the shared title footer through
+`StudioInfo.version()`; the collection's version remains unchanged.
+
+## Sailor Man - toy-canal practice duel
+
+`games/sailor_man/` supplies a playable best-of-three prototype duel and a
+node-free scorer for Aliento, Quiebre, Altura, Remate and answer-only Eco,
+a continuous 100 Hz microphone pipeline, and an opt-in workbench inside
+`GameShell`. Launch with `--game=sailor_man`: **Start duel** faces one
+explicitly synthetic practice skiff, with weighted judges, numbered paddles,
+alternating calls and an answerer-wins-ties rule. **Practice arena** in the
+shared setup freely selects Gatún, Lago Gatún, Corte Culebra, Pedro Miguel or
+Miraflores & the Pacific; no voyage gates or progress are implemented. Win two
+tandas, then enter shell results and replay in the same arena. Lock clocks pause
+inside performances; Ready and a 250 ms cue/tail guard gate player input.
+
+Shared **Multiplayer** setup offers two-human hot seat in all five practice
+arenas, with no chamber timeout, including locks. P1 calls tanda one; P2 answers
+and leads tanda two. Named/coloured P1/P2 pass cards select each singer's
+profile/source independently for the session, including rematches, without
+changing the saved source default. Neither selection opens hardware; every
+completed turn/Repeat stops capture and the next mic turn needs explicit Enable.
+Soundcheck Save/use applies only to that seat, without reparenting/restarting
+checked capture. Both actual scores/winners reach shell results. Rest counts
+are per singer; free Repeat uses only the completed caller's contour/profile
+as a neutral tone, not recorded voice. Listening deadlines and judge/tie/decider
+rules are unchanged. Water stays at its initial height in human lock matches.
+Full Practice and self-echo remain solo entries; mobile remains solo.
+
+Standalone boot shows three player-paced practice cards using the actual
+static lock and launches, with **Next**/**Done**, always-available **Skip**,
+Escape and controller navigation. Done/Skip lead to the normal title, not a
+match. No narration, microphone activation, profile/performance reads,
+campaign story or new save is introduced; collection boot keeps the framework
+intro. The shared written **Guide** now explains Aliento, Quiebre, Altura,
+Remate (including grito) and answer-only Eco as game simplifications, retaining
+actual mode rules and rebound keys. Comfort, Quiet Mode, no extra-volume
+reward and provisional unmeasured microphone bands stay explicit.
+
+One **Practice launch** setup entry displays each human's actual launch and
+plain toy crew on the shared plinth. Focusing P1/P2 changes canonical paint,
+plaque and identity ring, not scoring or voice. The isolated transparent
+Compatibility view is static, renders only the featured seat, reads no
+profile/performance data and writes no saves. Equipped cosmetic ids come from Store;
+this is not the production captain roster.
+Compact arena summaries stay mode-neutral; Details explains the solo clocks
+versus untimed hot seat.
+
+The shared **Store** offers twelve original toy cosmetics: four free defaults
+and eight paid hats/pennants/lower-hull finishes/bow ornaments. Eight stable
+`p1_`/`p2_` slots keep human equipment independent, while ownership and the
+per-game Balboas wallet are shared in `user://store.cfg`. Buy once to equip
+either/both singers; auto-equip chooses the first matching still-default slot.
+Normally completed duels pay `round(best human's accumulated judge points / 10)`;
+hot seat uses the higher human total, not their sum or rival points. Ordinary
+solo synthetic-skiff wins add five; echo/hot seat have no win bonus. Losses
+still earn conversion; workbench, seeds, unfinished/abandoned duels and timeouts
+pay nothing. Results bank once and display the payout. Existing minimum
+one-point valid paddles mean a completed silent three-judge loss can earn one
+Balboa. The actual play/setup/gallery rigs wear human outfits; the skiff/echo
+remains plain and finished share cards freeze cosmetic ids. No traditional
+dress/pattern, cultural gate, new save file or framework game-name branch is added.
+
+Original batched launches, gates, rail-mounted mulas, tropical banks and plain
+crew/crowd replace the primitive lock. Both boats stay framed as the camera
+eases toward the singer; an admitted, profile-relative contour unrolls over
+the water without rewarding amplitude or bridging silence. Review diamonds
+use existing scorer evidence. Reduced motion parks framing/bobbing/waves, not
+water or pitch; effects-off omits diamonds, and hidden views stop rendering.
+Gatún rises and Pedro Miguel descends with the four-minute chamber clock.
+Lake, Cut and Pacific practice are untimed between turns, including their free
+once-only Repeat; the listening deadlines remain bounded. Pacific uses five
+actual judges, HUD paddles and 50-point turn maxima. The other locations add
+jungle islands/howlers/ships, red-earth terraces/cable bridge and an arched
+bridge/skyline/causeway/festival boats. Their setup icons come from these same
+meshes via the game-owned `tools/capture_art.gd`. Real place names are
+owner-approved without authority branding; these are toy interpretations,
+not factual/cultural reconstructions.
+
+Culebra's ready card also offers **Challenge your echo**, separate from skiff
+practice. A fresh unscored seed uses the same guarded input window; its copied
+frames, source profile and Quiet Mode become a fixed opponent in best-of-three.
+Every echo/repeat waits 600 ms before returning as a contour and softer neutral
+synthetic tone, never recorded/live mic audio. Pause restarts the delay and
+same take; ECHO labels identify it on the boat/paddles/results. Replay requires
+a fresh seed and opens no microphone. No seed tracks or mode choice persist,
+no seed points inflate results, and no voyage encounter/progression is implied.
+
+The shell's **See Scores** previews a frozen 1200x630 share card; explicit
+**Save Image** writes/downloads the same PNG. Hot seat features both humans'
+original blue/red launches, P1/P2 labels and each singer's highest accepted
+normalized-turn contour with actual paddles; ties keep the first. Solo/echo
+feature only P1, not the synthetic rival or seed. Judge/tanda points, best scores,
+total Quiebres and longest Aliento are truthful; silence, no completed turn,
+incomplete duels and development scorer sessions stay distinct. Art is static
+and hidden views stop rendering. Only transient geometry/scalar captions enter
+artwork, with frozen cosmetic ids; no PCM, pitch-frame/profile files or PNG text/EXIF
+metadata are exported.
+The QR opens the studio homepage under **Discover more games**, explicitly
+without a public run record. Campaign/captain artwork and publishing are not
+implemented.
+
+The standalone title/pause **Gallery** displays eleven free current exhibits:
+P1's launch, synthetic skiff, human pair, mula, gate, howler and five practice
+dioramas. These reuse the actual match builders, not recorded/culturally
+reviewed crews or campaign-gated assets. The shared viewer owns mouse/touch/
+keyboard/controller orbit, zoom, reset and auto-spin through `set_view`.
+The static isolated Compatibility stage needs only `configure` and `set_view`;
+it has no independent spin loop or redundant `set_auto_spin`. Reduced motion
+parks auto-spin, hidden stages stop rendering, and no voice/profile/performance
+data, audio players or persistence enter the gallery. Recorded rivals, dredge/
+whole-canal exhibits and achievement gates remain future campaign work.
+
+Original game-owned horn, water, applause, paddle and mula effects use SFX.
+Judge feedback is limited to Remo between turns; filling water and mula bells
+belong to locks only. Selecting Microphone
+already silences it before Enable. Reference/repeat, guard, listening,
+Soundcheck, Practice and pause have no canal effects; completion stops capture
+before its final cues. Title music is stopped. Combined sound captions reuse
+the shell widget in the visible duel layout, even with muted SFX; the persistent
+YA header leaves the compact listening ribbon clear. Cruise music, production
+voices and physical acoustic-tail validation remain open.
+
+Remo needs no microphone: choose **Ready**, wait for **YA!**, hold Space,
+glide with W/S or arrows, press J
+for Quiebre and K for Remate. Gamepad and independent multitouch also feed
+the same 100 Hz frames/scorer. The keys are rebindable, the ribbon keeps a
+reference for Eco, and an explicitly synthetic tone previews pitch. Solo's **Practice**
+keeps the original full scorer and its reference/examples workflow. Starting
+Remo disconnects capture; unfinished turns are discarded on pause, focus loss
+or source change without losing the previous reference.
+
+The game-owned pre-duel **Soundcheck** measures Room/Speak/Low/High/Call and
+saves named scalar profiles in `user://sailor_man_voice.cfg`, never PCM or
+tracks. It is calibration, not a `save_files` entry. Only explicit Enable
+opens hardware; opening setup or selecting a saved profile does not. Back,
+pause/focus loss and failure preserve the earlier file and pending answer.
+Auto/Microphone/Remo is the saved default; human card choices are session-local.
+Auto prefers an available calibrated device, otherwise Remo, and also falls
+back on capture failure. Narrow active
+layouts prioritize the ribbon and independent touch controls over the canal view.
+
+Missing/unanalyzable audio does not count as a zero-score call. A four-second
+buffer stall aborts a listening window; cancellation drops the partial track
+without replacing a previously scored reference.
+
+For local recording comparisons, its dev-only `tools/analyse_takes.gd` reads
+WAVs through the same PCM pipeline and emits provisional scores/evidence,
+with optional reference-based Eco and explicit failure exits. It neither
+captures audio nor saves tracks/profiles; see the game's README for commands.
+
+Quiet Mode uses measured speaking RMS and bypasses the carrying-level gate.
+Optional session-local rest reminders offer water/rest or Remo between duels
+after six voiced mic turns in ten minutes, never force a choice. Longer windows,
+sensitivity and reminders are declared options. Live web analysis is bounded,
+including queued Stop/deadline draining. Recorded rival crews, Culebra's campaign
+echo encounter, cruise music and campaign progression are not implemented.
+Future campaign-aware hot-seat access is undecided.
+Physical microphones/permissions, authentic saloma recordings and cultural
+review are unverified. The owner authorized Remo and the duel assuming success;
+the real-recording gate is still unchecked.
+The prototype has an original SVG icon and a synthetic complete-duel walkthrough
+to satisfy the catalog's presentation contracts, not finished game art or a
+configured standalone export. Read its own `README.md`, `AGENTS.md`, `DESIGN.md`
+and `TODO.md` before extending it.
+
+## Tifo Beato - Ninety minutes. No silence.
+
+`godot --path . -- --game=tifo_beato` opens the original terrace rhythm game.
+Shared setup chooses a ground/curva section; first entry opens the game's own
+railway, not a running round. Career, Quick, Workshop and Chant wars live there.
+Five star-gated grounds, five sections and 24 original chant Resources drive
+seeded football, life/morale/rally, Fury, power-ups, tifos and six chaos events.
+Football results never gate promotion. The real saved workshop banner appears
+in the mosaic, giant banner and frozen share cards, including its mishaps.
+
+The five expanded pages add bus/station/hostile Away days, bounded best-only
+Derby week rituals, live classified-event Chant Creator (curated lyrics,
+sixteenth-grid editor, eight slots and checked offline musical codes),
+local-midnight Daily Derby and twelve read-only numeric Best Moments.
+Daily freezes its date/seed/ground/group/modifier/rival through a complete
+match and shares its local best/streak/assist badge. Replay seeks the real 3D
+view without input capture, scoring, payout or progress writes.
+
+Buttons are the privacy-first default. F/J Beat, Space Shout, A/S/D relative
+LOW/MID/HIGH, Q Fury and E power are rebindable; gamepad and independent touch
+contacts feed the same 100 Hz classifier/judge as optional mic and CPU.
+Soundcheck requests capture only after Start and saves numeric measurements,
+never PCM. Denied/digital-silence capture closes explicitly and leaves Buttons
+usable. Quiet Mode uses speaking level with fixed carry-equivalent scoring;
+timing trim adds to each seat's profile and caps the total to -100..400 ms.
+Known output shares that compensated clock. Rival audio never crosses judged
+onsets/Holds/Rests: an unsafe late cue keeps its caption without sound.
+
+Desktop hot seat offers Duel (echo actual calls), Two Capos (alternate verses
+with shared life/Fury) and Split the Stands (same P1 chart/seed in full turns).
+Blue/red named cards require old contacts to release, preserve late input and
+give the next player two guide beats. Results/payout wait for the set's final
+turn. Quick/hot seat never advance the career; practice pays no Tokens.
+The Creator also offers an unranked identical-chart successive challenge.
+Short practice has no Fury/power-up chart rewrites. Mobile remains solo.
+
+Original Compatibility toy models supply match/setup/store/gallery/share art,
+eleven captured PNGs, a five-card player-paced intro and the real 64-second
+silent tutorial. Twenty-one achievements, six cosmetic slots/22 items and
+28 base gallery exhibits plus the saved banner are declared by the manifest.
+Synthesis is the approved v1 audio direction; the commentator is caption-only.
+
+Six headless suites and a required-window `curva_view_test.gd` cover actual
+events through every complete mode, numeric privacy/calibration, safe timing,
+merged progress, model framing, touch targets, post-input layouts and all five
+story cards, the new workbench/replay layouts and original travel/ritual scenes.
+From the game folder, `tools\validate.ps1 -Godot <executable>
+-Suites @('sound','model','scene','flow','post_v1','post_v1_flow') -Window
+-Framework` runs them in an isolated project/profile. All fifteen shared
+framework suites pass, including the collection tutorial decoder. Tifo's actual
+Instructions video decodes on native and exported web.
+
+Windows/Web/Android/iOS presets use feature `tifo_beato` and the permanent
+`DeskCanSaw Games/Tifo Beato` user directory, excluding other games/tests/tools.
+Windows release boot and production-pack gameplay, browser portrait touch/
+desktop keyboard complete matches and deny-only mic recovery are verified.
+Android ARM64 debug packaging is verified, not device execution; iOS still
+needs Apple provisioning/tooling. Owner melody/rival/content review and physical
+microphone, speaker, pad/touch and mobile certification remain release gates.
+Read the game's README/DESIGN/TODO; milestones 0-15 are implemented, while
+online/stretch features remain outside this scope.
+
 ## Shipping one game on its own
 
 The same project produces the collection build *and* a standalone build of any
@@ -1324,11 +1600,13 @@ A game that declares no theme, and every collection build, gets
 `GameTheme.studio_default()`: the exact values the shared scenes are authored
 with, so nothing moves.
 
-That makes a standalone release **export configuration only**. Five games
-already have a preset — *Windows — Triangle Rush / Desk-Can-Saw / Dead Metal Jam
-/ Chicken Pit (standalone)* plus *Android — LaZer NFC* — each pinned by its own
-feature tag, spelled as the initials of the game's id (`tr`, `dcs`, `dmj`, `cp`,
-`lazer_nfc`). A preset carries the tag and drops the other games:
+That makes a standalone release **export configuration only**. Windows
+standalone presets cover Triangle Rush, Desk-Can-Saw, Dead Metal Jam,
+Chicken Pit, Creep Code, Cube Trials, Dolce's Adventure and Tifo Beato;
+LaZer NFC has Android and iOS presets, and Tifo Beato also has Web/Android/iOS.
+Each is pinned by its own feature tag (`tr`, `dcs`, `dmj`, `cp`, `creep_code`,
+`cube_trials`, `dolces_adventure`, `lazer_nfc`, `tifo_beato`).
+A preset carries the tag and drops the other games:
 
 ```ini
 custom_features="dmj"
@@ -1526,6 +1804,10 @@ from another game's rules.
 Back, Guide/Watch, the preference and Start stay outside the scrolling content.
 Controls and text use physical UI units, including on the expanded phone canvas,
 and still honor the player's UI scale. Player cards stack when space is limited.
+Footer wrapping measures actual action widths. Very short logical screens use
+a one-row context and **On start**, retaining full tooltip/accessibility text,
+so the written Guide keeps usable scroll space and whole Start/Back actions
+at enlarged UI sizes.
 
 All nine current games ship a recording and matching poster. A manifest's
 optional local video/poster overrides select footage for
@@ -1604,6 +1886,12 @@ real scene's input paths and reject takes that miss their required milestones.
 The optional `_set_capture_inset(bottom)` hook reserves room for captions without
 changing normal play. Record only one game's footage with, for example,
 `pwsh tools\record_tutorials.ps1 -Godot godot -Games creep_code`.
+Dolce's Adventure records its real Stage 1 with
+`pwsh tools\record_tutorials.ps1 -Godot godot -Games dolces_adventure`.
+Tifo Beato uses its own real-event driver for a 64-second Buttons performance:
+`pwsh tools\record_tutorials.ps1 -Godot godot -Games tifo_beato`.
+The shared recorder captures only the game viewport and intentionally drops
+the clip's audio behind the Instructions screen's existing menu music.
 Captures use a unique temporary directory and isolated user profile per recording
 invocation, and only completed encodes replace the shipped media.
 Recording overrides never persist to the player's settings.
@@ -1674,6 +1962,73 @@ Get-ChildItem tests\*.gd, games\*\tests\*.gd |
   }
 ```
 
+Dolce's Adventure owns twelve headless suites plus `dolce_view_test.gd`
+below. They cover manifest, physics, rules, pests, records, chunk fairness,
+streaming, fixed stages, rig, audio, routed gestures and the real shell scene.
+The scene suite snapshots and restores settings, achievements, store and run
+records; still use an isolated profile because these are real rounds.
+
+Sailor Man owns seventeen prototype suites: `saloma_scorer_test.gd`,
+`voice_normalisation_test.gd`, `voice_pipeline_test.gd`, `remo_source_test.gd`,
+`duel_state_test.gd`, `duel_scene_test.gd`, `sailor_scene_test.gd`,
+`voice_calibration_test.gd`, `soundcheck_scene_test.gd`, `sailor_audio_test.gd`,
+`gallery_scene_test.gd`, `art_capture_test.gd`, `character_preview_test.gd`,
+`store_test.gd`, `onboarding_test.gd`
+plus `canal_view_test.gd` and `share_card_test.gd`.
+The first fifteen support headless runs; canal/share-card suites require graphics.
+Also run all three scene suites, gallery, art capture, setup previews, store
+and onboarding with a real window: ten windowed checks in total, including
+phone through ultrawide and normal/150% UI.
+Its buffered
+microphone fixture tests actual PCM through the UI/source/scorer without
+opening hardware. Simulated Remo key/pad/touch events also exercise the real
+viewport, preview, Eco and pause/resume; ideal Remo/normalized sung fixtures
+score within 5%. Duel checks play complete wins/losses through the real sources,
+scorer, judges and shell results, and guard turn admission, buffered silence,
+retry and the native arena's camera/render budget. Human cases cover both
+actual winners, five Pacific judges, per-seat 160/280 Hz PCM/calibration/source/
+rest, fresh P2 Soundcheck Save/adoption, caller-relative free Repeat and both
+handoffs/live/reviews across all eight layouts, including focus scrolling and
+actual P2 touch/gamepad input. Calibration checks cover
+scalar round-trips/failure preservation, actual synthesized PCM through the
+wizard, capture handoff, Quiet Mode, bounded finishing, saved source fallback
+and optional rest actions. Canal checks cover both singers/water endpoints,
+actual paint/contour pixels, labels, hidden rendering, pause and accessibility;
+the measured maximum is 23 draw calls against a 60-draw budget. This is not a
+substitute for physical-device or salomero QA.
+Audio checks guard original PCM headroom/seams, owned playback, quiet input
+contexts, event-derived once-only captions with muted SFX and actual visible
+verdict captions from phone to ultrawide without shrinking active input.
+Share checks cover accepted-best selection/ties, per-seat frozen PCM geometry,
+privacy, silent/incomplete/scorer labels and seed/rival exclusion. Nine native
+card cases verify complete boats, actual gold/paint pixels, readable/static
+layout, hidden-view shutdown and reversible human/solo/other-game reuse, with
+5 measured draws per portrait against a 20-draw limit. All 27 full/half PNG and
+quality-75 half JPEG QR variants decoded; all 18 PNGs had no text/EXIF chunks.
+Actual shell preview/Save/direct-preview pixels matched. Default checks do not
+save or touch the clipboard; optional `--sailor-test-save` requires an isolated
+profile and preserving/restoring the desktop clipboard.
+Gallery checks use the actual list/stage, exact match meshes, canonical/error
+configuration, voice/audio/save isolation and actual mouse/pad/touch camera
+input. Its native matrix has 88 exhibit/size/UI renders, complete model/landmark
+framing and visible launch pixels, with a maximum of 13 draws; reset, shared
+auto-spin, reduced-motion parking and hidden rendering are also verified.
+Art checks verify the captured transparent model icon, real CLI failures and
+selector/default regeneration without overwriting checked-in art. Native checks
+preserve all five arena stills, inspect gold/blue at 512/64/32px, and verify
+actual title/picker/share branding with two measured icon draws. The game-owned
+`tools/capture_art.gd` regenerates icon and arena previews; `--only=icon` /
+`--only=levels` limit outputs and `--output-dir=<directory>` redirects them.
+These remain original prototype models, not recorded or culturally reviewed
+campaign assets or standalone export configuration.
+Shop checks use actual Buy/P2 Equip controls, real save reload, exact file/state
+restoration and other-game/voice/audio isolation. All twelve items run on both
+rigs (24 model cases); native checks render 24 shelf previews, eight shop
+size/UI layouts and complete decorated match/setup/gallery/frozen-share framing,
+with three maximum preview draws against ten. Damaged equipment fails visibly
+and recovers without stale art. Seven actual completed duels test payout,
+rounding, human-only totals, bonus exclusions and duplicate settlement.
+
 Run the suite against the full collection with `--game=all`: several checks
 assert values that specific games declare, so they cannot pass in a standalone
 run. `custom_keys_test.gd` uses an in-memory manifest to check CPU selection,
@@ -1697,10 +2052,10 @@ title-screen entry in collection and standalone builds. It copies every file a
 save can reach first and writes each back byte for byte, and keeps its backups
 in a folder of its own, so a run never changes a player's saves.
 
-Eight game-owned suites need a **real graphics window** and deliberately exit 1
-under `--headless`, where they guard `DisplayServer.get_name() == "headless"`
-and say so. Run them without `--headless`, and never read their headless exit
-code as a regression:
+The suites below require a **real graphics window** or add rendered checks
+when run with one. Window-only suites deliberately exit 1 under `--headless`,
+where they guard `DisplayServer.get_name() == "headless"` and say so; never
+read that intentional headless exit code as a regression:
 
 - `games/anti_chess/tests/board_view_test.gd` — portrait/wide framing, square
   picking, modal UI and the full-board draw budget. Optional
@@ -1728,6 +2083,56 @@ code as a regression:
 - `games/cube_trials/tests/cube_trials_multiplayer_view_test.gd` — routed
   gated level/character selection, blue/red/green car previews, handoffs and complete
   three-player HUDs, results and share image. Requires a fresh isolated profile.
+- `games/dolces_adventure/tests/dolce_view_test.gd` — actual pixels and
+  whole-body framing from 320px phones to ultrawide, multitouch targets,
+  Auto-run tip docking, long scores, large UI, Full, captions and airborne
+  poses. Optional `--dolce-view-captures=<absolute directory>` saves frames.
+- `games/sailor_man/tests/canal_view_test.gd` — all five practice arenas,
+  complete launches/source-relative ribbons in both singer framings and water
+  endpoints, 40 phone-to-ultrawide size/UI cases, actual paint/contour/landmark
+  pixels and labels, <60 draws (measured maximum 23), real pause, hidden-view
+  shutdown and accessibility preferences.
+  Optional `--sailor-capture-dir=<absolute directory>` saves rendered examples.
+- `games/sailor_man/tests/share_card_test.gd` — nine frozen result cards,
+  including both human winners, Pacific, a real decider, solo/echo/silent/
+  incomplete/scorer outcomes and a display-only width stress fixture. Actual
+  gold contours, player paint, full framing, static/reused/hidden views and
+  <20 draws per portrait (measured maximum 5).
+  Optional `--sailor-share-capture-dir=<absolute directory>` saves full/half
+  PNG and quality-75 half JPEG for QR decoding and PNG metadata checks.
+  `--sailor-test-save` tests the real explicit PNG action; use isolated user
+  data and preserve/restore the desktop clipboard, which receives the image path.
+- `games/sailor_man/tests/gallery_scene_test.gd` — also supports headless
+  configuration/mesh/isolation checks. With a window it renders all eleven
+  free exhibits in 88 phone-to-ultrawide size/UI cases, checks actual launch
+  pixels and complete framing, <60 draws (measured maximum 13), real viewer
+  mouse/pad/touch input, reset, auto-spin/reduced motion and hidden-render shutdown.
+  Optional `--sailor-gallery-capture-dir=<absolute directory>` saves examples.
+- `games/sailor_man/tests/art_capture_test.gd` — also supports headless PNG
+  and CLI rejection checks. With a window it verifies actual icon/level/default
+  regeneration, transparent full geometry, 512/64/32px gold/blue pixels, <10
+  draws (measured 2) and real title/picker/share theme integration.
+  Optional `--sailor-icon-capture-dir=<absolute directory>` saves inspections.
+- `games/sailor_man/tests/character_preview_test.gd` — also supports headless
+  real collection/standalone solo/hot-seat configuration, canonical mesh reuse,
+  rejection/recovery and audio/save isolation. With a window it checks 25
+  setup cases, including compact expanded Details, actual focused pickers and
+  Start visibility, full framing, paint/face/plaque pixels, static/hidden views
+  and <10 draws (measured maximum 3).
+  Optional `--sailor-setup-capture-dir=<absolute directory>` saves UI/model captures.
+- `games/sailor_man/tests/store_test.gd` — also supports headless purchases,
+  independent equipment/shared ownership, persistence, canonical mesh reuse,
+  frozen outfits and error recovery. With a window it checks 24 shelf previews,
+  eight shop layouts, whole scroll-focused controls and complete decorated
+  match/setup/gallery/share framing, with <10 preview draws (measured maximum 3).
+  Optional `--sailor-store-capture-dir=<absolute directory>` saves inspections.
+- `games/sailor_man/tests/onboarding_test.gd` — also supports headless pacing,
+  actual input/Router exits, five-mark Guide/rebinding, live Reduced motion and
+  audio/save isolation. With a window it checks 40 layouts for opening cards
+  and solo/hot-seat Guides, readable/reachable copy, whole actions, complete
+  actual model framing/pixels and <60 draws (measured maximum 12). Seven title routes include
+  incoming-transition and duplicate-input guards.
+  Optional `--sailor-onboarding-capture-dir=<absolute directory>` saves examples.
 
 Run tests sequentially and use an isolated user profile for host tests that
 exercise persistence or complete real rounds.
@@ -1735,6 +2140,13 @@ exercise persistence or complete real rounds.
 The FPS counter is available under **Settings → Display** and is drawn by
 `Router`, so it stays visible across scenes without each game implementing its
 own counter.
+
+- `games/tifo_beato/tests/curva_view_test.gd` — original live stadiums/cast/
+  effects/cameras, complete gallery/store/frozen-share geometry, real keyboard/
+  touch play, post-input portrait/short-landscape layouts and 30 five-card intro
+  layouts at normal/enlarged UI scales. Final visible+shadow draws measured 32
+  against a budget of 90. Headless `sound`, `model`, `scene` and `flow` suites
+  plus the separate platform Node fixture cover the non-rendering contracts.
 
 ## Placeholder assets
 

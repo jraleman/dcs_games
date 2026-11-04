@@ -40,6 +40,15 @@ config/icon.creep_code="res://games/creep_code/assets/game-icon.svg"
 config/name.cube_trials="Cube Trials"
 config/custom_user_dir_name.cube_trials="DeskCanSaw Games/Cube Trials"
 config/icon.cube_trials="res://games/cube_trials/assets/game-icon.png"
+config/name.dolces_adventure="Dolce's Adventure"
+config/version.dolces_adventure="1.0.0"
+config/custom_user_dir_name.dolces_adventure="DeskCanSaw Games/Dolce's Adventure"
+config/icon.dolces_adventure="res://games/dolces_adventure/assets/game-icon.png"
+config/name.tifo_beato="Tifo Beato"
+config/description.tifo_beato="Ninety minutes. No silence. An original football-terrace rhythm game."
+config/version.tifo_beato="1.0.0"
+config/custom_user_dir_name.tifo_beato="DeskCanSaw Games/Tifo Beato"
+config/icon.tifo_beato="res://games/tifo_beato/assets/game-icon.png"
 
 [audio]
 
@@ -48,6 +57,7 @@ driver/enable_input=true
 driver/enable_input.lazer_nfc=false
 driver/mix_rate.lazer_nfc=44100
 driver/output_latency.lazer_nfc=15
+driver/enable_input.tifo_beato=true
 
 [autoload]
 
@@ -72,6 +82,8 @@ build/single_game_id.antichess="anti_chess"
 build/single_game_id.anticheckers="anti_checkers"
 build/single_game_id.creep_code="creep_code"
 build/single_game_id.cube_trials="cube_trials"
+build/single_game_id.dolces_adventure="dolces_adventure"
+build/single_game_id.tifo_beato="tifo_beato"
 
 [display]
 
@@ -86,6 +98,7 @@ window/size/viewport_height.lazer_nfc=1280
 window/size/window_width_override.lazer_nfc=540
 window/size/window_height_override.lazer_nfc=960
 window/handheld/orientation.lazer_nfc=1
+window/handheld/orientation.tifo_beato=6
 
 [editor]
 
@@ -173,3 +186,5 @@ stats_urls/desk_can_saw="https://deskcansaw.com/stats/dcs"
 stats_urls/chicken_pit="https://deskcansaw.com/stats/cp"
 stats_urls/lazer_nfc="https://deskcansaw.com/stats/lz"
 stats_urls/cube_trials="https://deskcansaw.com"
+stats_urls/dolces_adventure="https://deskcansaw.com"
+stats_urls/tifo_beato="https://deskcansaw.com"

@@ -25,11 +25,13 @@ param(
     [int]    $Quality = 7,
     [ValidateSet(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
-        'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials'
+        'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
+        'sailor_man', 'tifo_beato'
     )]
     [string[]] $Games = @(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
-        'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials'
+        'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
+        'sailor_man', 'tifo_beato'
     ),
     [ValidateSet('solo', 'local')]
     [string[]] $Variants = @('solo', 'local')
@@ -49,6 +51,8 @@ $PosterTimes = @{
     anti_checkers   = '12.6'
     creep_code      = '5.2'
     cube_trials     = '7.0'
+    sailor_man      = '8.5'
+    tifo_beato      = '22.0'
 }
 
 # Per-game encoder quality, for clips the shared default does not suit. Chicken

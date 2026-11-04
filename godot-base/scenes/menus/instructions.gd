@@ -20,6 +20,7 @@ const Identity = preload("res://scripts/player_identity.gd")
 @onready var _margins: MarginContainer = %Margins
 @onready var _layout: VBoxContainer = %Layout
 @onready var _header: BoxContainer = %Header
+@onready var _context: BoxContainer = %Context
 @onready var _title: Label = %Title
 @onready var _back_button: Button = %BackButton
 @onready var _mode_label: Label = %ModeLabel
@@ -155,6 +156,11 @@ func _on_layout_changed(size: Vector2) -> void:
 	_ui_unit = size.x / maxf(get_window().size.x, 1.0) * preference
 	var canvas := size / _ui_unit
 	_scale_layout()
+	var short_screen := canvas.y < 300.0
+	_context.vertical = not short_screen
+	_show_again.text = "On start" if short_screen else "Show on start"
+	for label: Label in [_mode_label, _setup_label]:
+		label.max_lines_visible = 1 if short_screen else 2
 	var horizontal := roundi(clampf(canvas.x * 0.025, 12.0, 40.0))
 	var vertical := 12 if canvas.y < 500 else 20
 	Responsive.set_margins(_margins,
@@ -164,7 +170,10 @@ func _on_layout_changed(size: Vector2) -> void:
 	_header.vertical = usable < 330.0
 	_title.add_theme_font_size_override("font_size",
 		roundi((24 if usable < 600 else 30) * _ui_unit))
-	_actions.vertical = usable < 480.0
+	var action_width := _show_again.get_combined_minimum_size().x \
+		+ _start_button.get_combined_minimum_size().x \
+		+ _actions.get_theme_constant("separation")
+	_actions.vertical = action_width > usable * _ui_unit
 	_action_spacer.visible = not _actions.vertical
 	_show_again.size_flags_horizontal = (
 		Control.SIZE_EXPAND_FILL if _actions.vertical else Control.SIZE_SHRINK_BEGIN
@@ -173,7 +182,7 @@ func _on_layout_changed(size: Vector2) -> void:
 		Control.SIZE_EXPAND_FILL if _actions.vertical else Control.SIZE_FILL
 	)
 	_layout.add_theme_constant_override("separation",
-		roundi((8 if canvas.y < 500 else 12) * _ui_unit))
+		roundi((6 if short_screen else 8 if canvas.y < 500 else 12) * _ui_unit))
 	_margins.size = size
 	_fit_content.call_deferred()
 

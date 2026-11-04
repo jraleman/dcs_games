@@ -9,7 +9,7 @@ plus the games built on it. The base ships everything a game needs *before* it
 is a game: studio sting, intro, main menu, persistent settings, credits, pause
 overlay, achievements, responsive UI, share-image generation and audio.
 
-Nine games currently live in it:
+Eleven playable games currently live in it:
 
 | Game | ID | Folder | Control style |
 | --- | --- | --- | --- |
@@ -22,6 +22,52 @@ Nine games currently live in it:
 | LaZer NFC | `lazer_nfc` | `godot-base/games/lazer_nfc/` | `custom_keys` |
 | Creep Code | `creep_code` | `godot-base/games/creep_code/` | `custom_keys` |
 | Cube Trials | `cube_trials` | `godot-base/games/cube_trials/` | `custom_keys` |
+| Dolce's Adventure | `dolces_adventure` | `godot-base/games/dolces_adventure/` | `custom_keys` |
+| Tifo Beato | `tifo_beato` | `godot-base/games/tifo_beato/` | `custom_keys` |
+
+Sailor Man (`sailor_man`, `custom_keys`) is also discoverable as a **practice
+duel prototype**, not an eleventh completed game. Its solo best-of-three duel
+has one explicitly synthetic rival, weighted judges, five freely selectable
+toy-canal practice arenas (not voyage unlocks),
+opt-in microphone capture and keyboard/gamepad/multitouch Remo on the same
+100 Hz scorer. Solo locks rise/descend with a chamber clock; open water has free
+Repeat and the Pacific uses five actual judges. Culebra offers a separate
+self-echo challenge: a fresh unscored seed, then best-of-three against its
+fixed contour/profile after quiet 600 ms returns. Never live mic monitoring
+or saved tracks; replay needs a new seed. Practice keeps the full workbench.
+Shared setup also offers two-human hot seat in every practice arena, with no
+chamber timeout. P1 calls first, P2 leads tanda two; named pass-the-mic cards
+keep profile/source/rest state per seat, and both actual scores reach shell
+results. Card choices are session-local; source/profile selection never opens
+hardware, and every handoff/Repeat stops capture. No game-name framework branch
+or campaign gate was added. Mobile remains solo.
+Free-practice share cards show both humans' accepted best-turn contours on
+original parked launches, with actual paddles/judge/tanda statistics. Solo/echo
+feature P1 only; seeds are unscored. Preview is memory-only, Save is PNG and the
+QR opens the studio homepage, not a public run record.
+Its free gallery shows eleven current original boat/lock/scenery exhibits,
+not recorded crews or campaign-gated assets. The shared viewer owns orbit/zoom/
+reset and auto-spin; the isolated static stage reads no voice/profile data,
+creates no audio players and writes no progress.
+Its single **Practice launch** setup entry stands the actual plain crew and
+blue/red P1/P2 launch on the shared plinth, without voice/profile state or
+production captains.
+Its prototype shop declares four free defaults and eight paid original toy
+cosmetics across hat/pennant/paint/bow, with independent P1/P2 equipment and
+shared per-game ownership/Balboas. Completed duels pay the best human judge
+total divided by ten, rounded; ordinary solo skiff wins add five. No payout
+for workbench, seeds, incomplete duels or timeouts. Actual play/setup/gallery
+rigs wear the outfits; finished shares freeze ids, never live equipment.
+The skiff remains plain; traditional dress/patterns and cultural gates are absent.
+Its standalone opening has three player-paced, static original-model practice
+cards with Next/Done/Skip, not campaign narration. It opens no microphone and
+ends at the title; collection boot retains the framework intro. The shared
+written Guide defines the five game marks, comfort/Quiet Mode and provisional
+microphone bands while retaining actual mode rules and rebound controls.
+Read its own `AGENTS.md`, `DESIGN.md` and `TODO.md`: real salomero recordings and cultural
+review remain unverified; the owner authorized Remo and the duel assuming
+success, not as proof of that gate. Do not advertise recorded rival crews or
+the finished campaign. Future campaign-aware hot-seat access is undecided.
 
 > Anti-Chess and Anti Checkers are giveaway board games. They set
 > `uses_shell_round_rules = false` — they end by their own rules, not on the
@@ -74,6 +120,38 @@ Nine games currently live in it:
 > The renderer is still `gl_compatibility`; do not change the physics or add
 > framework game-name branches to change its presentation.
 
+> Dolce's Adventure is a solo side-scrolling endless run plus five fixed
+> biome stages for Dolce, a small chihuahua mix. It uses a node-free 120 Hz
+> model and original procedural 3D meshes in an isolated viewport under
+> `GameShell`, with three hearts, a Full buffer, burgers and stompable pests.
+> Distance is relative to the selected start; stages headline model-time
+> clears and unlock sequentially. Its Treats store, gallery, setup/share
+> portraits, synthesized cues, captions and real Stage 1 tutorial are game-owned.
+> Keyboard bindings are rebindable; gamepad/arrows are fixed extras for v1.
+> Multitouch controls offer persistent one-time Auto-run onboarding. Read
+> its `AGENTS.md`, `DESIGN.md` and `TODO.md` before changing mechanics, and
+> never weaken its chunk validator to fit a new obstacle.
+
+> Tifo Beato is an original football-terrace rhythm game with five grounds,
+> five curva sections, 24 original chant Resources, a star-gated career,
+> workshop banners, stewards, rival sing-offs and Duel/Two Capos/Split the
+> Stands hot seat. Buttons are the default; optional explicit-start mic,
+> keyboard, pad, independent touch and CPU share a 100 Hz classifier/judge.
+> Never monitor/save PCM. Input and known output use the same compensated
+> audio clock; source switches retain capture tails, and late rival audio
+> becomes caption-only when its safe gap has expired.
+> It opts out of arcade round rules and opens an inactive railway/lobby;
+> replay starts immediately. Original Compatibility toy models also supply
+> setup/store/gallery/frozen shares, captured art and a real silent tutorial.
+> Its Windows/Web/Android/iOS presets use `tifo_beato`; mobile stays solo.
+> Expanded play adds safe Away travel, best-only Derby preparation, a curated
+> musical-data Creator with offline codes/eight slots, local-midnight seeded
+> Daily Derby and twelve read-only numeric Best Moments. Short practice has no
+> Fury/power-up chart rewrites; replay never captures, scores, pays or saves.
+> Synthesis is approved, not a missing-recording placeholder. Physical mic,
+> speakers, controllers/mobile hardware, signing and owner melody/copy review
+> remain release gates. Read its own `AGENTS.md`, `DESIGN.md` and `TODO.md`.
+
 > Triangle Rush and Desk-Can-Saw were previously `target_rush` and
 > `slice_and_slash`. Those ids are gone — no alias, no migration — so a
 > `user://` written by an older build keeps its progress under the old strings
@@ -117,7 +195,7 @@ godot-base/
 
 Twelve game folders are **Git submodules** (`anti_checkers`, `anti_chess`,
 `capitans_walk`, `chicken_pit`, `creep_code`, `cube_trials`, `dead_metal_jam`,
-`dulces_adventure`, `lazer_nfc`, `puppy_kraft`, `sailor_man`, `tifo_beato`);
+`dolces_adventure`, `lazer_nfc`, `puppy_kraft`, `sailor_man`, `tifo_beato`);
 `desk_can_saw` and `triangle_rush` are plain folders in this repository. Clone with
 `git clone --recurse-submodules`, or run `git submodule update --init` in an
 existing checkout. A change that spans a submodule and the host is two commits:
@@ -170,6 +248,9 @@ games grow — enumerate the folder rather than trusting a number here:
 | `triangle_rush` | 1 | declared options |
 | `creep_code` | 5 | pure puzzles, toy geometry, expedition, outfit store, 3D layout |
 | `cube_trials` | 9 | physics/profiles, input/turns, level progression, GLB/3D geometry, rendered layouts/cameras/hot seat |
+| `dolces_adventure` | 13 | manifest, physics/rules/pests, records/chunks/stream/stages, rig/audio, controls, real scene and rendered layouts |
+| `sailor_man` | 17 | scorer, normalized PCM/Remo, solo/echo/two-human duels, per-seat calibration, owned audio, real scenes, share cards, free gallery, branding, setup, cosmetics/payouts and onboarding; three scene suites, gallery, art capture, setup, store and onboarding also run windowed, and canal/share-card suites require a window |
+| `tifo_beato` | 7 | sound/model/scene/full real-event flow, expanded model/input contracts and actual Compatibility geometry/workbench/replay/layout/input/story-card checks; `platform_fixture.gd` is a QA Node, not a suite |
 
 Run everything (PowerShell), skipping `*_fixture.gd`, which are helpers rather
 than suites:
@@ -184,7 +265,7 @@ Get-ChildItem tests\*.gd, games\*\tests\*.gd |
   }
 ```
 
-**Eight suites require a real graphics window and exit 1 under `--headless`**
+**Twelve suites require a real graphics window and exit 1 under `--headless`**
 by design — they guard `DisplayServer.get_name() == "headless"` and say so.
 Run them without `--headless`, and do not treat their headless exit code as a
 regression: `anti_chess/tests/board_view_test.gd`,
@@ -193,7 +274,11 @@ regression: `anti_chess/tests/board_view_test.gd`,
 `creep_code/tests/observatory_view_test.gd` and
 `cube_trials/tests/cube_trials_view_test.gd`,
 `cube_trials/tests/cube_trials_camera_test.gd` and
-`cube_trials/tests/cube_trials_multiplayer_view_test.gd`.
+`cube_trials/tests/cube_trials_multiplayer_view_test.gd` and
+`dolces_adventure/tests/dolce_view_test.gd` and
+`sailor_man/tests/canal_view_test.gd` and
+`sailor_man/tests/share_card_test.gd` and
+`tifo_beato/tests/curva_view_test.gd`.
 Run the camera suite for `--cube-vehicle=cube_car`, `cube_sonata` and `cube_crv`;
 all three must retain a real, unobstructed cockpit through every damage stage.
 Use `--cube-level=sunset_ridge` or `--cube-level=alpine_pass` for the new routes.
@@ -201,7 +286,9 @@ The level progression and multiplayer view suites require a fresh isolated
 user profile so their initial locked-state assertions remain meaningful.
 
 `tests/game_shell_test.gd` iterates `GameCatalog.all()`, so every game is
-covered automatically — do not add a per-game copy of it. `tests/game_options_test.gd`
+covered automatically — do not add a per-game copy of it. Games may open a
+lobby before their first round; the shell/lives drivers explicitly start an
+inactive game before asserting active-round behavior. `tests/game_options_test.gd`
 does the same for a game's declared `tunables` and `control_bindings`;
 `tests/accessibility_test.gd` and `tests/visual_effects_test.gd` each open with
 a `_test_every_game()` sweep that does the same for the reduced-motion and
@@ -292,10 +379,11 @@ add data to `GameManifest` instead.
 | `supports_multiplayer`, `supports_cpu_opponent` | Mode availability |
 
 `tunables` and `control_bindings` are declared in a constants-only
-`games/<id>/<prefix>_options.gd` — one per game, all nine of them
+`games/<id>/<prefix>_options.gd` — one per game
 (`TriangleRushOptions`, `DeskCanSawOptions`, `DmjOptions`, `ChickenPitOptions`,
 plus `anti_chess_options.gd`, `anti_checkers_options.gd`,
-`lazer_nfc_options.gd`, `creep_code_options.gd` and `cube_trials_options.gd`,
+`lazer_nfc_options.gd`, `creep_code_options.gd`, `cube_trials_options.gd`,
+`dolces_adventure_options.gd`, `sailor_man_options.gd` and `tifo_beato_options.gd`,
 which are loaded by path
 rather than `class_name`) — so
 headless tests can import the keys without touching an
@@ -336,6 +424,10 @@ key on its `GameManifest.copy`:
 The instructions screen works the same way: all three `control_style` branches
 route every string through `_game_text(key, fallback)`, so none of them can
 hardcode one game's rules as another game's briefing.
+The shared Guide measures footer actions rather than assuming a fixed wrapping
+width. Very short logical screens compact context to one row and **On start**;
+full context stays in tooltips/accessibility text. Preserve usable scroll space
+and whole actions at enlarged UI sizes without adding game-name layout branches.
 
 **Key APIs**
 
@@ -393,6 +485,11 @@ hardcode one game's rules as another game's briefing.
   double-click resets and right-click toggles auto-spin. Equivalent focused
   keyboard/controller and touch inputs remain available; descriptions and
   input help live in tooltips and accessibility text.
+- Gallery entries can also declare `available=false` for game-owned progress
+  gates. Omission defaults to available; explicit false locks even without an
+  achievement id or reason. `locked_description` supplies the explanation
+  (with a generic fallback), and `available=true` never bypasses an unmet
+  `requires_achievement`.
 - `GameSaves.managed_games()` / `.summary(m)` / `.has_save(m)` /
   `.save_files(m)` / `.erase(m)` / `.back_up(m)` / `.restore(m, path)` /
   `.backups(id)` / `.delete_backup(m, path)` — one game's save as the Saves
@@ -438,6 +535,9 @@ colour and its caption names the pick. That screen fits its words rather than
 trimming them. A header too narrow for the game's name folds Details and Back
 to icons, and the Player 2 options stack. Keep both rules measuring the
 longest text a control can show, so a toggle never reflows the row.
+The briefing, Details and choices share one scroller, and content reflow keeps
+the focused row visible. Narrow identity/picker pairs stack; compact heading
+caps and wrapping Start labels also apply to short landscape windows.
 
 Beside it, a **Store** button appears only when there is a game whose shop it
 could open: a standalone build's own game on the title screen, or the running
@@ -635,7 +735,8 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   `project.godot` *before* it ships; a tag-less standalone export silently
   shares `DeskCanSaw Games/DCS Base Game` with the collection and with every
   other tag-less build. Current tags: `collection`, `dmj`, `tr`, `dcs`, `cp`,
-  `lazer_nfc`, `antichess`, `anticheckers`, `creep_code`, `cube_trials`.
+  `lazer_nfc`, `antichess`, `anticheckers`, `creep_code`, `cube_trials`,
+  `dolces_adventure`, `tifo_beato`.
 - Renaming a settings key is a migration, not an edit. `Settings.load_settings()`
   ends in `_adopt_renamed_keys()`, which reads the old key only when the new one
   is absent and leaves the old one on disk for older builds sharing a `user://`.
@@ -670,7 +771,8 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   (one per game: `triangle_rush_options.gd`, `desk_can_saw_options.gd`,
   `dmj_options.gd`, `chicken_pit_options.gd`, `anti_chess_options.gd`,
   `anti_checkers_options.gd`, `lazer_nfc_options.gd`,
-  `creep_code_options.gd`, `cube_trials_options.gd`) is
+  `creep_code_options.gd`, `cube_trials_options.gd`,
+  `dolces_adventure_options.gd`, `sailor_man_options.gd`) is
   constants-only. `GameShell` is
   the other side of this rule: it *does* use autoload instances, so a test must
   never name `GameShell` (no `is GameShell`, no typed parameter). Load the

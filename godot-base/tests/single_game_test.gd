@@ -1035,6 +1035,14 @@ func _expect(condition: bool, message: String) -> void:	if not condition:
 
 func _finish() -> void:
 	GameCatalog.clear_restriction()
+	await create_timer(0.8).timeout
+	var audio_manager := get_root().get_node("AudioManager")
+	for child in audio_manager.find_children("*", "AudioStreamPlayer", true, false):
+		var player := child as AudioStreamPlayer
+		player.stop()
+		player.stream = null
+	await create_timer(0.1).timeout
+
 	if _failures.is_empty():
 		print("Single-game build tests passed.")
 		quit(0)

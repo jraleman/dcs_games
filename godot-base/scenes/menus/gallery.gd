@@ -330,6 +330,9 @@ func _describe_exhibit(exhibit: Dictionary) -> String:
 
 
 func _locked_reason(exhibit: Dictionary) -> String:
+	if not bool(exhibit.get("available", true)):
+		var reason := str(exhibit.get("locked_description", "")).strip_edges()
+		return reason if not reason.is_empty() else "Discover this exhibit by playing."
 	var requirement := str(exhibit.get("requires_achievement", ""))
 	if requirement.is_empty() or AchievementManager.is_unlocked(requirement):
 		return ""

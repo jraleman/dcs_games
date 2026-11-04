@@ -444,29 +444,6 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="ConfirmTitle" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"SetupTitle"
-text = "Ready to play?"
-autowrap_mode = 3
-
-[node name="ConfirmSubtitle" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-theme_type_variation = &"SetupBody"
-autowrap_mode = 3
-
-[node name="ConfirmDescription" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-theme_type_variation = &"SetupBody"
-theme_override_font_sizes/font_size = 22
-text = "Only Player 1 enters the arena."
-autowrap_mode = 3
-
 [node name="SetupScroll" type="ScrollContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -479,6 +456,29 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 10
+
+[node name="ConfirmTitle" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"SetupTitle"
+text = "Ready to play?"
+autowrap_mode = 3
+
+[node name="ConfirmSubtitle" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"SetupBody"
+autowrap_mode = 3
+
+[node name="ConfirmDescription" type="Label" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"SetupBody"
+theme_override_font_sizes/font_size = 22
+text = "Only Player 1 enters the arena."
+autowrap_mode = 3
 
 [node name="SoloSetupChoices" type="VBoxContainer" parent="Margins/Layout/Stage/ConfirmStep/Layout/Body/Setup/SetupScroll/SetupColumn"]
 unique_name_in_owner = true

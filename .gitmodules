@@ -1,36 +1,48 @@
 [submodule "godot-base/games/anti_checkers"]
 	path = godot-base/games/anti_checkers
 	url = git@github.com:jraleman/anti_checkers.git
+	branch = main
 [submodule "godot-base/games/anti_chess"]
 	path = godot-base/games/anti_chess
 	url = git@github.com:jraleman/anti_chess.git
+	branch = main
 [submodule "godot-base/games/chicken_pit"]
 	path = godot-base/games/chicken_pit
 	url = git@github.com:jraleman/chicken_pit.git
+	branch = main
 [submodule "godot-base/games/creep_code"]
 	path = godot-base/games/creep_code
 	url = git@github.com:jraleman/creep_code.git
+	branch = main
 [submodule "godot-base/games/cube_trials"]
 	path = godot-base/games/cube_trials
 	url = git@github.com:jraleman/cube_trials.git
+	branch = main
 [submodule "godot-base/games/dead_metal_jam"]
 	path = godot-base/games/dead_metal_jam
 	url = git@github.com:jraleman/dead_metal_jam.git
+	branch = master
 [submodule "godot-base/games/lazer_nfc"]
 	path = godot-base/games/lazer_nfc
 	url = git@github.com:jraleman/lazer_nfc.git
+	branch = main
 [submodule "godot-base/games/capitans_walk"]
 	path = godot-base/games/capitans_walk
 	url = git@github.com:jraleman/capitans_walk.git
-[submodule "godot-base/games/dulces_adventure"]
-	path = godot-base/games/dulces_adventure
-	url = git@github.com:jraleman/dulces_adventure.git
+	branch = main
+[submodule "godot-base/games/dolces_adventure"]
+	path = godot-base/games/dolces_adventure
+	url = git@github.com:jraleman/dolces_adventure.git
+	branch = main
 [submodule "godot-base/games/puppy_kraft"]
 	path = godot-base/games/puppy_kraft
 	url = git@github.com:jraleman/puppy_kraft.git
+	branch = main
 [submodule "godot-base/games/sailor_man"]
 	path = godot-base/games/sailor_man
 	url = git@github.com:jraleman/sailor_man.git
+	branch = main
 [submodule "godot-base/games/tifo_beato"]
 	path = godot-base/games/tifo_beato
 	url = git@github.com:jraleman/tifo_beato.git
+	branch = main
