@@ -46,3 +46,23 @@
 	path = godot-base/games/tifo_beato
 	url = git@github.com:jraleman/tifo_beato.git
 	branch = main
+[submodule "godot-base/games/baloos_chase"]
+	path = godot-base/games/baloos_chase
+	url = git@github.com:jraleman/baloos_chase.git
+	branch = main
+[submodule "godot-base/games/tuki-tuki_agents"]
+	path = godot-base/games/tuki-tuki_agents
+	url = git@github.com:jraleman/tuki-tuki_agents.git
+	branch = main
+[submodule "godot-base/games/florida_men"]
+	path = godot-base/games/florida_men
+	url = git@github.com:jraleman/florida_men.git
+	branch = main
+[submodule "godot-base/games/yacomio"]
+	path = godot-base/games/yacomio
+	url = git@github.com:jraleman/yacomio.git
+	branch = main
+[submodule "godot-base/games/rastro"]
+	path = godot-base/games/rastro
+	url = git@github.com:jraleman/rastro.git
+	branch = main
