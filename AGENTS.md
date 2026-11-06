@@ -211,8 +211,8 @@ godot-base/
   games/<id>/              # one folder per game: game.gd manifest, scenes, actors,
                            #   assets (incl. assets/video/tutorial.ogv), tests
   tests/                   # framework-wide headless SceneTree regression scripts
-  tools/                   # dev-only tutorial recorder + intro cue measurer
-                           #   (exclude from export presets)
+  tools/                   # dev-only tutorial recorder, intro cue measurer and
+                           #   screenshot tour (exclude from export presets)
   third_party/greaby_qrcode/  # vendored MIT QR encoder — keep LICENSE intact
   assets/                  # shared UI audio and images only — every game-specific
                            #   asset lives in that game's own folder
@@ -369,6 +369,20 @@ Re-measure a narrated intro's card cues only when its recording changes
 ```bash
 python tools/measure_intro_cues.py games/chicken_pit/assets/intro-narration.mp3 cards.txt
 ```
+
+Save a PNG of every screen for review: each game standalone, then the
+collection, in a real window, with a throwaway fully unlocked profile.
+Output goes to `build/screenshots/<timestamp>/`, a folder per run with a
+`screens.txt` index. `-Games <id>, <id>` and `-SkipCollection` narrow it:
+
+```bash
+pwsh tools/capture_screens.ps1 -Godot /path/to/godot
+```
+
+The walk is generic; progress only one game records and screens only it can
+reach come from an optional `games/<folder>/tools/screen_tour.gd` hook
+(interface in `tools/capture_screens_tour.gd`'s `_load_hook()` and the README),
+never from a game-name branch in the tour.
 
 ## The framework / game boundary (read before adding a game)
 

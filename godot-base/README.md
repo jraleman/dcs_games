@@ -28,6 +28,7 @@ godot --path . -- --game=tifo_beato     # original terrace rhythm career and two
 godot --path . -- --game=tuki_tuki      # Venezuelan DDR-style solo practice/story and local battles
 godot --path . -- --game=yacomio        # five-era 3D evolution, offline resources, cosmetic store and leaps
 godot --path . -- --game=florida_men     # 24-space party board, six 3D minigames, 1-4 humans and CPU guests
+godot --path . -- --game=rastro          # 3D car garage; customization only, no competitions yet
 godot --path . -- --game=all            # launch the full collection
 ```
 
@@ -161,10 +162,12 @@ windows use the compact heading caps and wrapping Start labels too.
 | `games/tuki-tuki_agents/` | Tuki Tuki: native DDR-style rhythm play, five synthesized songs, four champions, story/culture pages and simultaneous two-human battles; the catalog ID is `tuki_tuki`. |
 | `games/yacomio/` | YaComio!: solo, five-era 3D evolution with 24 upgrades, offline resources, milestone events, cosmetic store, free gallery, player-paced intro, journal and optional prestige. |
 | `games/florida_men/` | Florida Men: a 24-space party board and six original procedural 3D minigames; 1-4 local humans, CPU-filled seats, cosmetic hats, free gallery, frozen shares and a recorded complete-party tutorial. |
+| `games/rastro/` | Rastro: untimed solo 3D garage with all three original car types available, free paint/wheels/tires/suspension/engine customization, per-car saves and validated portable JSON builds. Competitions, driving and Cube Trials loading are future work. Keyboard, gamepad and touch inspection; Windows/Web/Android/iOS presets use the `rastro` feature and a stable separate save directory. |
 | `games/capitans_walk/` | Capitan's Walk grey box: solo, node-free 120 Hz walker/dog/leash physics, sixteen seeded Park templates with puddles/slopes, telegraphed sprinkler/jogger/flock/friendly-dog encounters, safe rings, physical play/greeting sniffs, happiness and banked rhythm points; rebindable keyboard, fixed analogue gamepad, independent multitouch with three handed layouts, classic/Easy legs, four live assists, instant restart and an original keyboard walkthrough. Automated events reach identical shared results through all three adapters; a real motor walk reaches a generated jogger at 52.09 m. Physical hardware and the three-person playtest remain unverified. Pickups, surprise events/bosses, final 3D art and progression remain later work. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
 | `tools/record_tutorials.ps1` | Records each game's tutorial clip through Godot's Movie Maker and encodes it to that game's own `games/<id>/assets/video/tutorial.ogv` plus a poster frame. |
 | `tools/measure_intro_cues.py` | Development-only: finds the pauses in a narration recording and prints the `cue_times` array a card-based intro needs. |
+| `tools/capture_screens.ps1` | Development-only: saves a PNG of every screen each game reaches, standalone and in the collection, for review. Runs `tools/capture_screens.gd`, which loads the walk itself from `tools/capture_screens_tour.gd`. |
 
 ## Looking right on every screen
 
@@ -233,6 +236,58 @@ space on the other. Layouts are written in those units and adapt at runtime:
 Anchored controls are animated with `modulate` and `scale` (with a centred
 pivot), never `position` — moving an anchored control bakes its offsets in and
 breaks the layout on the next resize.
+
+### Screenshots for review
+
+`tools/capture_screens.ps1` saves a PNG of every screen a player can reach, so
+a layout change can be reviewed in one folder instead of by clicking through
+every game:
+
+```powershell
+pwsh tools\capture_screens.ps1 -Godot C:\path\to\godot.exe
+pwsh tools\capture_screens.ps1 -Godot godot -Games chicken_pit, cube_trials -SkipCollection
+```
+
+It runs `res://tools/capture_screens.gd` once per game as a standalone build
+(`--game=<id>`), then once as the collection (`--game=all`), each in a real
+1280x720 window (`-Resolution` changes it). A run walks the screens in the
+order a player meets them: the studio sting and opening, the title screen,
+every settings tab, the store, each gallery exhibit, the saves screen and its
+confirmations, and the credits. A standalone run then plays every mode the
+game offers (solo, then local two-player): setup, briefing, the round, the
+pause overlay, results, the stats panel and the share card. The collection run
+keeps the shared screens plus one picker frame per cartridge. Lists longer
+than the window are kept a page at a time, and one that opens scrolled down is
+also kept from its top, as `_p1`; `-NoScrollPages` keeps one frame per screen.
+
+Output goes to the gitignored `build/screenshots/<timestamp>/`, or
+`-OutputDir`: one folder per run of `NNN_<screen>.png` in the order visited, a
+`screens.txt` naming each file's scene followed by the run's notes and
+warnings, and each run's Godot log under `logs/`. The wrapper exits 1 when a
+run fails, or is stopped after `-TimeoutSeconds`.
+
+Every run starts from a fresh, throwaway profile in which every achievement
+and unlock rule is met and every shop can afford its whole catalogue, so gated
+levels, characters, exhibits and items are on screen. A game's own
+`save_files` stay fresh, so its first-run screens are kept too, unless its hook
+seeds them (below). Real saves are never read or written: the tour refuses to
+seed a profile the wrapper did not make. A round is ended the way its timer
+would end it, with fixed scores, so results match from run to run;
+`screens.txt` labels those frames `tour-set scores`. Keep the window visible
+while it runs.
+
+Progress only one game records, and screens only it knows how to reach, such
+as a lobby's sub-pages or a mid-round event, come from an optional
+`games/<folder>/tools/screen_tour.gd`, discovered by convention like the
+tutorial drivers, so the shared tour never branches on a game id. Only a
+standalone run loads it. Every method is optional and may be a coroutine:
+`seed_profile() -> String` writes the game's own progress into the throwaway
+profile before the opening, and a returned line is added to the notes;
+`screens(mode) -> Array` lists screen ids, or dictionaries with `id`, `phase`
+(`lobby`, `round` or `results`) and `settle` seconds; `enter(scene, id) -> bool`
+shows one on the running game scene, and false skips it; `leave(scene, id)` puts
+the game back. Tifo Beato's hook seeds a finished career, so its later grounds,
+lobby rivals and every gallery exhibit are open.
 
 ## Common changes
 

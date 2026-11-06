@@ -26,12 +26,12 @@ param(
     [ValidateSet(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
         'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
-        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men'
+        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men', 'rastro'
     )]
     [string[]] $Games = @(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
         'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
-        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men'
+        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men', 'rastro'
     ),
     [ValidateSet('solo', 'local')]
     [string[]] $Variants = @('solo', 'local')
@@ -57,6 +57,7 @@ $PosterTimes = @{
     tuki_tuki_local = '7.0'
     yacomio        = '8.0'
     florida_men    = '15.8'
+    rastro         = '8.0'
 }
 
 $GameFolders = @{ tuki_tuki = 'tuki-tuki_agents' }
@@ -72,6 +73,7 @@ $Qualities = @{
     anti_checkers = 6
     creep_code = 5
     cube_trials = 5
+    rastro = 5
 }
 $QualityWasRequested = $PSBoundParameters.ContainsKey('Quality')
 

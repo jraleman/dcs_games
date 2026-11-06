@@ -58,6 +58,10 @@ var _asked_from: Dictionary = {}
 var _ui_scale := 1.0
 var _panel_style: StyleBox
 var _dialog_style: StyleBox
+## Where the list waits while new cards are unsorted; see [method _hold_scroll].
+var _held_scroll := 0
+## Counts holds, so only the latest one lets the list go.
+var _scroll_holds := 0
 
 
 func _ready() -> void:
@@ -546,6 +550,7 @@ func _trap_dialog_focus() -> void:
 ## Rebuilds every card — a backup adds a row, a delete can remove a whole card —
 ## and puts focus back where the player was, or as near to it as still exists.
 func _rebuild(from: Dictionary) -> void:
+	_hold_scroll(_scroll.scroll_vertical)
 	_build_cards()
 	refresh_layout()
 	first_focus = _first_focusable_control()
@@ -595,3 +600,40 @@ func _focusable(control: Control) -> bool:
 func _focus(control: Control) -> void:
 	if control != null and control.is_inside_tree():
 		control.grab_focus()
+
+
+## The first card takes focus before its labels are measured; see
+## [method _hold_scroll].
+func _focus_first() -> void:
+	_hold_scroll(0)
+	super()
+
+
+## [member ScrollContainer.follow_focus] scrolls to a control the moment it
+## takes focus, but new cards are only placed when their containers sort, later
+## in the frame. Following focus into a list that was just built scrolled to a
+## stale spot: a collection's list opened 1300px past the card it focused, and
+## a rebuild jumped to the top, away from it. The list keeps [param offset]
+## until the cards are in place, then shows the focus.
+func _hold_scroll(offset: int) -> void:
+	_held_scroll = offset
+	_scroll_holds += 1
+	_scroll.follow_focus = false
+	_release_scroll.call_deferred(_scroll_holds)
+
+
+## Starts in the deferred-call flush that sorts the new cards, so they are in
+## place by the next frame.
+func _release_scroll(hold: int) -> void:
+	if is_inside_tree():
+		await get_tree().process_frame
+	if hold != _scroll_holds:
+		return
+	_scroll.follow_focus = true
+	if not is_inside_tree():
+		return
+	_scroll.scroll_vertical = _held_scroll
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused != null and _scroll.is_ancestor_of(focused):
+		# A new offset only moves the cards in a deferred sort; measure after it.
+		_scroll.ensure_control_visible.call_deferred(focused)
