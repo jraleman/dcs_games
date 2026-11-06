@@ -25,6 +25,9 @@ godot --path . -- --game=dolces_adventure
 godot --path . -- --game=sailor_man     # toy-canal voice/Remo duel, not the finished voyage
 godot --path . -- --game=capitans_walk  # seeded Park grey box, keyboard/pad/touch; not the finished game
 godot --path . -- --game=tifo_beato     # original terrace rhythm career and two-human hot seat
+godot --path . -- --game=tuki_tuki      # Venezuelan DDR-style solo practice/story and local battles
+godot --path . -- --game=yacomio        # five-era 3D evolution, offline resources, cosmetic store and leaps
+godot --path . -- --game=florida_men     # 24-space party board, six 3D minigames, 1-4 humans and CPU guests
 godot --path . -- --game=all            # launch the full collection
 ```
 
@@ -155,6 +158,9 @@ windows use the compact heading caps and wrapping Start labels too.
 | `games/dolces_adventure/` | Dolce's Adventure: Dolce's side-scrolling run, five timed stages, procedural models, Treats store and gallery. The pre-release rename uses only the new identifiers; older development saves are not migrated. |
 | `games/sailor_man/` | Sailor Man prototype: five free toy-canal skiff-practice arenas, seeded Culebra self-echo or two-human hot seat, weighted judges, per-seat voice profiles, track-driven world ribbons, opt-in microphone, keyboard/gamepad/multitouch Remo, frozen share cards, eleven free gallery exhibits, actual P1/P2 setup launch previews and earned-Balboas toy cosmetics; real voices and the finished voyage remain pending. |
 | `games/tifo_beato/` | Tifo Beato: terrace rhythm career and hot seat, Away days, Derby week, curated Chant Creator, local-midnight Daily Derby and read-only Best Moments; optional microphone/Buttons, original Compatibility toys/audio, store/gallery/frozen shares and tutorial. Hardware and owner review remain pending. |
+| `games/tuki-tuki_agents/` | Tuki Tuki: native DDR-style rhythm play, five synthesized songs, four champions, story/culture pages and simultaneous two-human battles; the catalog ID is `tuki_tuki`. |
+| `games/yacomio/` | YaComio!: solo, five-era 3D evolution with 24 upgrades, offline resources, milestone events, cosmetic store, free gallery, player-paced intro, journal and optional prestige. |
+| `games/florida_men/` | Florida Men: a 24-space party board and six original procedural 3D minigames; 1-4 local humans, CPU-filled seats, cosmetic hats, free gallery, frozen shares and a recorded complete-party tutorial. |
 | `games/capitans_walk/` | Capitan's Walk grey box: solo, node-free 120 Hz walker/dog/leash physics, sixteen seeded Park templates with puddles/slopes, telegraphed sprinkler/jogger/flock/friendly-dog encounters, safe rings, physical play/greeting sniffs, happiness and banked rhythm points; rebindable keyboard, fixed analogue gamepad, independent multitouch with three handed layouts, classic/Easy legs, four live assists, instant restart and an original keyboard walkthrough. Automated events reach identical shared results through all three adapters; a real motor walk reaches a generated jogger at 52.09 m. Physical hardware and the three-person playtest remain unverified. Pickups, surprise events/bosses, final 3D art and progression remain later work. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
 | `tools/record_tutorials.ps1` | Records each game's tutorial clip through Godot's Movie Maker and encodes it to that game's own `games/<id>/assets/video/tutorial.ogv` plus a poster frame. |
@@ -454,7 +460,7 @@ that directory at startup, so **no framework file needs to change** to add one.
      second seat, not `GameSession.is_single_player()`. A game can separately own an intrinsic
      solo CPU: Anti-Chess does, while clearing `supports_cpu_opponent` to keep
      its multiplayer mode exclusively local humans.
-   - `max_local_players` — defaults to 2; set 3 to offer a third local human.
+   - `max_local_players` — defaults to 2; set 3 or 4 to offer additional local humans.
      Capacity is bounded by the shared blue/red/green player palette. CPU
      sessions remain two-seat and mobile remains solo. `GameSession.player_count()`
      reports the active count; `configure_multiplayer(controller, difficulty, players)`
@@ -1349,6 +1355,85 @@ microphone, speaker, pad/touch and mobile certification remain release gates.
 Read the game's README/DESIGN/TODO; milestones 0-15 are implemented, while
 online/stretch features remain outside this scope.
 
+## Tuki Tuki - the Venezuelan Rhythm Revolution
+
+`games/tuki-tuki_agents/` is a native module discovered as `tuki_tuki`, not a
+second Godot project. Its React/Three.js implementation and Vite/npm artifacts
+have been removed. Shared setup selects one of five songs and four champions;
+the game-owned scrolling briefing selects a supported difficulty and solo
+Story/Practice, or starts two simultaneous local humans on the same seeded chart.
+Story, cultural styles and biographies remain skippable.
+
+Its standalone opening is a short, skippable 3D rhythm demonstration with
+on-screen text and synthesized audio; collection boot keeps the shared intro.
+The actual champion rigs also dress shared setup previews and the cosmetic
+outfit/shoe store. Completed songs earn Beat Tokens once, with independent
+P1/P2 equipment that applies live without changing rhythm state. The free
+gallery displays all four champions, arrow meshes and the actual venue.
+Song completion, combo, weighted accuracy and local-battle achievements use
+the shared registry; no song, champion or gallery model is progression-gated.
+
+Original synthesized tracks preserve the web prototype's generated-beat approach;
+the old referenced music/images were not bundled. Track credits and champions
+are fictional. Judgement follows compensated audible playback with 22/64/106 ms
+windows, independent of visual scroll speed. Song length owns completion, while
+`GameShell` owns HUD, pause/settings, results, stats, replay and sharing.
+Keyboard rebinding and independent on-screen touch pads are supported; gamepad
+gameplay and hold notes are not. The original Compatibility meshes, pooled arrows,
+live accessibility preferences and physical-sized controls remain game-owned.
+
+The `tuki_tuki` feature provides standalone name/icon/save-directory overrides
+and Windows/Web presets; the Web preset is non-threaded. Its three headless
+suites cover complete deterministic charts, generated PCM/audio pause, and real
+solo/local scene behavior. `stage_view_test.gd` requires a graphics window and
+checks actual rendering and framing from portrait to ultrawide. Human timing
+feel, physical touch hardware and device-specific audio calibration are not
+replaced by those automated checks.
+The Instructions screen has distinct, captioned solo/local walkthroughs recorded
+from real native inputs. Re-record them with
+`pwsh tools\record_tutorials.ps1 -Godot godot -Games tuki_tuki`; the tool resolves
+the historical folder independently of the stable catalog ID.
+
+## YaComio! - Small beginnings, a world of possibilities
+
+`games/yacomio/` is a native Godot module discovered as `yacomio`. Its React/npm
+scaffold has been removed. The port keeps the playable prototype's economy:
+1 EP per active second, 5 EP per tap, RNA for 10 EP (+1 EP/s), and DNA
+Replication for 50 EP (+3 EP/s). Either upgrade may be purchased first, once.
+Its solo, untimed timeline now crosses microbes, photosynthesis, complex life,
+terrestrial ecosystems and human civilization with 24 upgrades and seven
+resources. Day/night and three timed milestone events integrate analytically
+over unlimited away time; offline resources never grant cosmetic tokens or
+advance an era. Pause and journal time are suspended.
+
+The inherited `GameShell` supplies pause, settings and accessibility. The HUD
+counts EP generated this visit separately from the spendable colony balance.
+Buttons accept mouse/touch and focus navigation; M/1/2/3/E/J are rebindable
+shortcuts. Original procedural Compatibility models are shared across gameplay,
+the five-card player-paced intro, eight cosmetic store entries, nine free
+gallery exhibits and frozen journal shares. One Spore Token per 100 actual
+active EP is reconciled from saved lifetime earnings minus immutable cosmetic
+prices, preventing duplicate awards. A confirmed leap after civilization
+resets evolution but keeps tokens, cosmetics and achievements, adding +25%
+permanent production per completed timeline. Continue resumes the colony.
+The share QR is explicitly the studio website, not public colony statistics.
+Every resource mutation saves `user://yacomio.cfg`, declared in `save_files` for
+the shared Saves screen. Damaged/newer saves disable play without being
+overwritten, and failed writes are reported in-game. Old browser saves are not
+imported. Native version-1 saves retain their EP and RNA/DNA without invented
+historical tokens or offline rewards.
+
+The `yacomio` feature defines standalone branding and a stable, separate
+`DeskCanSaw Games/YaComio` save directory. Windows and non-threaded Web presets
+ship this module without the other games or development scripts. Its state,
+scene and window-required rendered suites under `games/yacomio/tests/` cover
+full progression, events, offline/fractional accounting, migration, real
+controls, cancelled/confirmed prestige, cosmetics, actual rasterized models,
+shares and portrait-to-ultrawide layout. Its silent, captioned walkthrough earns
+RNA/DNA/membranes and reaches photosynthesis through real bound keys; re-record with
+`pwsh tools\record_tutorials.ps1 -Godot godot -Games yacomio`.
+Physical touch/controller hardware and human balance review remain unverified.
+
 ## Shipping one game on its own
 
 The same project produces the collection build *and* a standalone build of any
@@ -1732,10 +1817,11 @@ clatter are synthesized at runtime and routed through the existing SFX bus.
 Mode selection uses a two-step setup: choose single player or multiplayer, then
 confirm the roster, any declared level and characters and the controller
 assignment. **Back** on the second step returns to the first.
-Games opt into a third seat with `max_local_players = 3`; the count selector,
-green P3 card, instructions and results appear only for those games. Existing
-games remain two-player by default. Optional third-seat copy uses
-`player_three_control_description` and `instructions_player_three_controls`.
+Games opt into additional seats with `max_local_players = 3` or `4`; the count
+selector, green P3/golden P4 cards, instructions and results follow that
+capacity. Existing games remain two-player by default. Optional extra-seat
+copy uses `player_three_control_description` / `instructions_player_three_controls`
+and the equivalent `player_four` keys.
 Each mode card states its player count in a chip, so it never rests on its icon
 alone, and **Details** adds its labelled `P1`/`P2`/`CPU` roster. The chosen
 card keeps a **SELECTED** badge and a one-line summary of what pressing Start
@@ -1763,11 +1849,12 @@ only. Games may declare `solo_setup_choices` to ask meaningful questions before
 a solo round: Anti-Chess uses this for White/Black without presenting a second
 CPU/human question. Choices remain available when multiplayer is unavailable.
 
-`scripts/player_identity.gd` provides the shared P1/P2/P3 colors and labels.
+`scripts/player_identity.gd` provides the shared P1/P2/P3/P4 colors and labels.
 `GameSession.player_name(index)`, `player_color(index)` and
 `controller_assignments_changed` expose the same identities and assignments
-to game-owned UI. Opt-in target games get P3's default **4 / 5 / 6** actions;
-legacy target games retain their six actions and saved key bindings.
+to game-owned UI. Opt-in target games get P3's default **4 / 5 / 6** and P4's
+number-pad **1 / 2 / 3** actions; legacy target games retain their six actions
+and saved key bindings.
 `Settings.CONTROL_ACTIONS` remains the original six; use
 `control_actions_for_player(index)` for capacity-aware input.
 
@@ -1779,6 +1866,13 @@ results, statistics, replay and sharing include every active seat. Round/share
 data adds complete `player_scores`/`score_values`, names, colors and count,
 while retaining the original first-two-score fields. The default Store payout
 considers all scores once, rather than awarding one wallet grant per player.
+
+Florida Men always exposes four active participants, including CPU guests,
+while shared setup still counts humans only. It owns the board/minigame match,
+opts out of shell timer/lives rules and grants Sunshine Tokens only after a
+completed party. Its node-free 120 Hz minigames, original Compatibility meshes,
+input adapter and music stay in its game folder. See its README for rules,
+controls, tutorial recording and the four standalone presets.
 
 Where the player count has only one answer — a game that clears
 `supports_single_player`, or a gated game with a single unlocked route — the
@@ -2063,6 +2157,9 @@ read that intentional headless exit code as a regression:
 - `games/anti_checkers/tests/board_view_test.gd` — the equivalent coverage, with
   optional `--anti-checkers-capture-dir=<absolute directory>` output.
 - `games/chicken_pit/tests/pit_view_test.gd` — the 3D pit's `SubViewport`.
+- `games/florida_men/tests/party_view_test.gd` — real board/minigame pixels,
+  isolated worlds, four-seat HUDs and desktop/portrait/short-landscape/ultrawide
+  framing. Optional `--capture-dir=<absolute directory>` saves review frames.
 - `games/lazer_nfc/tests/lazer_nfc_layout_test.gd` — its responsive layout.
 - `games/creep_code/tests/observatory_view_test.gd` — all three relics and the
   finale, camera framing, direct mesh/number input, compact bottom controls,

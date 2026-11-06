@@ -169,12 +169,12 @@ var menu_order := 0
 ## `level_label`, `character_label`,
 ## `single_player_description`, `single_player_roster`,
 ## `single_player_selection_summary`, `multiplayer_description`,
-## `player_one_control_description`, `player_two_control_description`, `player_three_control_description`,
+## `player_one_control_description` through `player_four_control_description`,
 ## `solo_confirm_title`, `solo_confirm_description`, `versus_confirm_title`,
 ## `versus_confirm_description`, `instructions_headline`, `instructions_rules`,
 ## `instructions_demo_prompt`, `instructions_solo_summary`,
 ## `instructions_versus_summary`, `instructions_player_one_controls`,
-## `instructions_player_two_controls`, `instructions_player_three_controls`, `cpu_opponent_description`,
+## `instructions_player_two_controls` through `instructions_player_four_controls`, `cpu_opponent_description`,
 ## `instructions_cpu_summary`, `instructions_cpu_controls`.
 ##
 ## Custom-key games supply action descriptions, not literal key names: the

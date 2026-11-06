@@ -26,12 +26,12 @@ param(
     [ValidateSet(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
         'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
-        'sailor_man', 'tifo_beato'
+        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men'
     )]
     [string[]] $Games = @(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
         'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
-        'sailor_man', 'tifo_beato'
+        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men'
     ),
     [ValidateSet('solo', 'local')]
     [string[]] $Variants = @('solo', 'local')
@@ -53,7 +53,13 @@ $PosterTimes = @{
     cube_trials     = '7.0'
     sailor_man      = '8.5'
     tifo_beato      = '22.0'
+    tuki_tuki      = '7.0'
+    tuki_tuki_local = '7.0'
+    yacomio        = '8.0'
+    florida_men    = '15.8'
 }
+
+$GameFolders = @{ tuki_tuki = 'tuki-tuki_agents' }
 
 # Per-game encoder quality, for clips the shared default does not suit. Chicken
 # Pit's grass, bunting and moving camera give Theora
@@ -146,8 +152,9 @@ function New-CapturePlans {
         # Every clip lands in its own game folder, so the final names carry no
         # game prefix. The intermediates still do: one shared temp directory
         # holds them all, and two games' 'tutorial.ogv' would collide there.
-        $targetDir = Join-Path $gamesDir "$game\assets\video"
-        if ($game -eq 'anti_chess') {
+        $folder = if ($GameFolders.ContainsKey($game)) { $GameFolders[$game] } else { $game }
+        $targetDir = Join-Path $gamesDir "$folder\assets\video"
+        if ($game -in @('anti_chess', 'tuki_tuki')) {
             foreach ($variant in $SelectedVariants) {
                 $suffix = if ($variant -eq 'local') { '_local' } else { '' }
                 $plans += [pscustomobject]@{
@@ -159,7 +166,7 @@ function New-CapturePlans {
                     TempPoster = "tutorial_${game}${suffix}_poster.webp"
                     VideoName  = "tutorial$suffix.ogv"
                     PosterName = "tutorial${suffix}_poster.webp"
-                    PosterKey  = "anti_chess$suffix"
+                    PosterKey  = "$game$suffix"
                     TargetDir  = $targetDir
                     Quality    = $Quality
                 }
@@ -196,7 +203,7 @@ $variantList = @(
         Select-Object -Unique
 )
 if ($variantList.Count -eq 0) {
-    throw 'At least one Anti-Chess tutorial variant must be selected.'
+    throw 'At least one tutorial variant must be selected.'
 }
 
 New-Item -ItemType Directory -Path $workDir -Force | Out-Null

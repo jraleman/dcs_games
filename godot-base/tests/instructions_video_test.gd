@@ -441,7 +441,8 @@ func _test_roster_layouts(session: Node, settings: Node) -> void:
 				await _settle_layout()
 				_check_layout(screen, dimensions, 1.0)
 				var grid := screen.get_node("%ControlGrid") as GridContainer
-				_expect(grid.columns == (count if dimensions.x > dimensions.y else 1),
+				var landscape_columns := 2 if count == 4 else count
+				_expect(grid.columns == (landscape_columns if dimensions.x > dimensions.y else 1),
 					"%s: %d seats must have room to read at %s."
 					% [manifest.id, count, dimensions])
 				var visible := 0

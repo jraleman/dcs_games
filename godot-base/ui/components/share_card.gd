@@ -72,8 +72,10 @@ func configure(data: Dictionary) -> void:
 	_challenge.text = str(
 		data.get("challenge", _challenge_text(data, score))
 	).to_upper()
-	var default_caption := "FINAL SCORE / P1 / P2 / P3" \
-		if int(data.get("player_count", 2)) > 2 else "FINAL SCORE"
+	var default_caption := "FINAL SCORE"
+	if int(data.get("player_count", 2)) > 2:
+		for player in int(data["player_count"]):
+			default_caption += " / P%d" % (player + 1)
 	_score_caption.text = str(data.get("score_caption", default_caption)).to_upper()
 	_score.text = score
 	_accuracy.text = str(data.get("accuracy", "0%"))

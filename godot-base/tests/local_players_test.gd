@@ -54,6 +54,7 @@ func _run() -> void:
 	await _test_setup()
 	await _test_shell()
 	await _test_setup_gates()
+	await _test_four_seats()
 	for key: String in saved:
 		game.set(key, saved[key])
 	session.call("configure_single_player")
@@ -67,6 +68,54 @@ func _run() -> void:
 	_test_target_controls()
 	await create_timer(0.15).timeout
 	_finish.call_deferred()
+
+
+func _test_four_seats() -> void:
+	var game := GameCatalog.current()
+	var session := get_root().get_node("GameSession")
+	game.max_local_players = 4
+	game.supports_multiplayer = true
+	game.local_multiplayer_turns = false
+	game.characters = []
+	game.levels = []
+	session.call("configure_multiplayer", 0, 1, 4)
+	_expect(session.call("player_count") == 4 and session.call("player_name", 3) == "Player 4"
+		and session.call("player_color", 3) == Color("f6c453"),
+		"A four-seat game must keep a numbered golden fourth human.")
+	var menu := (load("res://scenes/menus/mode_select.tscn") as PackedScene).instantiate()
+	get_root().add_child(menu)
+	menu.call("_on_multiplayer_pressed")
+	var count := menu.get("_player_count_choice") as OptionButton
+	count.item_selected.emit(count.get_item_index(4))
+	var cards: Array = menu.get("_player_setup_cards")
+	_expect(cards.size() == 4 and (cards[3]["panel"] as Control).visible,
+		"Setup must expose a real fourth player, not reuse P3's card.")
+	menu.free()
+	var guide := (load("res://scenes/menus/instructions.tscn") as PackedScene).instantiate()
+	get_root().add_child(guide)
+	await process_frame
+	var extra: Array = guide.get("_extra_control_cards")
+	_expect(extra.size() == 2 and (extra[1]["panel"] as Control).visible,
+		"Instructions must include the fourth player's own bindings.")
+	guide.free()
+	var shell := (load("res://scenes/game/game_shell.tscn") as PackedScene).instantiate()
+	get_root().add_child(shell)
+	shell.set_process(false)
+	(shell.get_node("%RoundTimer") as Timer).stop()
+	shell.set("_scores", [2, 5, 9, 12])
+	shell.set("_best_streaks", [1, 2, 7, 8])
+	shell.call("_end_round")
+	var ui: Array = shell.get("_player_ui")
+	_expect(ui.size() == 4 and (ui[3]["result_score"] as Label).text == "12"
+		and (shell.get_node("%ResultLabel") as Label).text == "PLAYER 4 WINS!",
+		"The fourth score must reach the actual shared result and winner.")
+	var payload: Dictionary = shell.call("_share_payload")
+	_expect(payload["score_values"] == [2, 5, 9, 12] and payload["player_count"] == 4,
+		"Share data must retain all four seats.")
+	shell.free()
+	var assignments: Array[int] = [2, 4, 6, 8]
+	_expect(session.call("controller_player_index_from_assignments", 8, assignments) == 3,
+		"The fourth physical controller must resolve to P4.")
 
 
 func _test_setup() -> void:
@@ -248,6 +297,13 @@ func _test_target_controls() -> void:
 	_expect(InputMap.event_is_action(key, "player_three_target_1")
 		and not InputMap.event_is_action(key, "player_one_target_1"),
 		"The rebound key must reach P3's actual InputMap action, not just its Settings label.")
+	game.max_local_players = 4
+	settings.call("reset_controls_to_defaults", game.id)
+	_expect((settings.call("control_bindings_for_game", game.id) as Array).size() == 12,
+		"Opt-in four-seat target games must expose twelve actions, without changing CONTROL_ACTIONS.")
+	settings.call("set_control_key", &"player_four_target_1", KEY_1)
+	_expect(settings.call("binding_keycode", "controls/player_four_target_1") == KEY_1,
+		"The fourth target seat must support real rebinding.")
 	game.control_style = original_style
 	game.max_local_players = original_capacity
 	if had_bindings:

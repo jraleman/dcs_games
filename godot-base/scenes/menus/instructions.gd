@@ -199,10 +199,12 @@ func _fit_content() -> void:
 	_guide.custom_minimum_size = Vector2(
 		minf(available.x, GUIDE_MAX_WIDTH * _ui_unit), available.y
 	)
-	_control_grid.columns = mini(
+	var columns := mini(
 		GameSession.player_count(),
 		maxi(1, floori(_guide.custom_minimum_size.x / (300.0 * _ui_unit)))
 	)
+	var rows := ceili(float(GameSession.player_count()) / columns)
+	_control_grid.columns = ceili(float(GameSession.player_count()) / rows)
 	_body.size = available
 
 
@@ -625,7 +627,7 @@ func _populate_custom_keys_instructions() -> void:
 
 
 func _custom_key_controls(player_index: int) -> String:
-	var player: String = ["one", "two", "three"][player_index]
+	var player: String = ["one", "two", "three", "four"][player_index]
 	var game := GameCatalog.current()
 	var shared := game != null and game.local_multiplayer_turns
 	var lines := PackedStringArray([_game_text(

@@ -37,6 +37,7 @@ extends Node2D
 const PLAYER_ONE := 0
 const PLAYER_TWO := 1
 const PLAYER_THREE := 2
+const PLAYER_FOUR := 3
 ## Kept for existing two-seat game implementations; use active indices for new games.
 const PLAYER_COUNT := 2
 const Identity = preload("res://scripts/player_identity.gd")
@@ -762,7 +763,7 @@ func _configure_mode_ui() -> void:
 	_player_one_card.size_flags_horizontal = (
 		Control.SIZE_SHRINK_BEGIN if multiplayer else Control.SIZE_EXPAND_FILL
 	)
-	var count := GameSession.player_count()
+	var count := _active_player_indices().size()
 	_round_versus.visible = count == 2
 	_stats_versus.visible = count == 2
 	for player in _player_ui.size():
@@ -787,7 +788,7 @@ func _ensure_player_ui() -> void:
 		_player_ui.append(_player_panel_references(
 			_player_two_card, _round_player_two_card, _player_two_stats_card, "PlayerTwo"
 		))
-	while _player_ui.size() < GameSession.player_count():
+	while _player_ui.size() < _active_player_indices().size():
 		var player := _player_ui.size()
 		var prefix := "Player%d" % (player + 1)
 		var source := _player_ui[0]

@@ -17,7 +17,6 @@ const DEAD_METAL_JAM := "dead_metal_jam"
 const CHICKEN_PIT := "chicken_pit"
 
 const DEFAULT_TUTORIAL_VARIANT := "solo"
-const EXTERNAL_DRIVER_PATH := "res://games/%s/tools/tutorial_driver.gd"
 const DEFAULT_CAPTURE_INSET := 260.0
 const REQUIRED_DRIVER_METHODS: Array[String] = [
 	"configure", "steps", "duration", "settings_overrides",
@@ -412,7 +411,7 @@ func _requested_game() -> String:
 	if GameCatalog.get_manifest(requested) == null:
 		_fail_capture("Unknown tutorial game '%s'." % requested)
 		return TRIANGLE_RUSH
-	if _steps_for(requested).is_empty() and not ResourceLoader.exists(EXTERNAL_DRIVER_PATH % requested):
+	if _steps_for(requested).is_empty() and not ResourceLoader.exists(_external_driver_path(requested)):
 		_fail_capture("Game '%s' has no tutorial driver or built-in tutorial script." % requested)
 		return TRIANGLE_RUSH
 	return requested
@@ -430,7 +429,7 @@ func _requested_variant() -> String:
 	if requested.is_empty():
 		_fail_capture("Tutorial variant cannot be empty.")
 		return DEFAULT_TUTORIAL_VARIANT
-	if not ResourceLoader.exists(EXTERNAL_DRIVER_PATH % _game):
+	if not ResourceLoader.exists(_external_driver_path(_game)):
 		if requested != DEFAULT_TUTORIAL_VARIANT:
 			_fail_capture(
 				"Tutorial variant '%s' is unsupported for --game=%s." % [requested, _game]
@@ -439,8 +438,15 @@ func _requested_variant() -> String:
 	return requested
 
 
+## Stable catalog IDs need not match their historical game-folder names.
+func _external_driver_path(id: String) -> String:
+	var manifest := GameCatalog.get_manifest(id)
+	var folder := manifest.gameplay_scene_path.trim_prefix("res://games/").get_slice("/", 0)
+	return GameCatalog.GAMES_ROOT.path_join(folder).path_join("tools/tutorial_driver.gd")
+
+
 func _load_external_driver() -> RefCounted:
-	var path := EXTERNAL_DRIVER_PATH % _game
+	var path := _external_driver_path(_game)
 	if not ResourceLoader.exists(path):
 		return null
 	var script := load(path) as Script

@@ -49,6 +49,18 @@ config/description.tifo_beato="Ninety minutes. No silence. An original football-
 config/version.tifo_beato="1.0.0"
 config/custom_user_dir_name.tifo_beato="DeskCanSaw Games/Tifo Beato"
 config/icon.tifo_beato="res://games/tifo_beato/assets/game-icon.png"
+config/name.tuki_tuki="Tuki Tuki"
+config/description.tuki_tuki="The Venezuelan Rhythm Revolution. A local rhythm game with original synthesized beats."
+config/custom_user_dir_name.tuki_tuki="DeskCanSaw Games/Tuki Tuki"
+config/icon.tuki_tuki="res://games/tuki-tuki_agents/assets/game-icon.svg"
+config/name.yacomio="YaComio!"
+config/description.yacomio="Microbial Beginnings: a small, untimed evolution idle game."
+config/custom_user_dir_name.yacomio="DeskCanSaw Games/YaComio"
+config/icon.yacomio="res://games/yacomio/assets/icon.svg"
+config/name.florida_men="Florida Men"
+config/description.florida_men="Six headlines. Four guests. One very strange holiday."
+config/custom_user_dir_name.florida_men="DeskCanSaw Games/Florida Men"
+config/icon.florida_men="res://games/florida_men/assets/game-icon.svg"
 
 [audio]
 
@@ -58,6 +70,9 @@ driver/enable_input.lazer_nfc=false
 driver/mix_rate.lazer_nfc=44100
 driver/output_latency.lazer_nfc=15
 driver/enable_input.tifo_beato=true
+driver/enable_input.tuki_tuki=false
+driver/enable_input.yacomio=false
+driver/enable_input.florida_men=false
 
 [autoload]
 
@@ -84,6 +99,9 @@ build/single_game_id.creep_code="creep_code"
 build/single_game_id.cube_trials="cube_trials"
 build/single_game_id.dolces_adventure="dolces_adventure"
 build/single_game_id.tifo_beato="tifo_beato"
+build/single_game_id.tuki_tuki="tuki_tuki"
+build/single_game_id.yacomio="yacomio"
+build/single_game_id.florida_men="florida_men"
 
 [display]
 
@@ -99,6 +117,7 @@ window/size/window_width_override.lazer_nfc=540
 window/size/window_height_override.lazer_nfc=960
 window/handheld/orientation.lazer_nfc=1
 window/handheld/orientation.tifo_beato=6
+window/handheld/orientation.florida_men=6
 
 [editor]
 
@@ -188,3 +207,5 @@ stats_urls/lazer_nfc="https://deskcansaw.com/stats/lz"
 stats_urls/cube_trials="https://deskcansaw.com"
 stats_urls/dolces_adventure="https://deskcansaw.com"
 stats_urls/tifo_beato="https://deskcansaw.com"
+stats_urls/tuki_tuki="https://deskcansaw.com"
+stats_urls/yacomio="https://deskcansaw.com"

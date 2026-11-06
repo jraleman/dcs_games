@@ -81,6 +81,11 @@ const PLAYER_THREE_ACTIONS := [
 	&"player_three_target_2",
 	&"player_three_target_3",
 ]
+const PLAYER_FOUR_ACTIONS := [
+	&"player_four_target_1",
+	&"player_four_target_2",
+	&"player_four_target_3",
+]
 const CONTROL_ACTIONS := [
 	&"player_one_target_1",
 	&"player_one_target_2",
@@ -99,6 +104,9 @@ const CONTROL_SETTING_KEYS := {
 	&"player_three_target_1": "controls/player_three_target_1",
 	&"player_three_target_2": "controls/player_three_target_2",
 	&"player_three_target_3": "controls/player_three_target_3",
+	&"player_four_target_1": "controls/player_four_target_1",
+	&"player_four_target_2": "controls/player_four_target_2",
+	&"player_four_target_3": "controls/player_four_target_3",
 }
 const RESERVED_CONTROL_KEYS := [KEY_ESCAPE, KEY_F11]
 const CONTROLLER_TARGET_KEYS := [
@@ -176,6 +184,9 @@ const DEFAULTS := {
 	"controls/player_three_target_1": KEY_4,
 	"controls/player_three_target_2": KEY_5,
 	"controls/player_three_target_3": KEY_6,
+	"controls/player_four_target_1": KEY_KP_1,
+	"controls/player_four_target_2": KEY_KP_2,
+	"controls/player_four_target_3": KEY_KP_3,
 	"controls/controller_target_1": JOY_BUTTON_A,
 	"controls/controller_target_2": JOY_BUTTON_B,
 	"controls/controller_target_3": JOY_BUTTON_X,
@@ -513,7 +524,7 @@ func _register_options() -> void:
 ## game keeps the six target keys without saying so.
 func _register_control_bindings() -> void:
 	var built_in_targets: Array[Dictionary] = []
-	var actions := CONTROL_ACTIONS + PLAYER_THREE_ACTIONS
+	var actions := CONTROL_ACTIONS + PLAYER_THREE_ACTIONS + PLAYER_FOUR_ACTIONS
 	for index in actions.size():
 		var action: StringName = actions[index]
 		var setting_key := str(CONTROL_SETTING_KEYS[action])

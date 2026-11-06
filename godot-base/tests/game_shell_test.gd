@@ -65,6 +65,13 @@ func _drive(manifest: GameManifest) -> void:
 
 	var timer := game.get_node("%RoundTimer") as Timer
 	timer.stop()
+	var initial_scores := (game.get("_scores") as Array).duplicate()
+	var active: Array = game.call("_active_player_indices")
+	var supplied_scores := [7, 3]
+	var supplied_streaks := [4, 1]
+	while supplied_scores.size() < active.size():
+		supplied_scores.append(2)
+		supplied_streaks.append(1)
 
 	_expect(
 		game.has_method("_playfield_bounds") and game.has_method("_share_payload")
@@ -91,8 +98,8 @@ func _drive(manifest: GameManifest) -> void:
 
 	var store := get_root().get_node_or_null("Store")
 	var banked := int(store.call("points", manifest.id)) if store != null else 0
-	game.set("_scores", [7, 3])
-	game.set("_best_streaks", [4, 1])
+	game.set("_scores", supplied_scores)
+	game.set("_best_streaks", supplied_streaks)
 	game.call("_on_round_timer_timeout")
 	await process_frame
 
@@ -170,10 +177,13 @@ func _drive(manifest: GameManifest) -> void:
 	)
 	# A single human can still be playing a two-sided match against the CPU.
 	var shared_scores: Array = payload.get("score_values", [])
-	var expected_scores := [7, 3] if shared_scores.size() == 2 else [7]
+	var expected_scores := supplied_scores.slice(0, shared_scores.size())
+	var score_parts := PackedStringArray()
+	for score in expected_scores:
+		score_parts.append(str(score))
 	_expect(
 		shared_scores == expected_scores
-		and str(payload.get("score", "")) == ("7 - 3" if shared_scores.size() == 2 else "7"),
+		and str(payload.get("score", "")) == " - ".join(score_parts),
 		"%s must report share totals for the finished round." % manifest.id
 	)
 	# Domain-specific statistics need not invent hit/miss or combo counters.
@@ -201,8 +211,8 @@ func _drive(manifest: GameManifest) -> void:
 		"%s must restart cleanly from the results panel." % manifest.id
 	)
 	_expect(
-		int(game.get("_scores")[0]) == 0 and int(game.get("_round_id")) >= 2,
-		"%s must clear the score and advance the round id on replay." % manifest.id
+		game.get("_scores") == initial_scores and int(game.get("_round_id")) >= 2,
+		"%s must restore its initial scores and advance the round id on replay." % manifest.id
 	)
 
 	timer.stop()

@@ -1574,7 +1574,7 @@ func _refresh_player_setup() -> void:
 		if card.has("keys"):
 			(card["keys"] as Label).text = "KEYS " + _custom_key_summary(player)
 			(card["description"] as Label).text = _game_text(
-				"player_three_control_description",
+				"player_%s_control_description" % ["one", "two", "three", "four"][player],
 				"Take your turn using the shared controls." if _turn_based_setup()
 				else "Use this player's declared controls."
 			)

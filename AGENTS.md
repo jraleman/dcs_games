@@ -9,7 +9,7 @@ plus the games built on it. The base ships everything a game needs *before* it
 is a game: studio sting, intro, main menu, persistent settings, credits, pause
 overlay, achievements, responsive UI, share-image generation and audio.
 
-Eleven playable games currently live in it:
+Thirteen playable games currently live in it:
 
 | Game | ID | Folder | Control style |
 | --- | --- | --- | --- |
@@ -24,6 +24,8 @@ Eleven playable games currently live in it:
 | Cube Trials | `cube_trials` | `godot-base/games/cube_trials/` | `custom_keys` |
 | Dolce's Adventure | `dolces_adventure` | `godot-base/games/dolces_adventure/` | `custom_keys` |
 | Tifo Beato | `tifo_beato` | `godot-base/games/tifo_beato/` | `custom_keys` |
+| Tuki Tuki | `tuki_tuki` | `godot-base/games/tuki-tuki_agents/` | `custom_keys` |
+| Florida Men | `florida_men` | `godot-base/games/florida_men/` | `custom_keys` |
 
 Sailor Man (`sailor_man`, `custom_keys`) is also discoverable as a **practice
 duel prototype**, not an eleventh completed game. Its solo best-of-three duel
@@ -152,6 +154,29 @@ the finished campaign. Future campaign-aware hot-seat access is undecided.
 > speakers, controllers/mobile hardware, signing and owner melody/copy review
 > remain release gates. Read its own `AGENTS.md`, `DESIGN.md` and `TODO.md`.
 
+> Tuki Tuki is a native DDR-style module in the historically named
+> `tuki-tuki_agents` submodule, discovered as `tuki_tuki`. Five original
+> synthesized songs, four champions, skippable story/culture pages, solo
+> Story/Practice and simultaneous two-human charts use the shared shell.
+> The node-free judge uses compensated audible time, not visual distance;
+> scroll speed never changes timing windows. Original Compatibility meshes,
+> pooled arrows/effects and independent on-screen touch pads stay game-owned.
+> Windows/Web presets use `tuki_tuki` and a unique stable save directory.
+> React/Vite/npm were removed; referenced recordings were never bundled.
+> Human timing feel and physical-device calibration remain unverified.
+
+> Florida Men is a native 24-space board party with all six minigames upgraded
+> to original procedural 3D in an isolated Compatibility world. Shared setup
+> admits 1-4 humans; the game always simulates four participants, filling unused
+> seats with rule-aware CPUs. The node-free board and 120 Hz minigames own the
+> match rules (`uses_shell_round_rules = false`), not the framework timer/lives.
+> A completed party alone pays Sunshine Tokens; board coins are separate.
+> Four independent cosmetic hat slots, free gallery, setup and frozen share
+> portraits reuse the same meshes. Keyboard keys are rebindable; each assigned
+> pad uses stick/D-pad and A; mobile is solo with independent touch contacts.
+> Its real-key tutorial completes all six games. Physical hardware, mobile
+> signing and human balance review remain release checks; see its README.
+
 > Triangle Rush and Desk-Can-Saw were previously `target_rush` and
 > `slice_and_slash`. Those ids are gone — no alias, no migration — so a
 > `user://` written by an older build keeps its progress under the old strings
@@ -252,6 +277,8 @@ games grow — enumerate the folder rather than trusting a number here:
 | `dolces_adventure` | 13 | manifest, physics/rules/pests, records/chunks/stream/stages, rig/audio, controls, real scene and rendered layouts |
 | `sailor_man` | 17 | scorer, normalized PCM/Remo, solo/echo/two-human duels, per-seat calibration, owned audio, real scenes, share cards, free gallery, branding, setup, cosmetics/payouts and onboarding; three scene suites, gallery, art capture, setup, store and onboarding also run windowed, and canal/share-card suites require a window |
 | `tifo_beato` | 7 | sound/model/scene/full real-event flow, expanded model/input contracts and actual Compatibility geometry/workbench/replay/layout/input/story-card checks; `platform_fixture.gd` is a QA Node, not a suite |
+| `tuki_tuki` | 4 | exact timing/scoring/full charts, synthesized PCM and pause clock, real solo/local scene flow, and window-required rendered stage/layout checks |
+| `florida_men` | 3 | node-free board/minigames/input/audio, actual four-seat keys/rebinding/pause and a complete six-game party, plus window-required Compatibility rendering/layouts |
 
 Run everything (PowerShell), skipping `*_fixture.gd`, which are helpers rather
 than suites:
@@ -266,7 +293,7 @@ Get-ChildItem tests\*.gd, games\*\tests\*.gd |
   }
 ```
 
-**Twelve suites require a real graphics window and exit 1 under `--headless`**
+**Rendered suites require a real graphics window and exit 1 under `--headless`**
 by design — they guard `DisplayServer.get_name() == "headless"` and say so.
 Run them without `--headless`, and do not treat their headless exit code as a
 regression: `anti_chess/tests/board_view_test.gd`,
@@ -279,7 +306,8 @@ regression: `anti_chess/tests/board_view_test.gd`,
 `dolces_adventure/tests/dolce_view_test.gd` and
 `sailor_man/tests/canal_view_test.gd` and
 `sailor_man/tests/share_card_test.gd` and
-`tifo_beato/tests/curva_view_test.gd`.
+`tifo_beato/tests/curva_view_test.gd` and
+`florida_men/tests/party_view_test.gd`.
 Run the camera suite for `--cube-vehicle=cube_car`, `cube_sonata` and `cube_crv`;
 all three must retain a real, unobstructed cockpit through every damage stage.
 Use `--cube-level=sunset_ridge` or `--cube-level=alpine_pass` for the new routes.
@@ -623,17 +651,17 @@ does not match, so a game that copies an abbreviated one will not load.
 Shell notes:
 
 - Player capacity is opt-in: `GameManifest.max_local_players` defaults to 2
-  and currently supports up to 3. `local_multiplayer_turns` changes shared
+  and currently supports up to 4. `local_multiplayer_turns` changes shared
   setup/instructions, not game simulation. `characters` and optional
   `character_preview_scene_path` provide per-seat, session-local character
   selection. Keep these generic; never branch on a game ID in the framework.
 - Preserve legacy `PLAYER_COUNT = 2`, P1/P2 aliases and two-score hook signatures.
   Capacity-aware games use `_active_player_indices()`, `_active_scores()` and
-  `player_stats_panel(index)`. The shell's buffers, generated P3 panels, lives,
+  `player_stats_panel(index)`. The shell's buffers, generated extra-seat panels, lives,
   outcomes, replay and complete score arrays handle the active roster.
-  `scripts/player_identity.gd` owns blue/red/green identity colors.
+  `scripts/player_identity.gd` owns blue/red/green/gold identity colors.
   `Settings.CONTROL_ACTIONS` stays the original six target actions; use
-  `control_actions_for_player(index)` for extra seats. Unused P3 key defaults
+  `control_actions_for_player(index)` for extra seats. Unused extra-seat key defaults
   must not invalidate a two-player game's saved bindings.
 - The round can run on a countdown or on a pool of lives
   (*Settings → Game → Round mode*, stored as `game/round_mode` +
@@ -737,7 +765,7 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
   shares `DeskCanSaw Games/DCS Base Game` with the collection and with every
   other tag-less build. Current tags: `collection`, `dmj`, `tr`, `dcs`, `cp`,
   `lazer_nfc`, `antichess`, `anticheckers`, `creep_code`, `cube_trials`,
-  `dolces_adventure`, `tifo_beato`.
+  `dolces_adventure`, `tifo_beato`, `tuki_tuki`.
 - Renaming a settings key is a migration, not an edit. `Settings.load_settings()`
   ends in `_adopt_renamed_keys()`, which reads the old key only when the new one
   is absent and leaves the old one on disk for older builds sharing a `user://`.

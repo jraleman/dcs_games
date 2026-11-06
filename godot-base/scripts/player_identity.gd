@@ -3,7 +3,7 @@ extends RefCounted
 ## Shared seat identities keep setup, gameplay and results distinguishable.
 
 const COLORS: Array[Color] = [
-	Color("4da3ff"), Color("ff5c6c"), Color("55c47a"),
+	Color("4da3ff"), Color("ff5c6c"), Color("55c47a"), Color("f6c453"),
 ]
 
 
