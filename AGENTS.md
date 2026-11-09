@@ -360,6 +360,12 @@ There is no linter, formatter or CI configured. Match the existing style by hand
 Re-record tutorial clips only when gameplay visuals or captions change:
 
 ```bash
+bash tools/record_tutorials.sh --godot /path/to/godot
+```
+
+Or on Windows:
+
+```powershell
 pwsh tools/record_tutorials.ps1 -Godot /path/to/godot
 ```
 
@@ -376,8 +382,18 @@ Output goes to `build/screenshots/<timestamp>/`, a folder per run with a
 `screens.txt` index. `-Games <id>, <id>` and `-SkipCollection` narrow it:
 
 ```bash
+bash tools/capture_screens.sh --godot /path/to/godot
+```
+
+Or on Windows:
+
+```powershell
 pwsh tools/capture_screens.ps1 -Godot /path/to/godot
 ```
+
+The Bash counterparts require Bash 3.2+ and Python 3.10+, use long options
+(`--games`, `--skip-collection`), and keep macOS/Linux user data isolated.
+Run `python3 tools/tests/shell_scripts_test.py` for their fake-tool regressions.
 
 The walk is generic; progress only one game records and screens only it can
 reach come from an optional `games/<folder>/tools/screen_tour.gd` hook
@@ -866,6 +882,9 @@ persistence/toast core of `AchievementManager`, `Settings` and `AudioManager`.
 
 ## Working agreements
 
+- Keep a same-named `.sh` counterpart beside every `.ps1`, including game-owned
+  tools. Preserve options, outputs and failure handling; Bash entry points must
+  work on Linux/macOS with Bash 3.2, and shell files must use LF line endings.
 - Keep `godot-base/README.md` accurate — it is the authoring guide, and it is
   detailed. Update it in the same change as any behaviour it describes.
 - Prefer editing existing scenes/scripts over creating parallel ones.

@@ -165,9 +165,45 @@ windows use the compact heading caps and wrapping Start labels too.
 | `games/rastro/` | Rastro: untimed solo 3D garage with all three original car types available, free paint/wheels/tires/suspension/engine customization, per-car saves and validated portable JSON builds. Competitions, driving and Cube Trials loading are future work. Keyboard, gamepad and touch inspection; Windows/Web/Android/iOS presets use the `rastro` feature and a stable separate save directory. |
 | `games/capitans_walk/` | Capitan's Walk grey box: solo, node-free 120 Hz walker/dog/leash physics, sixteen seeded Park templates with puddles/slopes, telegraphed sprinkler/jogger/flock/friendly-dog encounters, safe rings, physical play/greeting sniffs, happiness and banked rhythm points; rebindable keyboard, fixed analogue gamepad, independent multitouch with three handed layouts, classic/Easy legs, four live assists, instant restart and an original keyboard walkthrough. Automated events reach identical shared results through all three adapters; a real motor walk reaches a generated jogger at 52.09 m. Physical hardware and the three-person playtest remain unverified. Pickups, surprise events/bosses, final 3D art and progression remain later work. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
-| `tools/record_tutorials.ps1` | Records each game's tutorial clip through Godot's Movie Maker and encodes it to that game's own `games/<id>/assets/video/tutorial.ogv` plus a poster frame. |
+| `tools/record_tutorials.ps1`, `tools/record_tutorials.sh` | Records each game's tutorial clip through Godot's Movie Maker and encodes it to that game's own `games/<id>/assets/video/tutorial.ogv` plus a poster frame. |
 | `tools/measure_intro_cues.py` | Development-only: finds the pauses in a narration recording and prints the `cue_times` array a card-based intro needs. |
-| `tools/capture_screens.ps1` | Development-only: saves a PNG of every screen each game reaches, standalone and in the collection, for review. Runs `tools/capture_screens.gd`, which loads the walk itself from `tools/capture_screens_tour.gd`. |
+| `tools/capture_screens.ps1`, `tools/capture_screens.sh` | Development-only: saves a PNG of every screen each game reaches, standalone and in the collection, for review. Runs `tools/capture_screens.gd`, which loads the walk itself from `tools/capture_screens_tour.gd`. |
+
+## Cross-platform tools
+
+Every PowerShell (`.ps1`) script has a same-named Bash (`.sh`) counterpart,
+including game-owned tools. Use PowerShell on Windows or Bash on Linux/macOS;
+the Bash entry points work with macOS's Bash 3.2 and require **Python 3.10+**.
+Set `PYTHON` to choose its interpreter. Scripts resolve their project paths
+from their own location, not the current working directory, and accept quoted
+executable/output paths containing spaces. Run a Bash script with `--help` for
+its options; lists accept comma-separated or space-separated values.
+If Godot is not on macOS's PATH, pass its app-bundle executable with `--godot`,
+for example `/Applications/Godot.app/Contents/MacOS/Godot`.
+
+From `godot-base/`:
+
+```bash
+bash tools/record_tutorials.sh --godot godot --games anti_chess --variants local
+bash tools/capture_screens.sh --godot godot --games chicken_pit,cube_trials --skip-collection
+bash games/tifo_beato/tools/validate.sh --godot godot --suites sound,model,scene
+bash games/lazer_nfc/tools/bake_voice.sh --destination /tmp/lazer-voice-preview
+python3 tools/tests/shell_scripts_test.py
+```
+
+Recording needs ffmpeg with Theora/WebP encoders; screenshots and recordings
+need a real graphics window. The Unix voice baker additionally needs offline
+**eSpeak NG** and ffmpeg. It produces a different synthesized voice from the
+Windows Microsoft Zira bank; the example writes a separate preview bank, not
+the shipped audio. Its `--check` compares against a bank baked with the same
+voice/engine version. See LaZer NFC's README for voice authoring options.
+
+Bash capture/recording/validation launches give their tool children a private
+`HOME`, `XDG_DATA_HOME` and `APPDATA`, covering macOS and Linux save locations
+without changing the caller's environment. Validation keeps its logs; media
+tools remove their private intermediate/profile directories even on failure.
+The tool regression tests use fake executables and temporary projects, so they
+need neither Godot nor speech/audio tools and never replace shipped assets.
 
 ## Looking right on every screen
 
@@ -239,13 +275,21 @@ breaks the layout on the next resize.
 
 ### Screenshots for review
 
-`tools/capture_screens.ps1` saves a PNG of every screen a player can reach, so
+`tools/capture_screens.ps1` or `tools/capture_screens.sh` saves a PNG of every
+screen a player can reach, so
 a layout change can be reviewed in one folder instead of by clicking through
 every game:
 
 ```powershell
 pwsh tools\capture_screens.ps1 -Godot C:\path\to\godot.exe
 pwsh tools\capture_screens.ps1 -Godot godot -Games chicken_pit, cube_trials -SkipCollection
+```
+
+On Linux/macOS:
+
+```bash
+bash tools/capture_screens.sh --godot godot
+bash tools/capture_screens.sh --games chicken_pit,cube_trials --skip-collection --resolution 1280x720
 ```
 
 It runs `res://tools/capture_screens.gd` once per game as a standalone build
@@ -1396,9 +1440,11 @@ merged progress, model framing, touch targets, post-input layouts and all five
 story cards, the new workbench/replay layouts and original travel/ritual scenes.
 From the game folder, `tools\validate.ps1 -Godot <executable>
 -Suites @('sound','model','scene','flow','post_v1','post_v1_flow') -Window
--Framework` runs them in an isolated project/profile. All fifteen shared
-framework suites pass, including the collection tutorial decoder. Tifo's actual
-Instructions video decodes on native and exported web.
+-Framework` runs them in an isolated project/profile.
+Linux/macOS uses `bash tools/validate.sh --godot godot
+--suites sound,model,scene,flow,post_v1,post_v1_flow --window --framework`.
+All fifteen shared framework suites pass, including the collection tutorial
+decoder. Tifo's actual Instructions video decodes on native and exported web.
 
 Windows/Web/Android/iOS presets use feature `tifo_beato` and the permanent
 `DeskCanSaw Games/Tifo Beato` user directory, excluding other games/tests/tools.
@@ -1999,13 +2045,21 @@ ultrawide and enlarged-UI sizes. Run it with a real graphics window and
 Re-record the clips after changing gameplay visuals or the tutorial captions:
 
 ```bash
+bash tools/record_tutorials.sh --godot /path/to/godot
+godot --headless --path . --import
+```
+
+Or on Windows:
+
+```powershell
 pwsh tools/record_tutorials.ps1 -Godot /path/to/godot
 godot --headless --path . --import
 ```
 
 `tools/tutorial_capture.tscn` loads the actual gameplay scene, drives it with a
 scripted demo player and overlays numbered step captions, so the clips can never
-drift from how the game really behaves. `tools/record_tutorials.ps1` runs that
+drift from how the game really behaves. `tools/record_tutorials.ps1` and
+`tools/record_tutorials.sh` run that
 scene through Godot's Movie Maker, encodes the result to Ogg Theora with ffmpeg
 and extracts the still poster frame shown before playback starts. Nothing
 outside `tools/` references either file — add `tools/*` to your export preset's
