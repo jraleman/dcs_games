@@ -647,10 +647,13 @@ func _save_state() -> void:
 	# Merge into the stored file instead of replacing it, for the same reason
 	# achievements do: a build that ships one game must not wipe another build's
 	# purchases out of a shared `user://`.
-	config.load(SAVE_PATH)
+	var err := config.load(SAVE_PATH)
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		push_warning("Could not read the store from %s (error %d)." % [SAVE_PATH, err])
+		return
 	for game_id in _game_ids:
 		_write_game(config, game_id)
-	var err := config.save(SAVE_PATH)
+	err = config.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not save the store to %s (error %d)." % [SAVE_PATH, err])
 

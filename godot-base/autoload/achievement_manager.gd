@@ -332,12 +332,15 @@ func _save_state() -> void:
 	# register achievements and progression keys, so a build that ships one game
 	# must not wipe another build's unlocks out of a shared `user://` — an
 	# unlock may never regress.
-	config.load(SAVE_PATH)
+	var err := config.load(SAVE_PATH)
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		push_warning("Could not read achievements from %s (error %d)." % [SAVE_PATH, err])
+		return
 	for raw_id: Variant in _unlocked:
 		var id := str(raw_id)
 		config.set_value(UNLOCKED_SECTION, id, _unlocked[raw_id])
 	for key: String in _all_progression_keys():
 		config.set_value(PROGRESSION_SECTION, key, bool(_progression.get(key, false)))
-	var err := config.save(SAVE_PATH)
+	err = config.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Could not save achievements to %s (error %d)." % [SAVE_PATH, err])

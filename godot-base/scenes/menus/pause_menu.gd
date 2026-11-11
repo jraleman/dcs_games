@@ -30,8 +30,12 @@ func _ready() -> void:
 	super()
 
 
+## Let GUI confirmation win when its button is also bound to Pause.
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause"):
+	if (
+		event.is_action_pressed("pause")
+		and not event.is_action_pressed("ui_accept")
+	):
 		get_viewport().set_input_as_handled()
 		var overlay := _active_overlay()
 		if overlay != null:

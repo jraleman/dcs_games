@@ -84,6 +84,7 @@ func _run() -> void:
 		return
 	_ran("declarations", _test_declarations())
 	_ran("path rules", _test_path_rules())
+	_ran("merge write safety", _test_merge_write_safety())
 	_ran("summary", _test_summary(subject))
 	_ran("erase is surgical", _test_erase_is_surgical(subject))
 	_ran("round trip", _test_round_trip(subject))
@@ -200,6 +201,48 @@ func _test_path_rules() -> bool:
 # --------------------------------------------------------------------------
 # Changing a save
 # --------------------------------------------------------------------------
+
+
+func _test_merge_write_safety() -> bool:
+	var damaged := "[absent_game]\nprogress=42\n[broken\n".to_utf8_buffer()
+	for entry: Array in [
+		[_settings, Settings.SAVE_PATH, &"save"],
+		[_store, Store.SAVE_PATH, &"_save_state"],
+		[_achievements, _achievements_path, &"_save_state"],
+	]:
+		var writer: Node = entry[0]
+		var path: String = entry[1]
+		var method: StringName = entry[2]
+		var existed := FileAccess.file_exists(path)
+		var before := _read(path)
+		_write(path, damaged.get_string_from_utf8())
+		if _read(path) != damaged:
+			_expect(false, "Could not seed the damaged merge file at %s." % path)
+			continue
+
+		writer.call(method)
+		_expect(
+			_read(path) == damaged,
+			"Saving %s must leave an unreadable existing file byte-for-byte intact." % path
+		)
+		_remove(path)
+		writer.call(method)
+		var created := ConfigFile.new()
+		_expect(
+			created.load(path) == OK,
+			"Saving %s must still initialize a missing file." % path
+		)
+
+		if existed:
+			var file := FileAccess.open(path, FileAccess.WRITE)
+			if file == null:
+				_expect(false, "Could not restore the merge fixture at %s." % path)
+				return false
+			file.store_buffer(before)
+			file.close()
+		else:
+			_remove(path)
+	return true
 
 
 func _test_summary(subject: GameManifest) -> bool:

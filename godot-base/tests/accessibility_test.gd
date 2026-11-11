@@ -29,6 +29,7 @@ func _run() -> void:
 	_test_settings_helpers(settings)
 	_test_controller_bindings(settings)
 	_test_persistence()
+	await _test_pause_menu_input(settings)
 	_test_menu_toggle_theme()
 	await _test_menu_toggle_input()
 	await _test_settings_menu(settings)
@@ -216,6 +217,33 @@ func _test_controller_bindings(settings: Node) -> void:
 		"Pause must reject D-pad buttons reserved for optional movement."
 	)
 
+	var original_layout: Dictionary = (settings.get("_values") as Dictionary).duplicate()
+	settings.call("set_controller_button", Settings.CONTROLLER_PAUSE_KEY, JOY_BUTTON_START)
+	for button: int in Settings.CONTROLLER_DPAD_BUTTON_IDS:
+		_expect(
+			bool(settings.call(
+				"set_controller_button", Settings.CONTROLLER_TARGET_KEYS[0], button
+			)),
+			"Targets must still accept D-pad buttons."
+		)
+		var before_swap: Dictionary = (settings.get("_values") as Dictionary).duplicate()
+		var changes: Array[String] = []
+		var on_changed := func(key: String, _value: Variant) -> void: changes.append(key)
+		settings.connect("changed", on_changed)
+		var assigned := bool(settings.call(
+			"set_controller_button", Settings.CONTROLLER_TARGET_KEYS[0], JOY_BUTTON_START
+		))
+		settings.disconnect("changed", on_changed)
+		_expect(
+			not assigned and settings.get("_values") == before_swap and changes.is_empty(),
+			"A conflict swap must not move Pause to the D-pad or change either mapping."
+		)
+		_expect_pause_binding(JOY_BUTTON_START)
+		settings.set("_values", before_swap)
+		settings.call("apply_controls")
+	settings.set("_values", original_layout)
+	settings.call("apply_controls")
+
 	var previous_button := int(settings.call("controller_target_button", 0))
 	_expect(
 		not bool(
@@ -312,6 +340,118 @@ func _test_persistence() -> void:
 			stored == expected,
 			"The persisted value for %s must match the selected assist." % key
 		)
+
+
+func _test_pause_menu_input(settings: Node) -> void:
+	var subject: GameManifest
+	for manifest in GameCatalog.available():
+		if manifest.has_store() and manifest.has_gallery():
+			subject = manifest
+			break
+	_expect(subject != null, "Pause input checks need a game with a store and gallery.")
+	if subject == null:
+		return
+
+	var original_id := GameCatalog.current_id()
+	var original_layout: Dictionary = (settings.get("_values") as Dictionary).duplicate()
+	# Headless defaults omit joypad UI bindings, so install the real collision.
+	var original_ui_events: Dictionary = {}
+	for binding: Array in [[&"ui_accept", JOY_BUTTON_A], [&"ui_cancel", JOY_BUTTON_B]]:
+		var action: StringName = binding[0]
+		original_ui_events[action] = InputMap.action_get_events(action)
+		var event := InputEventJoypadButton.new()
+		event.device = -1
+		event.button_index = binding[1]
+		InputMap.action_add_event(action, event)
+	GameCatalog.select(subject.id)
+	for button: int in [JOY_BUTTON_A, JOY_BUTTON_START]:
+		_expect(
+			bool(settings.call(
+				"set_controller_button", Settings.CONTROLLER_PAUSE_KEY, button
+			)),
+			"Pause must still accept both A and Start."
+		)
+		var pause := _instantiate_scene("res://scenes/menus/pause_menu.tscn")
+		if pause == null:
+			break
+		await process_frame
+		await process_frame
+		for screen: String in ["Settings", "Store", "Gallery"]:
+			var action := pause.get_node("Center/Panel/Layout/" + screen + "Button") as Button
+			action.grab_focus()
+			await _press_menu_joypad_button(JOY_BUTTON_A)
+			if not is_instance_valid(pause):
+				_expect(false, "Confirming %s must not resume the paused game." % screen)
+				break
+			var overlay := pause.call("_active_overlay") as Control
+			_expect(
+				overlay != null and overlay.is_visible_in_tree() and paused,
+				"Controller confirmation must open the %s overlay while paused." % screen
+			)
+			if overlay == null:
+				break
+			var confirmed: Array[bool] = [false]
+			var back := overlay.get_node("%BackButton") as Button
+			back.pressed.connect(func() -> void: confirmed[0] = true)
+			back.grab_focus()
+			await _press_menu_joypad_button(JOY_BUTTON_A)
+			_expect(
+				confirmed[0] and is_instance_valid(pause)
+				and (pause as Control).visible and paused,
+				"A must activate %s's focused Back button, not intercept it as Pause." % screen
+			)
+		if is_instance_valid(pause):
+			if button == JOY_BUTTON_START:
+				pause.call("_on_settings_pressed")
+				await process_frame
+				await _press_menu_joypad_button(JOY_BUTTON_START)
+				_expect(
+					(pause as Control).visible and paused
+					and pause.call("_active_overlay") == null,
+					"A non-confirmation Pause button must still close a nested overlay."
+				)
+			(pause.get_node("Center/Panel/Layout/ResumeButton") as Button).grab_focus()
+			await _press_menu_joypad_button(button)
+			_expect(
+				not is_instance_valid(pause) and not paused,
+				"Both focused A confirmation and the ordinary Pause button must resume."
+			)
+		if is_instance_valid(pause):
+			var overlay := pause.call("_active_overlay") as Node
+			if is_instance_valid(overlay):
+				overlay.free()
+			pause.free()
+		paused = false
+
+	var cancel_pause := _instantiate_scene("res://scenes/menus/pause_menu.tscn")
+	if cancel_pause != null:
+		await process_frame
+		await process_frame
+		await _press_menu_joypad_button(JOY_BUTTON_B)
+		_expect(
+			not is_instance_valid(cancel_pause) and not paused,
+			"The inherited menu-cancel action must still resume."
+		)
+		if is_instance_valid(cancel_pause):
+			cancel_pause.free()
+	paused = false
+	settings.set("_values", original_layout)
+	settings.call("apply_controls")
+	for action: StringName in original_ui_events:
+		InputMap.action_erase_events(action)
+		for event: InputEvent in original_ui_events[action]:
+			InputMap.action_add_event(action, event)
+	GameCatalog.select(original_id)
+
+
+func _press_menu_joypad_button(button: int) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventJoypadButton.new()
+		event.button_index = button
+		event.pressed = pressed
+		get_root().push_input(event, true)
+		await process_frame
+	await process_frame
 
 
 ## Headless runs expose no joypads, so every controller row must stay hidden and

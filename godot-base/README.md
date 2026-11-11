@@ -259,6 +259,10 @@ space on the other. Layouts are written in those units and adapt at runtime:
   also expose controller movement speed, stick deadzone and movement-layout
   controls. Every one of those pad-only rows hides itself until a controller is
   connected, so the screen never advertises hardware the player does not have.
+  Target and Pause buttons swap only when both resulting assignments are legal;
+  a swap that would move Pause onto the D-pad is refused without changing either
+  binding. Paused screens give GUI confirmation priority, so A still operates
+  focused menu buttons even when it is also assigned to Pause.
 - **`MenuScreen.refresh_layout()`** recomputes margins from the live viewport
   on every resize and calls `_on_layout_changed(size)`, which screens override.
   The main menu uses it to switch between a left-aligned poster layout in
@@ -719,8 +723,10 @@ The rest of the API is `points`, `add_points`, `is_owned`, `purchase`, `equip`,
 all taking the game id first. State lives in `user://store.cfg` (sections
 `points`, `owned`, `equipped`) and, like `settings.cfg` and `achievements.cfg`,
 is **merged** into the stored file — a one-game build never deletes another
-build's purchases. Ownership never regresses, and an equipped id the build does
-not recognise falls back to the slot's `default` rather than being dropped.
+build's purchases. Missing files are created; any other merge-read error aborts
+the write with a warning and leaves the existing file untouched. Ownership never
+regresses, and an equipped id the build does not recognise falls back to the
+slot's `default` rather than being dropped.
 
 The **Store** button appears wherever the shop has a game to serve: on the title
 screen of a standalone build, and on the pause overlay of any build while a

@@ -963,6 +963,8 @@ func set_controller_button(setting_key: String, button: int) -> bool:
 			break
 
 	if not conflicting_key.is_empty():
+		if not is_controller_button_allowed_for_setting(conflicting_key, previous_button):
+			return false
 		set_value(conflicting_key, previous_button)
 	set_value(setting_key, button)
 	return true
@@ -1024,13 +1026,16 @@ func save(path := SAVE_PATH) -> void:
 	# ships one game registers one game's option and binding keys, and rewriting
 	# the file from those alone would delete another build's saved values out of
 	# a shared `user://`.
-	config.load(path)
+	var err := config.load(path)
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		push_warning("Could not read settings from %s (error %d)" % [path, err])
+		return
 	if not _values.has(ROUND_MODE_KEY) and config.has_section_key("game", "round_mode"):
 		config.erase_section_key("game", "round_mode")
 	for key: String in _values:
 		var parts := key.split("/", false, 1)
 		config.set_value(parts[0], parts[1], _values[key])
-	var err := config.save(path)
+	err = config.save(path)
 	if err != OK:
 		push_warning("Could not save settings to %s (error %d)" % [path, err])
 
