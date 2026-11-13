@@ -1,6 +1,25 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/menus/pause_menu.gd" id="1_script"]
+[ext_resource type="Script" path="res://ui/components/round_overlay.gd" id="2_overlay"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_glass"]
+content_margin_left = 20.0
+content_margin_top = 20.0
+content_margin_right = 20.0
+content_margin_bottom = 20.0
+bg_color = Color(0.025, 0.045, 0.06, 0.84)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.686275, 0.866667, 0.917647, 0.24)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+shadow_color = Color(0, 0, 0, 0.24)
+shadow_size = 12
 
 [node name="PauseMenu" type="Control"]
 process_mode = 3
@@ -20,24 +39,32 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.0196078, 0.0313726, 0.0392157, 0.72)
+color = Color(0.0196078, 0.0313726, 0.0392157, 0.3)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Center" type="ScrollContainer" parent="." node_paths=PackedStringArray("content")]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+mouse_filter = 0
+horizontal_scroll_mode = 0
+follow_focus = true
+script = ExtResource("2_overlay")
+content = NodePath("Panel")
 
 [node name="Panel" type="PanelContainer" parent="Center"]
 custom_minimum_size = Vector2(560, 0)
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBox_glass")
+metadata/overlay_width = 360.0
 
 [node name="Layout" type="VBoxContainer" parent="Center/Panel"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="Center/Panel/Layout"]
 theme_type_variation = &"MenuHeading"
@@ -56,27 +83,40 @@ color = Color(0.686275, 0.866667, 0.917647, 0.35)
 [node name="ResumeButton" type="Button" parent="Center/Panel/Layout"]
 metadata/ui_sound_handled = true
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Resume"
+
+[node name="GuideButton" type="Button" parent="Center/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"NavigationButton"
+text = "Controls & Guide"
+tooltip_text = "Read controls and rules without leaving this game."
 
 [node name="SettingsButton" type="Button" parent="Center/Panel/Layout"]
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Settings"
 
 [node name="StoreButton" type="Button" parent="Center/Panel/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Store"
 
 [node name="GalleryButton" type="Button" parent="Center/Panel/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Gallery"
 
 [node name="ExitToMainMenuButton" type="Button" parent="Center/Panel/Layout"]
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 text = "Exit to Main Menu"
 
 [connection signal="pressed" from="Center/Panel/Layout/ResumeButton" to="." method="_on_resume_pressed"]
+[connection signal="pressed" from="Center/Panel/Layout/GuideButton" to="." method="_on_guide_pressed"]
 [connection signal="pressed" from="Center/Panel/Layout/SettingsButton" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="Center/Panel/Layout/StoreButton" to="." method="_on_store_pressed"]
 [connection signal="pressed" from="Center/Panel/Layout/GalleryButton" to="." method="_on_gallery_pressed"]

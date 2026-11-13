@@ -41,15 +41,18 @@ const PLAYER_FOUR := 3
 ## Kept for existing two-seat game implementations; use active indices for new games.
 const PLAYER_COUNT := 2
 const Identity = preload("res://scripts/player_identity.gd")
-const SIDE_CLEARANCE := 38.0
-const TOP_CLEARANCE := 190.0
-const BOTTOM_CLEARANCE := 105.0
+const SIDE_CLEARANCE := 18.0
+const TOP_CLEARANCE := 96.0
+const BOTTOM_CLEARANCE := 24.0
 const DANGER_SECONDS := 8.0
 const DANGER_COLOR := Color("ff4964")
 
 @onready var _playfield: Node2D = %Playfield
 @onready var _world_fx: Node2D = %WorldFX
 @onready var _hud: CanvasLayer = %HUD
+@onready var _shell_hud_margins: MarginContainer = $HUD/Overlay/Margins
+@onready var _shell_hud_layout: VBoxContainer = $HUD/Overlay/Margins/Layout
+@onready var _shell_top_bar: HBoxContainer = $HUD/Overlay/Margins/Layout/TopBar
 @onready var _screen_flash: ColorRect = %ScreenFlash
 @onready var _danger_overlay: ColorRect = %DangerOverlay
 @onready var _player_one_card: PanelContainer = %PlayerOneCard
@@ -163,6 +166,8 @@ var _lives := [0, 0]
 var _round_elapsed := 0.0
 var _round_gameplay_speed := 1.0
 var _round_target_size := 1.0
+var _shell_hud_unit := 1.0
+var _shell_hud_styles: Dictionary[PanelContainer, StyleBox] = {}
 
 
 func _ready() -> void:
@@ -188,12 +193,15 @@ func _ready() -> void:
 	_player_two_streak.add_theme_color_override("font_color", player_two_color)
 	_reset_round_gauge()
 	AudioManager.attach_ui_sounds(_hud)
+	get_viewport().size_changed.connect(_layout_shared_hud)
+	_layout_shared_hud()
 
 	if music:
 		AudioManager.play_music(music)
 
 	_build_playfield()
 	_begin_first_round()
+	_layout_shared_hud.call_deferred()
 
 
 func _process(delta: float) -> void:
@@ -775,6 +783,89 @@ func _configure_mode_ui() -> void:
 		(ui["caption"] as Label).text = _player_name(player).to_upper()
 		(ui["result_caption"] as Label).text = _player_name(player).to_upper()
 		(ui["stats_title"] as Label).text = _player_name(player).to_upper()
+	_layout_shared_hud.call_deferred()
+
+
+## Physical UI units keep the compact readouts legible without scaling Controls.
+## The empty hint panel stays at the bottom for games that measure its bounds.
+func _layout_shared_hud() -> void:
+	if not is_inside_tree() or _player_ui.is_empty():
+		return
+	var screen := get_viewport_rect().size
+	_shell_hud_unit = screen.x / maxf(get_window().size.x, 1.0) \
+		* float(Settings.get_value("ui/scale", 1.0))
+	var pad := 12.0 * _shell_hud_unit
+	Responsive.set_margins(_shell_hud_margins, roundi(pad), roundi(pad),
+		roundi(pad), roundi(pad))
+	_shell_top_bar.add_theme_constant_override("separation", roundi(8.0 * _shell_hud_unit))
+	_shell_hud_layout.add_theme_constant_override("separation", roundi(4.0 * _shell_hud_unit))
+	var timer_card := _time_label.get_parent().get_parent() as PanelContainer
+	if timer_card.get_parent() == _shell_top_bar:
+		var last := _shell_top_bar.get_child_count() - 1
+		if _pause_button.get_parent() == _shell_top_bar:
+			_shell_top_bar.move_child(_pause_button, last)
+			last -= 1
+		_shell_top_bar.move_child(timer_card, last)
+	var count := _active_player_indices().size() + 1
+	var available := screen.x - 2.0 * pad - 8.0 * _shell_hud_unit * (count - 1)
+	if _pause_button.visible and _pause_button.get_parent() == _shell_top_bar:
+		available -= 52.0 * _shell_hud_unit
+	var card_width := minf(180.0 * _shell_hud_unit, maxf(0.0, available / count))
+	for ui in _player_ui:
+		var card := ui["card"] as PanelContainer
+		if card.get_parent() != _shell_top_bar:
+			continue
+		card.custom_minimum_size = Vector2(card_width, 0)
+		card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		_style_shared_hud_panel(card)
+		for key in ["caption", "score", "streak"]:
+			var label := ui[key] as Label
+			_style_shared_hud_label(label, 28 if key == "score" else 12)
+			label.custom_minimum_size = Vector2.ZERO
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var caption := ui["caption"] as Label
+		caption.autowrap_mode = TextServer.AUTOWRAP_OFF
+		caption.clip_text = true
+		caption.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		caption.tooltip_text = caption.text
+		caption.accessibility_description = caption.text
+		caption.mouse_filter = Control.MOUSE_FILTER_PASS
+	if timer_card.get_parent() == _shell_top_bar:
+		timer_card.custom_minimum_size = Vector2(card_width, 0)
+		timer_card.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_END
+		_style_shared_hud_panel(timer_card)
+		_style_shared_hud_label(_time_label, 28)
+		_style_shared_hud_label(_time_caption, 12)
+		_style_shared_hud_label(_mode_title, 12)
+		_time_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_mode_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_style_shared_hud_label(_callout, 14)
+	_time_progress.custom_minimum_size.y = 3.0 * _shell_hud_unit
+	if _pause_button.get_parent() == _shell_top_bar:
+		_pause_button.custom_minimum_size = Vector2.ONE * 44.0 * _shell_hud_unit
+		_pause_button.add_theme_font_size_override("font_size", roundi(18.0 * _shell_hud_unit))
+	_hint.hide()
+
+
+func _style_shared_hud_label(label: Label, pixels: int) -> void:
+	label.add_theme_font_size_override("font_size", roundi(pixels * _shell_hud_unit))
+	label.add_theme_color_override("font_outline_color", Color(0.01, 0.02, 0.03, 0.95))
+	label.add_theme_constant_override("outline_size", maxi(1, roundi(2.0 * _shell_hud_unit)))
+
+
+func _style_shared_hud_panel(panel: PanelContainer) -> void:
+	if not _shell_hud_styles.has(panel):
+		_shell_hud_styles[panel] = panel.get_theme_stylebox("panel").duplicate() as StyleBox
+	var style := _shell_hud_styles[panel].duplicate() as StyleBox
+	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		style.set_content_margin(side,
+			(10.0 if side in [SIDE_LEFT, SIDE_RIGHT] else 4.0) * _shell_hud_unit)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child in panel.find_children("*", "Control", true, false):
+		if not child is BaseButton:
+			(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 ## Existing scene paths and aliases stay intact; additional seats use the same
@@ -958,8 +1049,13 @@ func open_pause_menu() -> void:
 		push_error("Could not load pause menu scene '%s'." % pause_scene)
 		return
 	_pause_menu = packed.instantiate()
+	_pause_menu.set("controls_hint_source", _controls_hint_for_pause)
 	_pause_menu.closed.connect(_on_pause_closed)
 	_hud.add_child(_pause_menu)
+
+
+func _controls_hint_for_pause() -> String:
+	return _hint.text
 
 
 func _on_pause_closed() -> void:
@@ -1322,6 +1418,8 @@ func _reset_reduced_motion_state() -> void:
 
 
 func _on_setting_changed(key: String, value: Variant) -> void:
+	if key == "ui/scale":
+		_layout_shared_hud()
 	if key == Settings.VISUAL_EFFECTS_KEY:
 		_set_intense_effects_enabled(Settings.visual_effects_enabled())
 		return
@@ -1337,13 +1435,22 @@ func _on_setting_changed(key: String, value: Variant) -> void:
 	_on_game_setting_changed(key, value)
 
 
-## Playfield rectangle inside the HUD clearances, in local coordinates.
+## Reserve the measured readouts, not a fixed title band or hidden instructions.
 func _playfield_bounds() -> Rect2:
 	var viewport_size := get_viewport_rect().size
-	var minimum := Vector2(SIDE_CLEARANCE, TOP_CLEARANCE)
+	var side := maxf(SIDE_CLEARANCE, 12.0 * _shell_hud_unit)
+	var top := TOP_CLEARANCE
+	if is_instance_valid(_shell_hud_margins) and _shell_hud_margins.is_visible_in_tree():
+		top = _shell_hud_margins.get_theme_constant("margin_top") \
+			+ _shell_top_bar.get_combined_minimum_size().y + 8.0 * _shell_hud_unit
+		if _time_progress.visible:
+			top += _time_progress.get_combined_minimum_size().y + 4.0 * _shell_hud_unit
+		if _callout.visible and not _callout.text.is_empty():
+			top += _callout.get_combined_minimum_size().y + 4.0 * _shell_hud_unit
+	var minimum := Vector2(side, top)
 	var maximum := Vector2(
-		viewport_size.x - SIDE_CLEARANCE,
-		viewport_size.y - BOTTOM_CLEARANCE
+		viewport_size.x - side,
+		viewport_size.y - maxf(BOTTOM_CLEARANCE, 12.0 * _shell_hud_unit)
 	)
 	if maximum.x < minimum.x:
 		minimum.x = viewport_size.x * 0.5

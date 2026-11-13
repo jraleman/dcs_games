@@ -376,7 +376,7 @@ func _test_pause_menu_input(settings: Node) -> void:
 			break
 		await process_frame
 		await process_frame
-		for screen: String in ["Settings", "Store", "Gallery"]:
+		for screen: String in ["Settings", "Store", "Gallery", "Guide"]:
 			var action := pause.get_node("Center/Panel/Layout/" + screen + "Button") as Button
 			action.grab_focus()
 			await _press_menu_joypad_button(JOY_BUTTON_A)
@@ -1461,11 +1461,19 @@ func _test_triangle_rush(session: Node, settings: Node) -> void:
 func _test_desk_can_saw(session: Node, settings: Node) -> void:
 	GameCatalog.select("desk_can_saw")
 	session.call("configure_single_player")
+	# A can can be sliced on the first frame in the expanded playfield, so
+	# check the startup event rather than requiring it to remain the latest cue.
+	var startup_captions: Array[String] = []
+	var record_caption := func(text: String) -> void: startup_captions.append(text)
+	var audio := get_root().get_node("AudioManager")
+	audio.caption_requested.connect(record_caption)
 	var game := _instantiate_scene("res://games/desk_can_saw/desk_can_saw.tscn")
 	if game == null:
+		audio.caption_requested.disconnect(record_caption)
 		return
 	await process_frame
 	await process_frame
+	audio.caption_requested.disconnect(record_caption)
 
 	var timer := game.get_node("%RoundTimer") as Timer
 	timer.stop()
@@ -1473,7 +1481,7 @@ func _test_desk_can_saw(session: Node, settings: Node) -> void:
 	_expect(
 		caption != null
 		and caption.visible
-		and str(caption.call("caption_text")) == "Chainsaw powered",
+		and startup_captions.has("Chainsaw powered"),
 		"Desk-Can-Saw must caption its startup power cue."
 	)
 	_expect(

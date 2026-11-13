@@ -96,20 +96,19 @@ func _test_unknown_game_is_refused(collection: PackedStringArray) -> void:
 	)
 
 
-## Source launches default to the standalone product, while the collection
-## preset explicitly clears that pin. Exported projects resolve their own tags.
+## Source launches default to the collection, while standalone exports resolve
+## their own feature-tag pins.
 func _test_project_launch_default() -> void:
 	if not OS.has_feature("editor"):
 		return
 	_expect(
-		str(ProjectSettings.get_setting(GameCatalog.SINGLE_GAME_SETTING, ""))
-		== "desk_can_saw",
-		"An ordinary source launch must default to standalone Desk-Can-Saw."
+		str(ProjectSettings.get_setting(GameCatalog.SINGLE_GAME_SETTING, "")).is_empty(),
+		"An ordinary source launch must default to the full collection."
 	)
 	_expect(
 		ProjectSettings.get_setting(GameCatalog.SINGLE_GAME_SETTING + ".collection", null)
 		== "",
-		"The collection export feature must explicitly clear the default game pin."
+		"The collection export feature must explicitly keep the catalog unpinned."
 	)
 	var presets := ConfigFile.new()
 	_expect(

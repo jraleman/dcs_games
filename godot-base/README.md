@@ -12,8 +12,9 @@ mobile without changes).
 ## Running it
 
 ```bash
-godot --path .                         # standalone Desk-Can-Saw, also the editor default
-godot --path . -- --game=triangle_rush  # launch a different standalone game
+godot --path .                         # full collection, also the editor default
+godot --path . -- --game=desk_can_saw   # launch a standalone game
+godot --path . -- --game=triangle_rush
 godot --path . -- --game=dead_metal_jam
 godot --path . -- --game=chicken_pit
 godot --path . -- --game=anti_chess
@@ -29,13 +30,14 @@ godot --path . -- --game=tuki_tuki      # Venezuelan DDR-style solo practice/sto
 godot --path . -- --game=yacomio        # five-era 3D evolution, offline resources, cosmetic store and leaps
 godot --path . -- --game=florida_men     # 24-space party board, six 3D minigames, 1-4 humans and CPU guests
 godot --path . -- --game=rastro          # 3D car garage; customization only, no competitions yet
-godot --path . -- --game=all            # launch the full collection
+godot --path . -- --game=all            # explicitly select the full collection
 ```
 
-Ordinary launches show only Desk-Can-Saw and default to three lives. A saved
-round-mode choice or starting-lives preference still wins. No game is gated:
-`--game=all` lists every game in the picker from the first launch, and
-standalone Desk-Can-Saw is always playable.
+Ordinary launches, including the editor's Play (F5), open the full collection,
+equivalent to `--game=all`. The title screen's **Play** opens the game picker.
+No game is gated: every game is listed from the first launch.
+Use `--game=desk_can_saw` for standalone Desk-Can-Saw, which defaults to three
+lives. A saved round-mode choice or starting-lives preference still wins.
 
 The first scene is `scenes/boot/studio_logo.tscn`; from there the flow is:
 
@@ -391,6 +393,30 @@ eliminated players with `_player_is_out(player_index)`; both no-op under the
 countdown, so a game never branches on the mode itself. What counts as a
 mistake is the game's call — a wrong key in Triangle Rush, an escaped can in
 Desk-Can-Saw.
+
+**Shared in-game HUD** — compact translucent score chips sit at the edges,
+with an outlined time/lives readout, a thin gauge and game-owned live status.
+Text stays solid and player identities retain their colours and labels.
+The shell sizes these controls in physical UI units, respecting the player's
+UI scale; touch Pause keeps a 44-unit target. `_playfield_bounds()` measures
+the live header instead of reserving a large title band and permanent footer.
+Use that rectangle for actors and viewports rather than copying the clearance
+constants. Games with their own touch controls still reserve their own input area.
+
+`%Hint` remains the game's writable controls summary, but is no longer drawn
+over gameplay. **Pause → Controls & Guide** presents it alongside the existing
+manifest-driven written Guide. Opening this read-only view never starts a
+tutorial video, changes the show-on-start preference, restarts the round or
+unpauses play; Back returns to Pause. Rebinding in Settings is reflected the
+next time help opens. Keep essential, changing objectives in `%Callout` or the
+game's own status UI, not in the hidden controls summary.
+
+Pause, results and statistics use lighter glass panels over the game. The
+shared `round_overlay.gd` keeps their existing content paths, stacks report
+columns on narrow screens and scrolls long content with keyboard/controller
+focus. A game that already reparents results into its own scrolling layout
+keeps ownership of that layout. No game-name branches or rendering-backend
+changes are required.
 
 **Add music** — drop an `.ogg` in `assets/audio/`, then set the `music` export
 on the main menu, intro or gameplay scene. Volume is already wired to the Music
@@ -1562,10 +1588,11 @@ godot --path . -- --game=triangle_rush
 godot --path . -- --game=desk_can_saw
 godot --path . -- --game=chicken_pit
 DCS_GAME=dead_metal_jam godot --path .     # same, for launchers that cannot pass args
-godot --path . -- --game=all              # override the default pin with the collection
+godot --path . -- --game=all              # override any lower-priority pin with the collection
 ```
 
-The checked-in `dcs/build/single_game_id` defaults to `desk_can_saw`.
+The checked-in `dcs/build/single_game_id` is empty, so editor Play and ordinary
+command-line launches default to the full collection.
 The reserved `all` selector works with `--game`, `DCS_GAME`, and
 `GameCatalog.restrict_to()`; it explicitly clears a lower-priority pin rather
 than falling back to it. `clear_restriction()` restores the configured launch
@@ -1818,8 +1845,8 @@ the other games' assets out of the package. Setting both means the build is
 correct even if one of them is edited later.
 
 The *Windows — DCS Collection* preset carries `custom_features="collection"`;
-`build/single_game_id.collection=""` clears the source project's Desk-Can-Saw
-default so that export still ships the full collection experience.
+`build/single_game_id.collection=""` explicitly keeps that export unpinned,
+independently of the source project's default.
 
 The user-dir override is **not optional**. Without it the standalone build
 shares `user://` with the collection, so saves, settings and achievements
@@ -1829,7 +1856,7 @@ that whoever writes those presets cannot ship a build that quietly shares the
 collection's save folder. Add the three `project.godot` overrides
 (`build/single_game_id.<tag>`, `config/name.<tag>`,
 `config/custom_user_dir_name.<tag>`) **before** the preset, not after.
-Source runs, including the default Desk-Can-Saw launch and `--game`
+Source runs, including the default collection launch and `--game`
 overrides, keep the existing development user directory. The engine fixes it at
 startup, so these runs still share the collection's save files. That is fine for
 playtesting, and the reason the override belongs in the preset.

@@ -233,7 +233,8 @@ Run everything from `godot-base/`. Godot is **not** installed in every dev
 environment — check before assuming a command will run.
 
 ```bash
-godot --path .                       # default: standalone Desk-Can-Saw with lives
+godot --path .                       # default: full collection, also editor Play
+godot --path . -- --game=desk_can_saw # run standalone Desk-Can-Saw with lives
 godot --path . -- --game=dead_metal_jam   # run one game as a standalone build
 godot --path . -- --game=all          # run the collection
 godot --headless --path . --import   # reimport assets and refresh the class cache
@@ -497,8 +498,8 @@ and whole actions at enlarged UI sizes without adding game-name layout branches.
   — standalone builds. A catalog holding one game *is* the standalone product,
   so the pin lives in one place: the project setting `dcs/build/single_game_id`
   (feature-overridable per export preset), `--game=<id>` after `--`, or
-  `DCS_GAME`. The source default is `desk_can_saw`; the reserved selector
-  `all` explicitly requests the collection through the same API. The collection
+  `DCS_GAME`. The source default is empty (the full collection); the reserved
+  selector `all` explicitly requests the collection through the same API. The collection
   export uses `build/single_game_id.collection=""`. `clear_restriction()`
   restores the configured launch selection. Never add a second way to hide a game.
 - `GameCatalog.intro_scene_path(fallback)` — the opening `studio_logo.gd` hands

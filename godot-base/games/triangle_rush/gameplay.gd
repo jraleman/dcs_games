@@ -648,11 +648,9 @@ func _position_is_clear(candidate: Vector2, moving_target: TriangleTarget) -> bo
 func _target_bounds() -> Rect2:
 	var viewport_size := get_viewport_rect().size
 	var radius := _target_radius()
-	var minimum := Vector2(SIDE_CLEARANCE + radius, TOP_CLEARANCE + radius)
-	var maximum := Vector2(
-		viewport_size.x - SIDE_CLEARANCE - radius,
-		viewport_size.y - BOTTOM_CLEARANCE - radius
-	)
+	var bounds := _playfield_bounds()
+	var minimum := bounds.position + Vector2.ONE * radius
+	var maximum := bounds.end - Vector2.ONE * radius
 
 	if maximum.x < minimum.x:
 		minimum.x = viewport_size.x * 0.5

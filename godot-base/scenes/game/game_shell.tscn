@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/game_shell.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
@@ -8,60 +8,54 @@
 [ext_resource type="Texture2D" path="res://assets/images/icon_home.svg" id="7_home"]
 [ext_resource type="Texture2D" path="res://assets/images/icon_back.svg" id="8_back"]
 [ext_resource type="PackedScene" path="res://ui/components/audio_caption.tscn" id="9_caption"]
+[ext_resource type="Script" path="res://ui/components/round_overlay.gd" id="10_overlay"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_player_one"]
-content_margin_left = 26.0
-content_margin_top = 15.0
-content_margin_right = 26.0
-content_margin_bottom = 15.0
-bg_color = Color(0.0352941, 0.109804, 0.176471, 0.88)
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+bg_color = Color(0.0352941, 0.109804, 0.176471, 0.58)
 border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.301961, 0.639216, 1, 0.72)
-corner_radius_top_left = 18
-corner_radius_top_right = 18
-corner_radius_bottom_right = 18
-corner_radius_bottom_left = 18
-shadow_color = Color(0.0196078, 0.211765, 0.419608, 0.42)
-shadow_size = 12
+border_width_bottom = 1
+border_color = Color(0.301961, 0.639216, 1, 0.5)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.16)
+shadow_size = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_player_two"]
-content_margin_left = 26.0
-content_margin_top = 15.0
-content_margin_right = 26.0
-content_margin_bottom = 15.0
-bg_color = Color(0.176471, 0.0431373, 0.0745098, 0.88)
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+bg_color = Color(0.176471, 0.0431373, 0.0745098, 0.58)
 border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 0.360784, 0.423529, 0.72)
-corner_radius_top_left = 18
-corner_radius_top_right = 18
-corner_radius_bottom_right = 18
-corner_radius_bottom_left = 18
-shadow_color = Color(0.419608, 0.0196078, 0.0941176, 0.42)
-shadow_size = 12
+border_width_bottom = 1
+border_color = Color(1, 0.360784, 0.423529, 0.5)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.16)
+shadow_size = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_timer"]
-content_margin_left = 28.0
-content_margin_top = 13.0
-content_margin_right = 28.0
-content_margin_bottom = 13.0
-bg_color = Color(0.054902, 0.0823529, 0.0980392, 0.88)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.686275, 0.866667, 0.917647, 0.25)
-corner_radius_top_left = 18
-corner_radius_top_right = 18
-corner_radius_bottom_right = 18
-corner_radius_bottom_left = 18
-shadow_color = Color(0, 0, 0, 0.32)
-shadow_size = 10
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+bg_color = Color(0.025, 0.04, 0.055, 0.58)
+border_width_bottom = 1
+border_color = Color(0.686275, 0.866667, 0.917647, 0.28)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.16)
+shadow_size = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_progress_background"]
 bg_color = Color(1, 1, 1, 0.075)
@@ -80,38 +74,29 @@ shadow_color = Color(0.301961, 0.639216, 1, 0.32)
 shadow_size = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hint"]
-content_margin_left = 28.0
-content_margin_top = 11.0
-content_margin_right = 28.0
-content_margin_bottom = 11.0
-bg_color = Color(0.0352941, 0.054902, 0.0666667, 0.78)
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_round"]
+content_margin_left = 24.0
+content_margin_top = 20.0
+content_margin_right = 24.0
+content_margin_bottom = 20.0
+bg_color = Color(0.025, 0.045, 0.06, 0.84)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.686275, 0.866667, 0.917647, 0.18)
-corner_radius_top_left = 14
-corner_radius_top_right = 14
-corner_radius_bottom_right = 14
-corner_radius_bottom_left = 14
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_round"]
-content_margin_left = 50.0
-content_margin_top = 40.0
-content_margin_right = 50.0
-content_margin_bottom = 40.0
-bg_color = Color(0.0431373, 0.0705882, 0.0901961, 0.97)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.686275, 0.866667, 0.917647, 0.42)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
-shadow_color = Color(0, 0, 0, 0.62)
-shadow_size = 24
+border_color = Color(0.686275, 0.866667, 0.917647, 0.24)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+shadow_color = Color(0, 0, 0, 0.24)
+shadow_size = 12
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stat"]
 content_margin_left = 22.0
@@ -187,25 +172,27 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 42
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 42
-theme_override_constants/margin_bottom = 30
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 12
 
 [node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 4
 
 [node name="TopBar" type="HBoxContainer" parent="HUD/Overlay/Margins/Layout"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 8
 
 [node name="PlayerOneCard" type="PanelContainer" parent="HUD/Overlay/Margins/Layout/TopBar"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
+mouse_filter = 2
+size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_player_one")
 
 [node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard"]
@@ -216,28 +203,30 @@ theme_override_constants/separation = -2
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.568627, 0.768627, 1, 0.9)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 12
 text = "PLAYER 1"
 
 [node name="PlayerOneScore" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_font_sizes/font_size = 52
+theme_override_font_sizes/font_size = 28
 text = "0"
 
 [node name="PlayerOneStreak" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 23)
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.301961, 0.639216, 1, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 12
 text = " "
 
 [node name="TimerCard" type="PanelContainer" parent="HUD/Overlay/Margins/Layout/TopBar"]
 layout_mode = 2
-size_flags_horizontal = 3
+mouse_filter = 2
+size_flags_horizontal = 10
+size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_timer")
 
 [node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard"]
@@ -246,6 +235,7 @@ theme_override_constants/separation = -4
 
 [node name="ModeTitle" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.9)
@@ -258,7 +248,7 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
-theme_override_font_sizes/font_size = 48
+theme_override_font_sizes/font_size = 28
 text = "30"
 horizontal_alignment = 1
 
@@ -267,14 +257,16 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.576471, 0.65098, 0.690196, 0.9)
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 12
 text = "SECONDS LEFT"
 horizontal_alignment = 1
 
 [node name="PlayerTwoCard" type="PanelContainer" parent="HUD/Overlay/Margins/Layout/TopBar"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
+mouse_filter = 2
+size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_player_two")
 
 [node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard"]
@@ -285,7 +277,7 @@ theme_override_constants/separation = -2
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.65098, 0.690196, 0.9)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 12
 text = "PLAYER 2"
 horizontal_alignment = 2
 
@@ -293,31 +285,34 @@ horizontal_alignment = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_font_sizes/font_size = 52
+theme_override_font_sizes/font_size = 28
 text = "0"
 horizontal_alignment = 2
 
 [node name="PlayerTwoStreak" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 23)
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 12
 text = " "
 horizontal_alignment = 2
 
 [node name="PauseButton" type="Button" parent="HUD/Overlay/Margins/Layout/TopBar"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(132, 0)
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-size_flags_vertical = 4
-theme_override_font_sizes/font_size = 21
-text = "PAUSE"
+size_flags_vertical = 0
+theme_type_variation = &"NavigationButton"
+theme_override_font_sizes/font_size = 18
+tooltip_text = "Pause and help"
+accessibility_name = "Pause and help"
+text = "II"
 
 [node name="TimeProgress" type="ProgressBar" parent="HUD/Overlay/Margins/Layout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 11)
+custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 mouse_filter = 2
 max_value = 30.0
@@ -330,10 +325,13 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_progress_fill")
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.686275, 0.866667, 0.917647, 0.52)
-theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.85, 0.91, 0.94, 1)
+theme_override_colors/font_outline_color = Color(0.01, 0.02, 0.03, 0.95)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 14
 text = "ROUND CALLOUT"
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="Spacer" type="Control" parent="HUD/Overlay/Margins/Layout"]
 layout_mode = 2
@@ -349,10 +347,12 @@ alignment = 1
 
 [node name="HintPanel" type="PanelContainer" parent="HUD/Overlay/Margins/Layout/BottomRow"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_hint")
 
 [node name="Hint" type="Label" parent="HUD/Overlay/Margins/Layout/BottomRow/HintPanel"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.686275, 0.752941, 0.788235, 1)
@@ -360,7 +360,7 @@ theme_override_font_sizes/font_size = 20
 text = "Controls hint"
 horizontal_alignment = 1
 
-[node name="RoundOver" type="Control" parent="HUD"]
+[node name="RoundOver" type="ScrollContainer" parent="HUD" node_paths=PackedStringArray("content")]
 unique_name_in_owner = true
 visible = false
 anchors_preset = 15
@@ -368,15 +368,21 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+horizontal_scroll_mode = 0
+follow_focus = true
+script = ExtResource("10_overlay")
+content = NodePath("Center")
 
 [node name="Dim" type="ColorRect" parent="HUD/RoundOver"]
+top_level = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.0117647, 0.0196078, 0.027451, 0.82)
+mouse_filter = 2
+color = Color(0.0117647, 0.0196078, 0.027451, 0.3)
 
 [node name="Center" type="CenterContainer" parent="HUD/RoundOver"]
 layout_mode = 1
@@ -392,6 +398,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(800, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_round")
+metadata/overlay_width = 560.0
 
 [node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/RoundPanel"]
 layout_mode = 2
@@ -530,6 +537,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(319, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"NavigationButton"
 icon = ExtResource("5_score")
 icon_max_width = 28
 text = "See Scores"
@@ -537,6 +545,7 @@ text = "See Scores"
 [node name="ExitToMainMenuButton" type="Button" parent="HUD/RoundOver/Center/RoundPanel/Layout/Actions"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"NavigationButton"
 icon = ExtResource("7_home")
 icon_max_width = 28
 text = "Main Menu"
@@ -547,6 +556,7 @@ visible = false
 custom_minimum_size = Vector2(1180, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_round")
+metadata/overlay_width = 940.0
 
 [node name="Layout" type="VBoxContainer" parent="HUD/RoundOver/Center/ScorePanel"]
 layout_mode = 2
@@ -950,6 +960,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"NavigationButton"
 icon = ExtResource("6_share")
 icon_max_width = 26
 text = "Save Image"
@@ -960,12 +971,14 @@ visible = false
 custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"NavigationButton"
 icon = ExtResource("5_score")
 icon_max_width = 26
 text = "Open Image"
 
 [node name="ShareStatus" type="Label" parent="HUD/RoundOver"]
 unique_name_in_owner = true
+top_level = true
 visible = false
 layout_mode = 1
 anchors_preset = 12

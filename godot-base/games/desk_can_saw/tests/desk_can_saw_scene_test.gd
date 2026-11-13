@@ -10,6 +10,8 @@ func _init() -> void:
 
 
 func _run() -> void:
+	# Physical HUD metrics need a window, not the headless 64px placeholder.
+	root.size = Vector2i(1280, 720)
 	var session := get_root().get_node_or_null("GameSession")
 	if session == null:
 		_failures.append("The GameSession autoload is required for scene tests.")

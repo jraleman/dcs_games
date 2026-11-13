@@ -73,11 +73,19 @@ var _panel_styles: Dictionary[Control, StyleBox] = {}
 var _toggle_icons: Dictionary[StringName, ImageTexture] = {}
 var _toggle_icon_sizes: Dictionary[StringName, Vector2] = {}
 var _extra_control_cards: Array[Dictionary] = []
+var _in_game_help := false
+var _round_controls := ""
+
+
+## Paused help reuses the written Guide, never its video or start/save actions.
+func configure_in_game_help(controls: String) -> void:
+	_in_game_help = true
+	_round_controls = controls
 
 
 func _ready() -> void:
 	_reduced_motion = Settings.reduced_motion_enabled()
-	first_focus = _start_button
+	first_focus = _back_button if _in_game_help else _start_button
 	margins = _margins
 	# Back has to undo however the player got here. A solo-only game skips mode
 	# select entirely (see `main_menu.gd`), so returning to it would bounce
@@ -93,7 +101,12 @@ func _ready() -> void:
 			game_select_scene if GameCatalog.offers_a_choice() else main_menu_scene
 		)
 	_populate_instructions()
-	_setup_video()
+	if not _in_game_help:
+		_setup_video()
+	_start_button.visible = not _in_game_help
+	_show_again.visible = not _in_game_help
+	_demo_prompt.visible = not _in_game_help
+	_actions.visible = not _in_game_help
 	_guide.visible = not _video_ready
 	_guide_button.visible = _video_ready
 	_update_guide_help()
@@ -321,7 +334,8 @@ func _refresh_focus_order() -> void:
 		controls.append(_guide)
 	else:
 		controls.append_array([_video, _restart_button])
-	controls.append_array([_show_again, _start_button])
+	if not _in_game_help:
+		controls.append_array([_show_again, _start_button])
 	for index in controls.size():
 		controls[index].focus_next = controls[(index + 1) % controls.size()].get_path()
 		var previous := controls[(index - 1 + controls.size()) % controls.size()]
@@ -343,6 +357,8 @@ func _populate_instructions() -> void:
 		_summary.text += "\n" + str(level["title"])
 	_refresh_player_roster()
 	_append_round_mode_note()
+	if _in_game_help and not _round_controls.strip_edges().is_empty():
+		_rules.text += "\n\n" + _round_controls
 	_populate_setup_label()
 	_mode_label.tooltip_text = _mode_label.text
 	_mode_label.accessibility_description = _mode_label.text
@@ -903,10 +919,15 @@ func _play_entrance() -> void:
 
 
 func _on_show_again_toggled(pressed: bool) -> void:
+	if _in_game_help:
+		return
 	Settings.set_value("game/show_instructions", pressed)
 
 
 func _on_start_pressed() -> void:
+	if _in_game_help:
+		go_back()
+		return
 	Router.goto(GameCatalog.current_gameplay_scene_path())
 
 

@@ -9,6 +9,7 @@ extends MenuScreen
 @export_file("*.tscn") var settings_scene := "res://scenes/menus/settings_menu.tscn"
 @export_file("*.tscn") var store_scene := "res://scenes/menus/store.tscn"
 @export_file("*.tscn") var gallery_scene := "res://scenes/menus/gallery.tscn"
+@export_file("*.tscn") var guide_scene := "res://scenes/menus/instructions.tscn"
 @export_file("*.tscn") var main_menu_scene := "res://scenes/menus/main_menu.tscn"
 
 @onready var _store_button: Button = %StoreButton
@@ -17,6 +18,9 @@ extends MenuScreen
 var _settings_overlay: MenuScreen
 var _store_overlay: MenuScreen
 var _gallery_overlay: MenuScreen
+var _guide_overlay: MenuScreen
+## Read on demand so rebinding controls while paused cannot leave stale help.
+var controls_hint_source: Callable
 
 
 func _ready() -> void:
@@ -70,6 +74,8 @@ func _active_overlay() -> MenuScreen:
 		return _store_overlay
 	if is_instance_valid(_gallery_overlay):
 		return _gallery_overlay
+	if is_instance_valid(_guide_overlay):
+		return _guide_overlay
 	return null
 
 
@@ -85,10 +91,16 @@ func _on_gallery_pressed() -> void:
 	_gallery_overlay = _open_overlay(gallery_scene)
 
 
+func _on_guide_pressed() -> void:
+	_guide_overlay = _open_overlay(guide_scene, true)
+
+
 ## Every nested screen is configured the same way: it is told which game is
 ## running, because the pause overlay only exists during a round, and that game
 ## is the one whose controls, options, cosmetics and models are worth showing.
-func _open_overlay(scene_path: String) -> MenuScreen:
+func _open_overlay(scene_path: String, in_game_guide := false) -> MenuScreen:
+	if _active_overlay() != null:
+		return _active_overlay()
 	var packed: PackedScene = load(scene_path)
 	if packed == null:
 		return null
@@ -96,7 +108,11 @@ func _open_overlay(scene_path: String) -> MenuScreen:
 	if overlay == null:
 		push_error("PauseMenu: %s is not a MenuScreen." % scene_path)
 		return null
-	overlay.set("game_context_id", GameCatalog.current_id())
+	if in_game_guide:
+		var hint := str(controls_hint_source.call()) if controls_hint_source.is_valid() else ""
+		overlay.call("configure_in_game_help", hint)
+	else:
+		overlay.set("game_context_id", GameCatalog.current_id())
 	# The tree is paused while this overlay is up.
 	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
 	overlay.z_index = z_index
@@ -110,6 +126,7 @@ func _on_overlay_closed() -> void:
 	_settings_overlay = null
 	_store_overlay = null
 	_gallery_overlay = null
+	_guide_overlay = null
 	show()
 	_focus_first()
 
