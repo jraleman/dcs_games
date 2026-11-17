@@ -1,8 +1,7 @@
 extends SceneTree
 
-const GAME_SESSION_SCRIPT := preload("res://autoload/game_session.gd")
-
 var _failures := PackedStringArray()
+var _session_constants: Dictionary
 
 
 func _init() -> void:
@@ -17,6 +16,7 @@ func _run() -> void:
 		_failures.append("The GameSession autoload is required for scene tests.")
 		await _finish()
 		return
+	_session_constants = session.get_script().get_script_constant_map()
 
 	await _test_both_modes_available()
 	await _test_slice_mode_flow(session)
@@ -94,8 +94,8 @@ func _test_slice_mode_flow(session: Node) -> void:
 
 	session.call(
 		"configure_multiplayer",
-		GAME_SESSION_SCRIPT.PlayerTwoController.HUMAN,
-		GAME_SESSION_SCRIPT.CpuDifficulty.MEDIUM
+		_session_constants["PlayerTwoController"]["HUMAN"],
+		_session_constants["CpuDifficulty"]["MEDIUM"]
 	)
 	var instructions := _instantiate_scene("res://scenes/menus/instructions.tscn")
 	if instructions == null:
@@ -217,8 +217,8 @@ func _test_multiplayer_isolation(session: Node) -> void:
 	GameCatalog.select("desk_can_saw")
 	session.call(
 		"configure_multiplayer",
-		GAME_SESSION_SCRIPT.PlayerTwoController.HUMAN,
-		GAME_SESSION_SCRIPT.CpuDifficulty.MEDIUM
+		_session_constants["PlayerTwoController"]["HUMAN"],
+		_session_constants["CpuDifficulty"]["MEDIUM"]
 	)
 	var game := _instantiate_scene("res://games/desk_can_saw/desk_can_saw.tscn")
 	if game == null:

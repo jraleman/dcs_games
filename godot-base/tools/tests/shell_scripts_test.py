@@ -182,13 +182,13 @@ class ShellScriptsTest(unittest.TestCase):
     def test_tutorial_variants_alias_and_explicit_quality(self) -> None:
         result = self.run_script(
             SCRIPTS[0], "--ffmpeg", str(self.tools / "ffmpeg stub"),
-            "--games", "TUKI_TUKI,anti_chess,chicken_pit",
+            "--games", "TUKI_TUKI,anti_chess,chicken_pit,capitans_walk,puppy_kraft",
             "--variants", "local", "--quality", "9",
         )
         self.assert_success(result)
         for folder, suffix in (
             ("tuki-tuki_agents", "_local"), ("anti_chess", "_local"),
-            ("chicken_pit", ""),
+            ("chicken_pit", ""), ("capitans_walk", ""), ("puppy_kraft", ""),
         ):
             bank = self.project / "games" / folder / "assets" / "video"
             self.assertTrue((bank / f"tutorial{suffix}.ogv").is_file())
@@ -216,6 +216,50 @@ class ShellScriptsTest(unittest.TestCase):
         self.assertEqual(shipped.read_bytes(), b"previous tutorial")
         encode = self.calls("ffmpeg")[0]["arguments"]
         self.assertEqual(encode[encode.index("-q:v") + 1], "5")
+        self.assertEqual(list(self.work.iterdir()), [])
+
+    def test_posters_only_crops_existing_variants_without_godot(self) -> None:
+        video = self.project / "games/tuki-tuki_agents/assets/video"
+        video.mkdir(parents=True)
+        for suffix in ("", "_local"):
+            (video / f"tutorial{suffix}.ogv").write_bytes(b"untouched video")
+        result = self.run_script(
+            SCRIPTS[0], "--posters-only", "--godot", "not-installed",
+            "--ffmpeg", str(self.tools / "ffmpeg stub"), "--games", "tuki_tuki",
+        )
+        self.assert_success(result)
+        self.assertEqual(self.calls("godot"), [])
+        calls = self.calls("ffmpeg")
+        self.assertEqual(len(calls), 2)
+        for call, suffix in zip(calls, ("", "_local")):
+            arguments = call["arguments"]
+            self.assertEqual(
+                Path(arguments[arguments.index("-i") + 1]),
+                video / f"tutorial{suffix}.ogv",
+            )
+            self.assertIn("-frames:v", arguments)
+            self.assertIn(
+                "crop=iw*0.60:ih*0.60:iw*0.20:ih*0.155,scale=960:540:flags=lanczos",
+                arguments,
+            )
+            self.assertEqual((video / f"tutorial{suffix}.ogv").read_bytes(), b"untouched video")
+            self.assertTrue((video / f"tutorial{suffix}_poster.webp").is_file())
+        self.assertEqual(list(self.work.iterdir()), [])
+
+    def test_posters_only_failure_keeps_existing_media(self) -> None:
+        video = self.project / "games/chicken_pit/assets/video"
+        video.mkdir(parents=True)
+        (video / "tutorial.ogv").write_bytes(b"original video")
+        (video / "tutorial_poster.webp").write_bytes(b"original poster")
+        result = self.run_script(
+            SCRIPTS[0], "--posters-only", "--godot", "not-installed",
+            "--ffmpeg", str(self.tools / "ffmpeg stub"), "--games", "chicken_pit",
+            MOCK_FAIL="ffmpeg:poster",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.calls("godot"), [])
+        self.assertEqual((video / "tutorial.ogv").read_bytes(), b"original video")
+        self.assertEqual((video / "tutorial_poster.webp").read_bytes(), b"original poster")
         self.assertEqual(list(self.work.iterdir()), [])
 
     def test_screens_use_catalog_order_and_private_profiles(self) -> None:

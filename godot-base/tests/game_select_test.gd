@@ -71,6 +71,7 @@ func _run() -> void:
 
 	await _test_main_menu_has_one_game_button()
 	await _test_cartridge_per_available_game()
+	await _test_cover_and_logo_fallback()
 	await _test_opens_on_the_selected_game()
 	await _test_only_the_cartridge_in_hand_previews()
 	await _test_reduced_motion_parks_previews()
@@ -172,6 +173,13 @@ func _test_cartridge_per_available_game() -> void:
 			"The '%s' mode chips must come from its manifest." % manifest.id
 		)
 		var theme := manifest.theme if manifest.theme != null else GameTheme.studio_default()
+		var cover := theme.cover_texture()
+		_expect(card.get("_cover") == cover,
+			"The '%s' cartridge must use its declared cover, independently of its logo."
+			% manifest.id)
+		if not theme.cover_texture_path.is_empty():
+			_expect(cover != null,
+				"The '%s' cover declaration must resolve to an imported texture." % manifest.id)
 		_expect(
 			card.call("accent") == theme.accent,
 			"The '%s' cartridge must wear its own game's accent." % manifest.id
@@ -213,6 +221,45 @@ func _test_cartridge_per_available_game() -> void:
 		"The rack must light one slot per cartridge."
 	)
 	await _close(screen)
+
+
+## Cover printing must not obscure live preview labels or break a logo-only game.
+func _test_cover_and_logo_fallback() -> void:
+	var manifest := GameManifest.new()
+	manifest.id = "cover_fixture"
+	manifest.title = "Cover fixture"
+	for candidate in GameCatalog.available():
+		if not candidate.tutorial_video_path.is_empty():
+			manifest.tutorial_video_path = candidate.tutorial_video_path
+			manifest.tutorial_poster_path = candidate.tutorial_poster_path
+			break
+	manifest.theme = GameTheme.studio_default()
+	manifest.theme.cover_texture_path = "res://icon.svg"
+	manifest.theme.logo_color = Color("e35a70")
+	var card := (load("res://ui/components/game_card.tscn") as PackedScene).instantiate() as GameCard
+	get_root().add_child(card)
+	card.configure(manifest)
+	card.set_reduced_motion(true)
+	card.set_current(false, true)
+	var band := card.get_node("%Band") as Control
+	_expect(card.get("_cover") == load("res://icon.svg") and is_zero_approx(band.modulate.a),
+		"A parked cover must replace the separate title band, not be painted over by it.")
+	card.set_current(true, true)
+	_expect(is_equal_approx(band.modulate.a, 1.0)
+		and (card.get_node("%Screen") as Control).visible
+		and card.has_preview_clip() and card.poster() != null and not card.is_previewing(),
+		"Reduced motion must show the poster and live labels without playing the clip.")
+	for path in ["", "res://tests/missing_cover_art.png"]:
+		manifest.theme.cover_texture_path = path
+		card.configure(manifest)
+		card.set_current(false, true)
+		_expect(card.get("_cover") == null
+			and card.get("_logo") == manifest.theme.logo_texture()
+			and card.get("_logo_color") == manifest.theme.logo_color
+			and is_equal_approx(band.modulate.a, 1.0),
+			"An absent or missing cover must restore the original tinted logo and title band.")
+	card.queue_free()
+	await process_frame
 
 
 ## The rack opens on the game already chosen, so backing out of setup lands on

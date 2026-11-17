@@ -30,6 +30,7 @@ func _run() -> void:
 		session.call("configure_single_player")
 		await _drive(manifest)
 	await _test_compact_layout()
+	await _test_hud_controls()
 
 	# Scene-owned audio releases its stopped playbacks on the mixer thread.
 	await create_timer(0.15, true, false, true).timeout
@@ -297,6 +298,9 @@ func _test_compact_layout() -> void:
 						"All %d score chips must fit at %s, UI %s." % [count, dimensions, scale_value])
 					_expect(player == 0 or not rect.intersects(previous),
 						"Player chips must not overlap at %s." % dimensions)
+					var caption := cards[player]["caption"] as Label
+					_expect(caption.size.x > 0 and caption.text.begins_with("P"),
+						"Every score must retain a visible seat tag, not colour alone.")
 					previous = rect
 				var pause_button := shell.get_node("%PauseButton") as Control
 				_expect(viewport.encloses(pause_button.get_global_rect()),
@@ -376,6 +380,81 @@ func _test_compact_layout() -> void:
 	settings.call("set_value", "ui/scale", old_scale)
 	manifest.max_local_players = old_capacity
 	manifest.supports_multiplayer = old_multiplayer
+	await _settle_layout()
+
+
+func _test_hud_controls() -> void:
+	var packed := load("res://scenes/game/game_shell.tscn") as PackedScene
+	var shell := packed.instantiate()
+	shell.process_mode = Node.PROCESS_MODE_DISABLED
+	root.add_child(shell)
+	await _settle_layout()
+	var help := shell.get_node("%HudHelpButton") as Button
+	help.pressed.emit()
+	await _settle_layout()
+	var pause := shell.get("_pause_menu") as Node
+	_expect(pause != null and pause.call("_active_overlay") != null,
+		"Help without a game-owned tray must open the existing paused Guide.")
+	if pause != null:
+		var guide := pause.call("_active_overlay") as Control
+		if guide != null:
+			guide.call("go_back")
+		pause.call("resume")
+	var tray := Control.new()
+	var touch_tray := Control.new()
+	shell.add_child(tray)
+	shell.add_child(touch_tray)
+	var notifications := [0]
+	var relayout := func() -> void: notifications[0] += 1
+	shell.call("register_hud_controls", touch_tray)
+	_expect(bool(shell.call("_has_foldable_hud_controls", false))
+		and not bool(shell.call("_has_foldable_hud_controls", true)),
+		"Required touch-only trays must offer the Guide, not a toggle that cannot hide anything.")
+	shell.call("register_hud_controls", tray, relayout, false)
+	shell.call("register_hud_controls", tray, relayout, false)
+	_expect(bool(shell.call("_has_foldable_hud_controls", true)),
+		"Optional explanations must still expand on touchscreen devices.")
+	await _settle_layout()
+	_expect(not tray.visible and touch_tray.visible == DisplayServer.is_touchscreen_available(),
+		"Optional controls start collapsed without removing required touchscreen input.")
+	_expect((shell.get("_hud_control_trays") as Array).size() == 2,
+		"Registering the same tray twice must not duplicate callbacks or state.")
+	var old_scores: Array = (shell.get("_scores") as Array).duplicate()
+	var active := bool(shell.get("_round_active"))
+	notifications[0] = 0
+	help.pressed.emit()
+	await _settle_layout()
+	_expect(tray.visible and touch_tray.visible and help.button_pressed
+		and bool(shell.call("hud_controls_expanded")) and notifications[0] == 1,
+		"Help expands every registered tray and notifies its layout exactly once.")
+	_expect(shell.get("_scores") == old_scores and bool(shell.get("_round_active")) == active,
+		"Opening controls must not start, finish, pause or score a round.")
+	var host := HBoxContainer.new()
+	shell.get_node("HUD/Overlay").add_child(host)
+	shell.call("mount_hud_help", host)
+	help.custom_minimum_size = Vector2(90, 60)
+	shell.call("_layout_shared_hud")
+	await _settle_layout()
+	_expect(help.get_parent() == host and help.is_visible_in_tree()
+		and help.custom_minimum_size == Vector2(90, 60),
+		"Mounted Help remains usable without the shell overwriting a custom HUD's sizing.")
+	var fresh := packed.instantiate()
+	fresh.process_mode = Node.PROCESS_MODE_DISABLED
+	root.add_child(fresh)
+	await _settle_layout()
+	_expect(not bool(fresh.call("hud_controls_expanded")) and bool(shell.call("hud_controls_expanded")),
+		"Help expansion belongs to this scene, not global settings or another game.")
+	fresh.free()
+	help.pressed.emit()
+	await _settle_layout()
+	_expect(not tray.visible and not help.button_pressed
+		and touch_tray.visible == DisplayServer.is_touchscreen_available(),
+		"Closing Help restores the desktop/touch policy without changing input adapters.")
+	tray.free()
+	shell.call("_sync_hud_controls")
+	_expect(not bool(shell.call("_has_foldable_hud_controls", true)),
+		"Freed optional trays must not leave a nonfunctional Help toggle.")
+	shell.free()
 	await _settle_layout()
 
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://scripts/game_shell.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" path="res://assets/images/icon_back.svg" id="8_back"]
 [ext_resource type="PackedScene" path="res://ui/components/audio_caption.tscn" id="9_caption"]
 [ext_resource type="Script" path="res://ui/components/round_overlay.gd" id="10_overlay"]
+[ext_resource type="Texture2D" path="res://assets/images/icon_hud_help.svg" id="11_help"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_player_one"]
 content_margin_left = 12.0
@@ -182,7 +183,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="TopBar" type="HBoxContainer" parent="HUD/Overlay/Margins/Layout"]
+[node name="TopBar" type="HFlowContainer" parent="HUD/Overlay/Margins/Layout"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
@@ -195,9 +196,9 @@ mouse_filter = 2
 size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_player_one")
 
-[node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard"]
+[node name="Layout" type="HBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard"]
 layout_mode = 2
-theme_override_constants/separation = -2
+theme_override_constants/separation = 6
 
 [node name="Caption" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout"]
 layout_mode = 2
@@ -205,6 +206,7 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(0.568627, 0.768627, 1, 0.9)
 theme_override_font_sizes/font_size = 12
 text = "PLAYER 1"
+vertical_alignment = 1
 
 [node name="PlayerOneScore" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout"]
 unique_name_in_owner = true
@@ -212,8 +214,13 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_font_sizes/font_size = 28
 text = "0"
+vertical_alignment = 1
 
-[node name="PlayerOneStreak" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout"]
+[node name="Details" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout"]
+visible = false
+layout_mode = 2
+
+[node name="PlayerOneStreak" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerOneCard/Layout/Details"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
@@ -229,9 +236,9 @@ size_flags_horizontal = 10
 size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_timer")
 
-[node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard"]
+[node name="Layout" type="HBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard"]
 layout_mode = 2
-theme_override_constants/separation = -4
+theme_override_constants/separation = 6
 
 [node name="ModeTitle" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
 unique_name_in_owner = true
@@ -243,6 +250,13 @@ theme_override_font_sizes/font_size = 23
 text = "GAME TITLE"
 horizontal_alignment = 1
 
+[node name="TimeIcon" type="TextureRect" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
 [node name="TimeLabel" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -251,8 +265,13 @@ theme_override_colors/font_color = Color(0.94902, 0.968627, 0.976471, 1)
 theme_override_font_sizes/font_size = 28
 text = "30"
 horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="TimeCaption" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
+[node name="Details" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout"]
+visible = false
+layout_mode = 2
+
+[node name="TimeCaption" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/TimerCard/Layout/Details"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
@@ -269,9 +288,9 @@ mouse_filter = 2
 size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_player_two")
 
-[node name="Layout" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard"]
+[node name="Layout" type="HBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard"]
 layout_mode = 2
-theme_override_constants/separation = -2
+theme_override_constants/separation = 6
 
 [node name="Caption" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout"]
 layout_mode = 2
@@ -280,6 +299,7 @@ theme_override_colors/font_color = Color(1, 0.65098, 0.690196, 0.9)
 theme_override_font_sizes/font_size = 12
 text = "PLAYER 2"
 horizontal_alignment = 2
+vertical_alignment = 1
 
 [node name="PlayerTwoScore" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout"]
 unique_name_in_owner = true
@@ -288,8 +308,13 @@ mouse_filter = 2
 theme_override_font_sizes/font_size = 28
 text = "0"
 horizontal_alignment = 2
+vertical_alignment = 1
 
-[node name="PlayerTwoStreak" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout"]
+[node name="Details" type="VBoxContainer" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout"]
+visible = false
+layout_mode = 2
+
+[node name="PlayerTwoStreak" type="Label" parent="HUD/Overlay/Margins/Layout/TopBar/PlayerTwoCard/Layout/Details"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
@@ -298,6 +323,18 @@ theme_override_colors/font_color = Color(1, 0.360784, 0.423529, 1)
 theme_override_font_sizes/font_size = 12
 text = " "
 horizontal_alignment = 2
+
+[node name="HudHelpButton" type="Button" parent="HUD/Overlay/Margins/Layout/TopBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 0
+theme_type_variation = &"NavigationButton"
+tooltip_text = "Controls and guide"
+accessibility_name = "Controls and guide"
+icon = ExtResource("11_help")
+expand_icon = true
+icon_alignment = 1
 
 [node name="PauseButton" type="Button" parent="HUD/Overlay/Margins/Layout/TopBar"]
 unique_name_in_owner = true
@@ -323,6 +360,7 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_progress_fill")
 
 [node name="Callout" type="Label" parent="HUD/Overlay/Margins/Layout"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.85, 0.91, 0.94, 1)

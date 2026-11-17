@@ -7,13 +7,17 @@
     requested game, then encodes the intermediate AVIs to the Ogg Theora files
     Godot's VideoStreamPlayer can play and extracts a still poster frame for
     each clip. Re-run this after changing gameplay visuals or the tutorial
-    captions.
+    captions. -PostersOnly refreshes cropped stills from the existing videos
+    without launching Godot or changing a video.
 
 .EXAMPLE
     pwsh tools\record_tutorials.ps1 -Godot 'C:\Godot\Godot_v4.7.2-stable_win64.exe'
 
 .EXAMPLE
     pwsh tools\record_tutorials.ps1 -Godot 'C:\Godot\Godot_v4.7.2-stable_win64.exe' -Games anti_chess -Variants local
+
+.EXAMPLE
+    pwsh tools\record_tutorials.ps1 -PostersOnly
 #>
 [CmdletBinding()]
 param(
@@ -23,15 +27,18 @@ param(
     [string] $CaptureResolution = '1280x720',
     [string] $OutputScale = '960:540',
     [int]    $Quality = 7,
+    [switch] $PostersOnly,
     [ValidateSet(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
         'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
-        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men', 'rastro'
+        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men', 'rastro',
+        'capitans_walk', 'puppy_kraft'
     )]
     [string[]] $Games = @(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
         'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
-        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men', 'rastro'
+        'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men', 'rastro',
+        'capitans_walk', 'puppy_kraft'
     ),
     [ValidateSet('solo', 'local')]
     [string[]] $Variants = @('solo', 'local')
@@ -39,25 +46,30 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Seconds into each clip that best represent the game on the idle poster.
-$PosterTimes = @{
-    triangle_rush    = '6.2'
-    desk_can_saw     = '10.8'
-    dead_metal_jam   = '13.4'
-    chicken_pit      = '9.0'
-    anti_chess       = '9.8'
-    anti_chess_local = '9.8'
-    lazer_nfc       = '5.0'
-    anti_checkers   = '12.6'
-    creep_code      = '5.2'
-    cube_trials     = '7.0'
-    sailor_man      = '8.5'
-    tifo_beato      = '22.0'
-    tuki_tuki      = '7.0'
-    tuki_tuki_local = '7.0'
-    yacomio        = '8.0'
-    florida_men    = '15.8'
-    rastro         = '8.0'
+# Seconds, crop scale, left and top as fractions of the actual video.
+# Uniform scale preserves its aspect ratio; captions remain in the full clip.
+# Keep the compositions in record_tutorials.sh identical.
+$PosterFrames = @{
+    triangle_rush    = @('19.3', '0.64', '0.23', '0.08')
+    desk_can_saw     = @('6.0', '0.65', '0.16', '0.035')
+    dead_metal_jam   = @('7.5', '0.70', '0.12', '0.055')
+    chicken_pit      = @('7.0', '0.74', '0.13', '0.035')
+    anti_chess       = @('8.8', '0.73', '0.135', '0.025')
+    anti_chess_local = @('8.1', '0.72', '0.14', '0.035')
+    lazer_nfc        = @('4.3', '0.60', '0.20', '0.045')
+    anti_checkers    = @('7.3', '0.70', '0.15', '0.035')
+    creep_code      = @('24.3', '0.60', '0.20', '0.055')
+    cube_trials     = @('18.8', '0.72', '0.12', '0.035')
+    dolces_adventure = @('14.1', '0.62', '0.13', '0.115')
+    sailor_man      = @('12.2', '0.64', '0.18', '0.115')
+    tifo_beato      = @('42.3', '0.70', '0.13', '0.035')
+    tuki_tuki       = @('20.9', '0.60', '0.20', '0.155')
+    tuki_tuki_local = @('20.9', '0.60', '0.20', '0.155')
+    yacomio         = @('44.3', '0.52', '0.04', '0.18')
+    florida_men     = @('161.7', '0.68', '0.16', '0.055')
+    rastro          = @('12.9', '0.63', '0.015', '0.04')
+    capitans_walk   = @('9.1', '0.68', '0.085', '0.08')
+    puppy_kraft     = @('34.5', '0.60', '0.045', '0.145')
 }
 
 $GameFolders = @{ tuki_tuki = 'tuki-tuki_agents' }
@@ -197,7 +209,7 @@ function New-CapturePlans {
     return $plans
 }
 
-$godotExe = Resolve-Executable -Tool $Godot
+$godotExe = if (-not $PostersOnly) { Resolve-Executable -Tool $Godot }
 $ffmpegExe = Resolve-Executable -Tool $FFmpeg
 $variantList = @(
     $Variants |
@@ -226,58 +238,65 @@ try {
         $avi = Join-Path $workDir $plan.AviName
         $ogv = Join-Path $workDir $plan.TempVideo
         $poster = Join-Path $workDir $plan.TempPoster
-        $posterAt = if ($PosterTimes.ContainsKey($plan.PosterKey)) {
-            $PosterTimes[$plan.PosterKey]
+        if (-not $PosterFrames.ContainsKey($plan.PosterKey)) {
+            throw "No poster composition for '$($plan.PosterKey)'."
+        }
+        $frame = $PosterFrames[$plan.PosterKey]
+        $posterFilter = 'crop=iw*{0}:ih*{0}:iw*{1}:ih*{2},scale=960:540:flags=lanczos' -f (
+            $frame[1], $frame[2], $frame[3]
+        )
+
+        if ($PostersOnly) {
+            $ogv = Join-Path $plan.TargetDir $plan.VideoName
+            Assert-OutputFile -Path $ogv -What "Existing video for $($plan.Label)"
         } else {
-            '6.0'
+            Write-Host "Recording $($plan.Label) ..." -ForegroundColor Cyan
+            $godotArgs = @(
+                '--path', $projectDir,
+                '--resolution', $CaptureResolution,
+                '--fixed-fps', $Fps,
+                '--write-movie', $avi,
+                'res://tools/tutorial_capture.tscn',
+                '++',
+                "--game=$($plan.Game)"
+            )
+            if ($plan.Variant) {
+                $godotArgs += "--tutorial-variant=$($plan.Variant)"
+            }
+            Invoke-Tool -FilePath $godotExe -What "Recording $($plan.Label)" -Arguments $godotArgs
+            Assert-OutputFile -Path $avi -What "Recording $($plan.Label)"
+
+            Write-Host "Encoding $($plan.Label) ..." -ForegroundColor Cyan
+            # Audio is dropped: menu music continues behind the captioned clip.
+            Invoke-Tool -FilePath $ffmpegExe -What "Encoding $($plan.Label)" -Arguments @(
+                '-y', '-hide_banner', '-loglevel', 'error',
+                '-i', $avi, '-an',
+                '-vf', "scale=$OutputScale`:flags=lanczos",
+                '-r', $Fps,
+                '-c:v', 'libtheora', '-q:v', $plan.Quality,
+                $ogv
+            )
+            Assert-OutputFile -Path $ogv -What "Encoding $($plan.Label)"
+
+            $sizeMb = [math]::Round((Get-Item -LiteralPath $ogv).Length / 1MB, 2)
+            Write-Host "  -> $($plan.VideoName) ($sizeMb MB)" -ForegroundColor Green
         }
 
-        Write-Host "Recording $($plan.Label) ..." -ForegroundColor Cyan
-        $godotArgs = @(
-            '--path', $projectDir,
-            '--resolution', $CaptureResolution,
-            '--fixed-fps', $Fps,
-            '--write-movie', $avi,
-            'res://tools/tutorial_capture.tscn',
-            '++',
-            "--game=$($plan.Game)"
-        )
-        if ($plan.Variant) {
-            $godotArgs += "--tutorial-variant=$($plan.Variant)"
-        }
-        Invoke-Tool -FilePath $godotExe -What "Recording $($plan.Label)" -Arguments $godotArgs
-        Assert-OutputFile -Path $avi -What "Recording $($plan.Label)"
-
-        Write-Host "Encoding $($plan.Label) ..." -ForegroundColor Cyan
-        # Audio is dropped on purpose: the clip plays behind menu music and the
-        # on-screen captions carry the explanation.
-        Invoke-Tool -FilePath $ffmpegExe -What "Encoding $($plan.Label)" -Arguments @(
-            '-y', '-hide_banner', '-loglevel', 'error',
-            '-i', $avi, '-an',
-            '-vf', "scale=$OutputScale`:flags=lanczos",
-            '-r', $Fps,
-            '-c:v', 'libtheora', '-q:v', $plan.Quality,
-            $ogv
-        )
-        Assert-OutputFile -Path $ogv -What "Encoding $($plan.Label)"
-
-        $sizeMb = [math]::Round((Get-Item -LiteralPath $ogv).Length / 1MB, 2)
-        Write-Host "  -> $($plan.VideoName) ($sizeMb MB)" -ForegroundColor Green
-
-        # Still frame for the idle state of the card: the clips fade in from
-        # black, so frame 0 would look like a broken player.
+        Write-Host "Poster for $($plan.Label) ..." -ForegroundColor Cyan
         Invoke-Tool -FilePath $ffmpegExe -What "Poster for $($plan.Label)" -Arguments @(
             '-y', '-hide_banner', '-loglevel', 'error',
-            '-ss', $posterAt, '-i', $ogv, '-frames:v', '1',
-            '-vf', 'scale=640:360:flags=lanczos',
-            '-c:v', 'libwebp', '-quality', '82',
+            '-ss', $frame[0], '-i', $ogv, '-frames:v', '1',
+            '-vf', $posterFilter,
+            '-c:v', 'libwebp', '-quality', '90',
             $poster
         )
         Assert-OutputFile -Path $poster -What "Poster for $($plan.Label)"
         New-Item -ItemType Directory -Path $plan.TargetDir -Force | Out-Null
-        Move-Item -LiteralPath $ogv -Destination (Join-Path $plan.TargetDir $plan.VideoName) -Force
+        if (-not $PostersOnly) {
+            Move-Item -LiteralPath $ogv -Destination (Join-Path $plan.TargetDir $plan.VideoName) -Force
+            Remove-Item -LiteralPath $avi -Force
+        }
         Move-Item -LiteralPath $poster -Destination (Join-Path $plan.TargetDir $plan.PosterName) -Force
-        Remove-Item -LiteralPath $avi -Force
         Write-Host "  -> $($plan.PosterName)" -ForegroundColor Green
     }
 

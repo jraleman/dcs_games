@@ -141,7 +141,7 @@ windows use the compact heading caps and wrapping Start labels too.
 | `ui/components/cartridge_console.gd` | Original menu console, cartridge shell and controller meshes. Exposes insertion progress and a stationary reduced-motion pose; the title screen owns navigation. |
 | `ui/components/achievement_toast.tscn` | Small reusable unlock notification used by `AchievementManager`. |
 | `ui/components/audio_caption.tscn` | Reusable gameplay caption panel for important sound-only events. |
-| `ui/components/game_card.tscn` | One game on the picker, drawn as a cartridge in that game's `GameTheme`: logo, plaque label, mode chips and a label window that shows the poster and plays the looping, muted walkthrough clip only while it is the cartridge in hand. A view only — it reads no autoload. |
+| `ui/components/game_card.tscn` | One game on the picker, drawn as a cartridge in that game's `GameTheme`: optional square cover (logo/title fallback), then poster, mode chips and a looping, muted walkthrough only while it is the cartridge in hand. A view only — it reads no autoload. |
 | `ui/components/cartridge_shelf.gd` | The console rack the picker's cartridges stand in, drawn as a layer behind and a layer in front of them: slots lit in each game's accent, an LED pager, and a power light the seating animation switches on. Either end can run off screen. |
 | `ui/components/store_item_card.gd` | One cosmetic on the shop shelf: preview, price, lock reason and a button per slot it can be worn in. A view only — it reads no autoload and moves no money. |
 | `ui/components/player_avatar.gd` | Drawn placeholder for per-player portrait art; set `portrait` to swap in a real texture. |
@@ -166,8 +166,10 @@ windows use the compact heading caps and wrapping Start labels too.
 | `games/florida_men/` | Florida Men: a 24-space party board and six original procedural 3D minigames; 1-4 local humans, CPU-filled seats, cosmetic hats, free gallery, frozen shares and a recorded complete-party tutorial. |
 | `games/rastro/` | Rastro: untimed solo 3D garage with all three original car types available, free paint/wheels/tires/suspension/engine customization, per-car saves and validated portable JSON builds. Competitions, driving and Cube Trials loading are future work. Keyboard, gamepad and touch inspection; Windows/Web/Android/iOS presets use the `rastro` feature and a stable separate save directory. |
 | `games/capitans_walk/` | Capitan's Walk grey box: solo, node-free 120 Hz walker/dog/leash physics, sixteen seeded Park templates with puddles/slopes, telegraphed sprinkler/jogger/flock/friendly-dog encounters, safe rings, physical play/greeting sniffs, happiness and banked rhythm points; rebindable keyboard, fixed analogue gamepad, independent multitouch with three handed layouts, classic/Easy legs, four live assists, instant restart and an original keyboard walkthrough. Automated events reach identical shared results through all three adapters; a real motor walk reaches a generated jogger at 52.09 m. Physical hardware and the three-person playtest remain unverified. Pickups, surprise events/bosses, final 3D art and progression remain later work. |
+| `games/baloos_chase/` | Baloo's Chase: solo 3D throw/chase/retrieve prototype across backyard, park and woodland courses, with completion-based unlocks, bouncing throws, obstacles, independent medals and time records, keyboard/gamepad/multitouch input and original cartridge cover art. The `baloos_chase` feature registers its standalone website demo and separate save directory. |
 | `tools/tutorial_capture.tscn` | Development-only recorder: plays a real round with a scripted demo player and captioned steps for the instructions video. |
 | `tools/record_tutorials.ps1`, `tools/record_tutorials.sh` | Records each game's tutorial clip through Godot's Movie Maker and encodes it to that game's own `games/<id>/assets/video/tutorial.ogv` plus a poster frame. |
+| `tools/render_covers.gd` | Development-only cover renderer: discovers each game's `tools/cover_art.gd` and photographs its actual models into `assets/cover.png`. |
 | `tools/measure_intro_cues.py` | Development-only: finds the pauses in a narration recording and prints the `cue_times` array a card-based intro needs. |
 | `tools/capture_screens.ps1`, `tools/capture_screens.sh` | Development-only: saves a PNG of every screen each game reaches, standalone and in the collection, for review. Runs `tools/capture_screens.gd`, which loads the walk itself from `tools/capture_screens_tour.gd`. |
 
@@ -398,18 +400,55 @@ Desk-Can-Saw.
 with an outlined time/lives readout, a thin gauge and game-owned live status.
 Text stays solid and player identities retain their colours and labels.
 The shell sizes these controls in physical UI units, respecting the player's
-UI scale; touch Pause keeps a 44-unit target. `_playfield_bounds()` measures
+UI scale; Pause and Help keep 44-unit targets. `_playfield_bounds()` measures
 the live header instead of reserving a large title band and permanent footer.
 Use that rectangle for actors and viewports rather than copying the clearance
 constants. Games with their own touch controls still reserve their own input area.
+
+**Help** opens optional game-owned controls without pausing or changing inputs,
+scoring or simulation. Register each tray in `_build_playfield()` after adding
+it to the tree:
+
+```gdscript
+register_hud_controls(tray, _resize_world)
+```
+
+Trays start collapsed on desktop. Required touch controls stay visible on
+touchscreen devices; pass `false` as the third argument for optional explanations
+such as a ledger or tutorial checklist that should also start collapsed on touch.
+Expansion belongs to the current scene, not settings or progress. A game with a
+custom HUD can call `mount_hud_help(parent)` and then own the button's position and
+size. `hud_controls_expanded()` also exposes the state to custom drawing code.
+The relayout callback is deferred; measure visible children and listen for their
+minimum-size changes so hidden controls do not leave empty space.
+Keep primary actions, player identities, charge/timing cues, consent, meaningful
+warnings and save/input failures outside optional trays. Bound and scroll long help.
+If there is nothing optional to expand, Help opens the existing paused
+Controls & Guide. This includes touchscreen layouts whose registered trays
+are all required input, rather than offering a toggle that cannot hide anything.
 
 `%Hint` remains the game's writable controls summary, but is no longer drawn
 over gameplay. **Pause → Controls & Guide** presents it alongside the existing
 manifest-driven written Guide. Opening this read-only view never starts a
 tutorial video, changes the show-on-start preference, restarts the round or
 unpauses play; Back returns to Pause. Rebinding in Settings is reflected the
-next time help opens. Keep essential, changing objectives in `%Callout` or the
-game's own status UI, not in the hidden controls summary.
+next time help opens. `%Callout` starts hidden too: games that use it for essential,
+changing objectives must show it when needed, or use their own persistent status UI.
+Do not put those cues in the hidden controls summary.
+
+Game-owned overlays follow the same policy: board ledgers, directional pads,
+input diagnostics and longer upgrade descriptions are optional; actual turns,
+primary actions, prices and errors remain visible. Puppy Kraft's First Steps and
+scent/mouth details scroll behind Help while charge, warnings and save failures
+remain visible. Sailor Man retains source/profile controls for hot seat and
+microphone use, regardless of optional help. None of these changes unlocks
+prototype content or relaxes microphone consent.
+
+The presentation remains original and Compatibility-safe. Capitan's Walk dresses
+its actual solver in a layered 2D Park view while retaining the diagnostic spike;
+Puppy Kraft uses a bevelled toy pup, adaptive framing and a day/night sky.
+Florida Men's shared crew meshes, Creep Code's silhouette-based theatre framing
+and Tifo Beato's softer key/fill lighting are reused by their existing views.
 
 Pause, results and statistics use lighter glass panels over the game. The
 shared `round_overlay.gd` keeps their existing content paths, stacks report
@@ -515,6 +554,7 @@ that directory at startup, so **no framework file needs to change** to add one.
    | `_spawn_round_confetti(color: Color) -> void` | Custom celebration particles. |
    | `_playfield_bounds() -> Rect2` | Report your play area if it is not the whole viewport. |
    | `_configure_mode_ui() -> void` | Extra HUD wiring for 1P/2P/CPU. Call `super()`. |
+   | `_hud_player_is_cpu(player_index: int) -> bool` | Identify simulated CPU seats outside shared setup; compact tags never infer a controller from a name or board colour. |
    | `_on_player_labels_changed() -> void` / `_on_controls_changed() -> void` | React to accessibility settings. |
    | `_on_game_setting_changed(key: String, value: Variant) -> void` | React to one of your tunables changing live. |
    | `_set_reduced_motion_enabled(value: bool) -> void` | Park your own ambient motion. **Call `super(value)`.** |
@@ -671,7 +711,7 @@ that directory at startup, so **no framework file needs to change** to add one.
    - `credits` — your game's own credits sections, in the same
      `{"heading": …, "lines": […]}` shape as `StudioInfo.CREDITS`. They lead
      the credits roll when the build ships this game alone.
-   - `theme` — a `GameTheme` with your logo, colours and optional UI skin,
+   - `theme` — a `GameTheme` with your logo, optional cover, colours and UI skin,
      materials and menu sounds. Like the intro, it only dresses the shared
      screens when the build ships this game alone. See *Shipping one game on its own*.
 5. Put the game's own tests in `res://games/<id>/tests/`. The framework-level
@@ -683,11 +723,13 @@ The menus need no edit either. The title screen has a single **Play** button,
 and the picker behind it builds one cartridge from `GameCatalog.available()`, in
 `menu_order`, so a new game appears as soon as its manifest does — and
 disappears again behind an `unlock_rule` until earned. The cartridge wears the
-game's `GameTheme` — logo, accent and plaque label — and its label window plays
+game's `GameTheme` — cover or logo, accent and plaque label — and its label window plays
 the same `tutorial_video_path` clip the instructions screen uses while it is the
 cartridge in hand, falling back to `tutorial_poster_path` and then to a labelled
 placeholder, so a game with no recording yet still gets a cartridge of the right
-shape. Only the cartridge in hand ever decodes its clip.
+shape. Only the cartridge in hand ever decodes its clip. Parked covers carry their
+own printed titles; selecting one fades the cover out and restores the live
+title/mode band with its preview. Reduced motion makes that swap immediate.
 
 ### A store of your own
 
@@ -1715,6 +1757,7 @@ Declare a `GameTheme` and a standalone build wears it everywhere:
 ```gdscript
 var theme := GameTheme.new()
 theme.logo_texture_path = "res://games/dead_metal_jam/assets/game-icon.svg"
+theme.cover_texture_path = "res://games/dead_metal_jam/assets/cover.png"
 theme.logo_color = Color("ffd34e")
 theme.plaque_color = Color("2a2019")
 theme.accent = Color("ffd34e")        # focus rings, sliders, tabs, menu glow
@@ -1730,9 +1773,10 @@ The shared presentation reads it without naming a game:
   follow the game. An optional `background_material` replaces the shader while
   retaining aspect correction and reduced motion. A gameplay scene can override
   its inherited backdrop with its own art instead.
-- `main_menu.gd` — the cartridge takes `logo_texture_path`, tinted with
-  `logo_color`; its label and lights take `plaque_color` and `light`. The
-  logo fits the label at any resolution or aspect. The existing `plaque_material`
+- `main_menu.gd` — the cartridge prefers optional `cover_texture_path` in
+  full colour, falling back to `logo_texture_path` tinted with `logo_color`;
+  its label and lights take `plaque_color` and `light`. Art fits the label
+  without distortion at any resolution or aspect. The existing `plaque_material`
   name is retained for compatibility and still accepts game-owned materials.
   `menu_motion` controls the subtle idle focus response, never a whole-console spin.
 - `router.gd` — at boot it hands `ThemeDB.get_project_theme()` to
@@ -1757,12 +1801,35 @@ The optional presentation fields are:
 
 | Field | Contract |
 | --- | --- |
+| `cover_texture_path: String` | Optional full-colour square cartridge art. Used on the standalone title and parked picker cards, never tinted by `logo_color`. Empty or missing art falls back to the logo; a missing file warns. Icons and share branding still use `logo_texture_path`. |
 | `ui_theme: Theme` | Partial widget overrides. `MenuHeading` and `MenuSectionHeading` distinguish headings from body text and player identity. `NavigationButton` and `MenuToggle` keep shared menu actions and switches translucent and square-edged independently of ordinary Button/CheckButton skins; games may explicitly override either role. Empty styles and border-only overlays retain their transparency. |
 | `ui_sounds: GameUISoundBank` | `focus`, `click`, `back`, their dB gains, and `focus_cooldown_ms`. A focus `AudioStreamRandomizer` can provide non-repeating variants. All cues use the existing SFX bus. |
 | `background_material: ShaderMaterial` | Supports `top_color`, `bottom_color`, `glow_color`, `aspect`, and `speed`; zero speed must freeze all decorative motion. Materials are duplicated per screen. |
 | `plaque_material: Material` | Duplicated onto the cartridge label; a `StandardMaterial3D` also receives `plaque_color`. Existing declarations need no migration. |
 | `menu_motion: GameTheme.MenuMotion` | `SPRING` allows a small idle cartridge tilt; `FIRM` halves that focus response. Both use the same non-overshooting insertion, stationary console and reduced-motion fade. |
 | `style_share_card: bool` | Opts the shared result card into the payload game's logo, palette and frozen backdrop, including in collection builds. Defaults to `false`, preserving existing cards. |
+
+The shipped covers are 1024-square PNGs with game-specific compositions of the
+actual meshes or 2D actors, not screenshots of the desktop or replacement
+gameplay models. Each game owns `tools/cover_art.gd`: `static func design() -> Dictionary`
+supplies the paper, camera, subject rectangle and lettering, and
+`static func build(parent: Node) -> Node` stages those assets without running a match.
+The shared offline compositor supplies typography, print textures and lighting;
+none of this development code is needed to display the exported PNG.
+
+Regenerate in a real Compatibility graphics window, from `godot-base/`:
+
+```bash
+godot --path . --script res://tools/render_covers.gd -- --game=all
+godot --headless --path . --import
+```
+
+`--games=chicken_pit,cube_trials` narrows the render. `--output-dir=<directory>`
+writes review images named by game ID instead of replacing the game-owned
+covers. The source uses installed SystemFont fallbacks (Impact, Georgia,
+Trebuchet MS and Consolas, then Noto/DejaVu), so lettering can differ when
+regenerating on another OS; the shipped PNGs have no runtime font dependency.
+Keep the original icon/logo assets: covers deliberately do not replace them.
 
 Share artwork remains game-owned through `GameManifest.share_art_scene_path`:
 a `Control` scene implementing `configure(Dictionary)`. The shared card also
@@ -1856,6 +1923,11 @@ that whoever writes those presets cannot ship a build that quietly shares the
 collection's save folder. Add the three `project.godot` overrides
 (`build/single_game_id.<tag>`, `config/name.<tag>`,
 `config/custom_user_dir_name.<tag>`) **before** the preset, not after.
+The website reads these identities as its catalog, so every registered game,
+including a playable prototype, needs one. Sailor Man, Capitan's Walk and
+Puppy Kraft use `sailor_man`, `capitans_walk` and `puppy_kraft` respectively.
+`tests/single_game_test.gd` compares the tags with every discovered manifest,
+checks matching titles and requires separate save directories.
 Source runs, including the default collection launch and `--game`
 overrides, keep the existing development user directory. The engine fixes it at
 startup, so these runs still share the collection's save files. That is fine for
@@ -2088,6 +2160,24 @@ Or on Windows:
 pwsh tools/record_tutorials.ps1 -Godot /path/to/godot
 godot --headless --path . --import
 ```
+
+To refresh only the stills, without Godot recording or changing the videos:
+
+```bash
+bash tools/record_tutorials.sh --posters-only
+```
+
+```powershell
+pwsh tools\record_tutorials.ps1 -PostersOnly
+```
+
+Both modes extract 960x540 WebP posters from selected real frames, cropped closer
+to the action without changing aspect ratio. The full videos retain their HUD
+and tutorial captions. `PosterFrames` / `POSTER_FRAMES` holds the timestamp,
+uniform crop scale, left and top fractions; update both scripts together.
+The existing game and solo/local selectors also apply to poster-only refreshes.
+Missing videos and failed extraction leave that clip's existing media untouched.
+Reimport afterwards so the editor sees the updated stills.
 
 `tools/tutorial_capture.tscn` loads the actual gameplay scene, drives it with a
 scripted demo player and overlays numbered step captions, so the clips can never

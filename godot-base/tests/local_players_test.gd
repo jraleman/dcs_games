@@ -156,7 +156,8 @@ func _test_shell() -> void:
 		and (shell.get("_scores") as Array).size() == 3,
 		"The shell's active indices and state buffers must include P3.")
 	var ui: Array = shell.get("_player_ui")
-	_expect((ui[2]["caption"] as Label).text == "PLAYER 3"
+	_expect((ui[2]["caption"] as Label).text == "P3"
+		and (ui[2]["caption"] as Label).accessibility_description == "PLAYER 3"
 		and (ui[2]["score"] as Label).get_theme_color("font_color").is_equal_approx(Identity.color(2)),
 		"P3's HUD must use its own label and green tint.")
 	for field in ["caption", "result_caption", "stats_title"]:

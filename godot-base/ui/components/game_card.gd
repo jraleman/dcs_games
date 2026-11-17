@@ -5,11 +5,10 @@ extends Button
 ## seats in its console: a dark shell with ribbed grips and a gold edge
 ## connector, wearing a label in the game's own colours.
 ##
-## The label carries the game's logo, its title and what it can be played as.
-## Its window shows the game's own footage while this is the cartridge the
-## player holds: the poster at once, then the tutorial clip. Everything else is
-## drawn, so a new game needs no picker art beyond the [GameTheme] and tutorial
-## media its manifest already declares.
+## The parked label carries optional full-colour cover art, or the original
+## logo/title/modes layout. In hand, it fades to the game's own poster, then its
+## tutorial clip and live title/mode band. Cover art never replaces icon branding
+## or changes which cartridge may decode video.
 ##
 ## A dumb view on purpose. It is a class_name script that headless tests
 ## import, so it touches no autoload instance. The screen decides which
@@ -97,6 +96,7 @@ var _plaque_color := Color("141d23")
 var _plaque_texture: Texture2D
 var _plaque_region := Rect2()
 var _logo: Texture2D
+var _cover: Texture2D
 var _logo_color := Color.WHITE
 var _clip: VideoStream
 var _current := false
@@ -191,6 +191,7 @@ func configure(
 	if _logo == null:
 		_logo = GameTheme.studio_default().logo_texture()
 	_logo_color = presentation.logo_color
+	_cover = presentation.cover_texture()
 	_plaque_texture = null
 	var material := presentation.plaque_material as BaseMaterial3D
 	if material != null and material.albedo_texture != null:
@@ -208,6 +209,7 @@ func configure(
 	_placeholder.visible = _clip == null and _poster.texture == null
 	_update_accessibility()
 	_sync_preview(true)
+	_set_screen_alpha(_screen_alpha)
 	_redraw_all()
 
 
@@ -387,6 +389,9 @@ func _set_screen_alpha(value: float) -> void:
 	_screen_alpha = value
 	_screen.modulate.a = value
 	_screen.visible = value > 0.001
+	_band.modulate.a = value if _cover != null else 1.0
+	if _cover != null:
+		_label.queue_redraw()
 	_gloss.queue_redraw()
 
 
@@ -542,7 +547,10 @@ func _draw_label() -> void:
 		_label.draw_texture_rect_region(_plaque_texture, rect, _plaque_region, _plaque_color)
 	else:
 		_label.draw_rect(rect, _plaque_color)
-	if _logo != null:
+	if _cover != null:
+		_label.draw_texture_rect(_cover, _fit(_cover.get_size(), rect), false,
+			Color(1, 1, 1, 1.0 - _screen_alpha))
+	elif _logo != null:
 		var fitted := _fit(
 			_logo.get_size(), Rect2(WINDOW.position * u, WINDOW.size * u).grow(-0.05 * u)
 		)

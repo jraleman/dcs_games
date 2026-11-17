@@ -15,6 +15,7 @@ extends MenuScreen
 
 const ConsoleModel = preload("res://ui/components/cartridge_console.gd")
 const LOGO_FACE_SPAN := 2.08
+const COVER_FACE_SPAN := 2.24
 const INSERT_TIME := 0.58
 
 @onready var _title: Label = %Title
@@ -245,12 +246,14 @@ func _apply_theme() -> void:
 	if material != null:
 		material.albedo_color = presentation.plaque_color
 	_logo_body.mesh = mesh
-	var logo := presentation.logo_texture()
+	var cover := presentation.cover_texture()
+	var logo := cover if cover != null else presentation.logo_texture()
 	if logo != null:
 		_logo_face.texture = logo
-	_logo_face.modulate = presentation.logo_color
+	_logo_face.modulate = Color.WHITE if cover != null else presentation.logo_color
 	var longest := maxf(_logo_face.texture.get_width(), _logo_face.texture.get_height())
-	_logo_face.pixel_size = LOGO_FACE_SPAN / maxf(longest, 1.0)
+	var span := COVER_FACE_SPAN if cover != null else LOGO_FACE_SPAN
+	_logo_face.pixel_size = span / maxf(longest, 1.0)
 	_key_light.light_color = presentation.light
 	_fill_light.light_color = presentation.accent
 	_focus_accent.color = presentation.accent

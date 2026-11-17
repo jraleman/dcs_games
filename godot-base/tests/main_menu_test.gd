@@ -38,6 +38,7 @@ func _run() -> void:
 	await _test_release_version()
 	await _test_layouts()
 	await _test_themed_portrait()
+	await _test_cover_fallback()
 	await _test_reduced_motion()
 	await _test_setup_details()
 	await _test_launch(false, false)
@@ -174,6 +175,13 @@ func _test_themed_portrait() -> void:
 		var menu := await _open(MAIN_MENU)
 		if menu == null:
 			continue
+		var theme := GameCatalog.theme()
+		var cover := theme.cover_texture()
+		var face := menu.get_node("%Face") as Sprite3D
+		if not theme.cover_texture_path.is_empty():
+			_expect(cover != null and face.texture == cover and face.modulate == Color.WHITE,
+				"The '%s' title must use its full-colour cover without the logo tint."
+				% manifest.id)
 		root.size = Vector2i(320, 568)
 		for frame in 5:
 			await process_frame
@@ -199,6 +207,29 @@ func _test_themed_portrait() -> void:
 	root.theme = GameCatalog.theme().restyle(ThemeDB.get_project_theme())
 	root.size = Vector2i(1280, 720)
 	await process_frame
+
+
+func _test_cover_fallback() -> void:
+	GameCatalog.restrict_to(GameCatalog.all()[0].id)
+	var manifest := GameCatalog.current()
+	var original_theme := manifest.theme
+	manifest.theme = GameTheme.studio_default()
+	manifest.theme.cover_texture_path = "res://icon.svg"
+	manifest.theme.logo_color = Color("e35a70")
+	var menu := await _open(MAIN_MENU)
+	if menu != null:
+		var face := menu.get_node("%Face") as Sprite3D
+		_expect(face.texture == load("res://icon.svg") and face.modulate == Color.WHITE,
+			"Dedicated cover art must ignore a non-white silhouette tint.")
+		for path in ["", "res://tests/missing_cover_art.png"]:
+			manifest.theme.cover_texture_path = path
+			menu.call("_apply_theme")
+			_expect(face.texture == manifest.theme.logo_texture()
+				and face.modulate == manifest.theme.logo_color,
+				"A missing or undeclared cover must retain the original tinted logo fallback.")
+		await _close(menu)
+	manifest.theme = original_theme
+	GameCatalog.clear_restriction()
 
 
 func _test_setup_details() -> void:

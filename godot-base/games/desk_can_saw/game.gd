@@ -102,6 +102,7 @@ static func manifest() -> GameManifest:
 static func _theme() -> GameTheme:
 	var theme := GameTheme.new()
 	theme.logo_texture_path = "res://games/desk_can_saw/assets/game-icon.svg"
+	theme.cover_texture_path = "res://games/desk_can_saw/assets/cover.png"
 	theme.logo_color = Color("ffcf66")
 	theme.plaque_color = Color("3b2a1c")
 	theme.accent = Color("ffcf66")

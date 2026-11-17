@@ -76,6 +76,7 @@ static func manifest() -> GameManifest:
 static func _theme() -> GameTheme:
 	var theme := GameTheme.new()
 	theme.logo_texture_path = "res://games/triangle_rush/assets/game-icon.svg"
+	theme.cover_texture_path = "res://games/triangle_rush/assets/cover.png"
 	theme.logo_color = Color("66efd5")
 	theme.plaque_color = Color("273958")
 	theme.accent = Color("66efd5")

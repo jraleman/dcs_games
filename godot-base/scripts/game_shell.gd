@@ -46,13 +46,17 @@ const TOP_CLEARANCE := 96.0
 const BOTTOM_CLEARANCE := 24.0
 const DANGER_SECONDS := 8.0
 const DANGER_COLOR := Color("ff4964")
+const HUD_TIME = preload("res://assets/images/icon_hud_time.svg")
+const HUD_LIVES = preload("res://assets/images/icon_hud_lives.svg")
 
 @onready var _playfield: Node2D = %Playfield
 @onready var _world_fx: Node2D = %WorldFX
 @onready var _hud: CanvasLayer = %HUD
 @onready var _shell_hud_margins: MarginContainer = $HUD/Overlay/Margins
 @onready var _shell_hud_layout: VBoxContainer = $HUD/Overlay/Margins/Layout
-@onready var _shell_top_bar: HBoxContainer = $HUD/Overlay/Margins/Layout/TopBar
+@onready var _shell_top_bar: HFlowContainer = $HUD/Overlay/Margins/Layout/TopBar
+@onready var _hud_help_button: Button = %HudHelpButton
+@onready var _time_icon: TextureRect = %TimeIcon
 @onready var _screen_flash: ColorRect = %ScreenFlash
 @onready var _danger_overlay: ColorRect = %DangerOverlay
 @onready var _player_one_card: PanelContainer = %PlayerOneCard
@@ -168,6 +172,8 @@ var _round_gameplay_speed := 1.0
 var _round_target_size := 1.0
 var _shell_hud_unit := 1.0
 var _shell_hud_styles: Dictionary[PanelContainer, StyleBox] = {}
+var _hud_control_trays: Array[Dictionary] = []
+var _hud_controls_expanded := false
 
 
 func _ready() -> void:
@@ -192,6 +198,7 @@ func _ready() -> void:
 	_player_one_streak.add_theme_color_override("font_color", player_one_color)
 	_player_two_streak.add_theme_color_override("font_color", player_two_color)
 	_reset_round_gauge()
+	_hud_help_button.pressed.connect(_on_hud_help_pressed)
 	AudioManager.attach_ui_sounds(_hud)
 	get_viewport().size_changed.connect(_layout_shared_hud)
 	_layout_shared_hud()
@@ -509,6 +516,11 @@ func _player_name(player_index: int) -> String:
 	return "Player %d" % (player_index + 1)
 
 
+## Games can identify simulated seats that are not configured by shared setup.
+func _hud_player_is_cpu(player_index: int) -> bool:
+	return player_index == PLAYER_TWO and GameSession.player_two_is_cpu()
+
+
 func _player_color(player_index: int) -> Color:
 	if player_index >= PLAYER_COUNT:
 		return Identity.color(player_index)
@@ -792,12 +804,14 @@ func _layout_shared_hud() -> void:
 	if not is_inside_tree() or _player_ui.is_empty():
 		return
 	var screen := get_viewport_rect().size
+	var compact := get_window().size.y < 480 or get_window().size.x < 480
 	_shell_hud_unit = screen.x / maxf(get_window().size.x, 1.0) \
 		* float(Settings.get_value("ui/scale", 1.0))
-	var pad := 12.0 * _shell_hud_unit
+	var pad := 10.0 * _shell_hud_unit
 	Responsive.set_margins(_shell_hud_margins, roundi(pad), roundi(pad),
 		roundi(pad), roundi(pad))
-	_shell_top_bar.add_theme_constant_override("separation", roundi(8.0 * _shell_hud_unit))
+	_shell_top_bar.add_theme_constant_override("h_separation", roundi(6.0 * _shell_hud_unit))
+	_shell_top_bar.add_theme_constant_override("v_separation", roundi(4.0 * _shell_hud_unit))
 	_shell_hud_layout.add_theme_constant_override("separation", roundi(4.0 * _shell_hud_unit))
 	var timer_card := _time_label.get_parent().get_parent() as PanelContainer
 	if timer_card.get_parent() == _shell_top_bar:
@@ -805,46 +819,72 @@ func _layout_shared_hud() -> void:
 		if _pause_button.get_parent() == _shell_top_bar:
 			_shell_top_bar.move_child(_pause_button, last)
 			last -= 1
+		if _hud_help_button.get_parent() == _shell_top_bar:
+			_shell_top_bar.move_child(_hud_help_button, last)
+			last -= 1
 		_shell_top_bar.move_child(timer_card, last)
-	var count := _active_player_indices().size() + 1
-	var available := screen.x - 2.0 * pad - 8.0 * _shell_hud_unit * (count - 1)
-	if _pause_button.visible and _pause_button.get_parent() == _shell_top_bar:
-		available -= 52.0 * _shell_hud_unit
-	var card_width := minf(180.0 * _shell_hud_unit, maxf(0.0, available / count))
-	for ui in _player_ui:
+	for player in _player_ui.size():
+		var ui := _player_ui[player]
 		var card := ui["card"] as PanelContainer
 		if card.get_parent() != _shell_top_bar:
 			continue
-		card.custom_minimum_size = Vector2(card_width, 0)
+		card.custom_minimum_size = Vector2(0, 44.0 * _shell_hud_unit)
 		card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		_style_shared_hud_panel(card)
 		for key in ["caption", "score", "streak"]:
 			var label := ui[key] as Label
-			_style_shared_hud_label(label, 28 if key == "score" else 12)
+			_style_shared_hud_label(label, (22 if compact else 26) if key == "score" else 12)
 			label.custom_minimum_size = Vector2.ZERO
-			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		var caption := ui["caption"] as Label
+		var tag := "P%d" % (player + 1)
+		if _hud_player_is_cpu(player):
+			tag = "CPU%d" % (player + 1)
+		if caption.text != tag:
+			ui["hud_description"] = caption.text
+		caption.text = tag
 		caption.autowrap_mode = TextServer.AUTOWRAP_OFF
-		caption.clip_text = true
-		caption.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		caption.tooltip_text = caption.text
-		caption.accessibility_description = caption.text
+		caption.clip_text = false
+		caption.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		caption.tooltip_text = str(ui.get("hud_description", _player_name(player)))
+		caption.accessibility_description = caption.tooltip_text
 		caption.mouse_filter = Control.MOUSE_FILTER_PASS
+		(ui["score"] as Label).accessibility_name = caption.tooltip_text
+		card.tooltip_text = "%s\n%s" % [caption.tooltip_text, (ui["streak"] as Label).text]
 	if timer_card.get_parent() == _shell_top_bar:
-		timer_card.custom_minimum_size = Vector2(card_width, 0)
+		timer_card.custom_minimum_size = Vector2(0, 44.0 * _shell_hud_unit)
 		timer_card.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_END
 		_style_shared_hud_panel(timer_card)
-		_style_shared_hud_label(_time_label, 28)
+		_style_shared_hud_label(_time_label, 22 if compact else 26)
 		_style_shared_hud_label(_time_caption, 12)
 		_style_shared_hud_label(_mode_title, 12)
 		_time_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_mode_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_mode_title.hide()
+		timer_card.tooltip_text = _time_caption.text
+		_time_label.accessibility_name = _time_caption.text
+		_time_icon.visible = _uses_shell_round_rules and _time_label.visible
+		_time_icon.texture = HUD_LIVES if _lives_mode else HUD_TIME
+		_time_icon.custom_minimum_size = Vector2.ONE * 18.0 * _shell_hud_unit
 	_style_shared_hud_label(_callout, 14)
-	_time_progress.custom_minimum_size.y = 3.0 * _shell_hud_unit
+	_time_progress.custom_minimum_size.y = 2.0 * _shell_hud_unit
+	if _hud_help_button.get_parent() == _shell_top_bar:
+		_hud_help_button.custom_minimum_size = Vector2.ONE * 44.0 * _shell_hud_unit
+		_hud_help_button.add_theme_constant_override(
+			"icon_max_width", roundi(22.0 * _shell_hud_unit))
 	if _pause_button.get_parent() == _shell_top_bar:
 		_pause_button.custom_minimum_size = Vector2.ONE * 44.0 * _shell_hud_unit
 		_pause_button.add_theme_font_size_override("font_size", roundi(18.0 * _shell_hud_unit))
+	for button: Button in [_hud_help_button, _pause_button]:
+		for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+			var style := button.get_theme_stylebox(state).duplicate() as StyleBox
+			for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+				style.set_content_margin(side, 4.0 * _shell_hud_unit)
+			if style is StyleBoxFlat and state != "focus":
+				style.bg_color.a = 0.18 if state == "normal" else 0.35
+				style.shadow_size = 0
+			button.add_theme_stylebox_override(state, style)
 	_hint.hide()
 
 
@@ -860,7 +900,11 @@ func _style_shared_hud_panel(panel: PanelContainer) -> void:
 	var style := _shell_hud_styles[panel].duplicate() as StyleBox
 	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 		style.set_content_margin(side,
-			(10.0 if side in [SIDE_LEFT, SIDE_RIGHT] else 4.0) * _shell_hud_unit)
+			(8.0 if side in [SIDE_LEFT, SIDE_RIGHT] else 3.0) * _shell_hud_unit)
+	if style is StyleBoxFlat:
+		style.bg_color.a = 0.18
+		style.border_color.a = 0.18
+		style.shadow_size = 0
 	panel.add_theme_stylebox_override("panel", style)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for child in panel.find_children("*", "Control", true, false):
@@ -912,7 +956,7 @@ func _player_panel_references(
 	return {
 		"card": card, "score": card.get_node("Layout/" + prefix + "Score"),
 		"caption": card.get_node("Layout/Caption"),
-		"streak": card.get_node("Layout/" + prefix + "Streak"),
+		"streak": card.get_node("Layout/Details/" + prefix + "Streak"),
 		"result_card": result, "result_score": result.get_node("Layout/Round" + prefix + "Score"),
 		"result_caption": result.get_node("Layout/Caption"),
 		"stats_card": stats, "stats_title": stats.get_node("Layout/Title"), "stats": fields,
@@ -1064,6 +1108,63 @@ func _on_pause_closed() -> void:
 
 func _on_pause_button_pressed() -> void:
 	open_pause_menu()
+
+
+## Optional trays collapse on desktop; required touch input remains available.
+## Games retain ownership of the tray and its layout, not a second help screen.
+func register_hud_controls(
+	control: Control, relayout := Callable(), keep_on_touch := true
+) -> void:
+	for entry in _hud_control_trays:
+		if entry["control"] == control:
+			return
+	_hud_control_trays.append({"control": control, "touch": keep_on_touch})
+	if relayout.is_valid():
+		control.visibility_changed.connect(relayout, CONNECT_DEFERRED)
+	_sync_hud_controls()
+
+
+## Custom game HUDs mount the same help action beside their own pause button.
+func mount_hud_help(parent: Node) -> void:
+	if _hud_help_button.get_parent() != parent:
+		_hud_help_button.reparent(parent, false)
+	_hud_help_button.show()
+
+
+## A scene-local view choice, never gameplay state or a saved setting.
+func hud_controls_expanded() -> bool:
+	return _hud_controls_expanded
+
+
+func _on_hud_help_pressed() -> void:
+	if not _has_foldable_hud_controls(DisplayServer.is_touchscreen_available()):
+		open_pause_menu()
+		if is_instance_valid(_pause_menu):
+			_pause_menu.call("_on_guide_pressed")
+		return
+	_hud_controls_expanded = not _hud_controls_expanded
+	_sync_hud_controls()
+
+
+func _sync_hud_controls() -> void:
+	var touchscreen := DisplayServer.is_touchscreen_available()
+	var foldable := _has_foldable_hud_controls(touchscreen)
+	for entry in _hud_control_trays:
+		if is_instance_valid(entry["control"]):
+			(entry["control"] as Control).visible = _hud_controls_expanded \
+				or (bool(entry["touch"]) and touchscreen)
+	_hud_help_button.toggle_mode = foldable
+	_hud_help_button.set_pressed_no_signal(_hud_controls_expanded and foldable)
+	_hud_help_button.tooltip_text = "Controls and guide" if not foldable \
+		else ("Hide controls" if _hud_controls_expanded else "Show controls")
+	_hud_help_button.accessibility_name = _hud_help_button.tooltip_text
+
+
+func _has_foldable_hud_controls(touchscreen: bool) -> bool:
+	for entry in _hud_control_trays:
+		if is_instance_valid(entry["control"]) and (not touchscreen or not bool(entry["touch"])):
+			return true
+	return false
 
 
 # --------------------------------------------------------------------------

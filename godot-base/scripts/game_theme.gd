@@ -28,10 +28,14 @@ enum MenuMotion { SPRING, FIRM }
 ## Backdrop materials use the menu uniform contract, frozen at speed zero.
 @export var style_share_card := false
 
-## Logo shown on the menu cartridge. A single-colour silhouette works best:
-## it is tinted with [member logo_color], so it suits any theme. A texture with
-## its own colours should leave that tint white.
+## Icon/share branding and the cartridge fallback when no cover is supplied.
+## A silhouette is tinted with [member logo_color]; full-colour logos should
+## leave that tint white.
 @export_file("*.png", "*.svg", "*.webp") var logo_texture_path := ""
+
+## Optional square, full-colour cartridge artwork. Icons and share branding keep
+## using the logo; absent cover art preserves the original silhouette presentation.
+@export_file("*.png", "*.svg", "*.webp") var cover_texture_path := ""
 
 ## Multiplied over the logo. White leaves a full-colour logo alone.
 @export var logo_color := Color.WHITE
@@ -76,6 +80,17 @@ func logo_texture() -> Texture2D:
 		return null
 	if not ResourceLoader.exists(path):
 		push_warning("GameTheme: logo '%s' does not exist." % path)
+		return null
+	return load(path) as Texture2D
+
+
+## Dedicated box art is never multiplied by a silhouette's logo tint.
+func cover_texture() -> Texture2D:
+	var path := cover_texture_path.strip_edges()
+	if path.is_empty():
+		return null
+	if not ResourceLoader.exists(path):
+		push_warning("GameTheme: cover '%s' does not exist." % path)
 		return null
 	return load(path) as Texture2D
 

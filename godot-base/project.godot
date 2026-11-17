@@ -65,6 +65,16 @@ config/name.rastro="Rastro"
 config/description.rastro="Three cars. Your signature. An untimed 3D customization garage."
 config/custom_user_dir_name.rastro="DeskCanSaw Games/Rastro"
 config/icon.rastro="res://games/rastro/assets/game-icon.svg"
+config/name.sailor_man="Sailor Man"
+config/custom_user_dir_name.sailor_man="DeskCanSaw Games/Sailor Man"
+config/name.capitans_walk="Capitan's Walk"
+config/custom_user_dir_name.capitans_walk="DeskCanSaw Games/Capitan's Walk"
+config/name.puppy_kraft="Puppy Kraft"
+config/custom_user_dir_name.puppy_kraft="DeskCanSaw Games/Puppy Kraft"
+config/name.baloos_chase="Baloo's Chase"
+config/description.baloos_chase="He gets the ball. You do the fetching."
+config/custom_user_dir_name.baloos_chase="DeskCanSaw Games/Baloo's Chase"
+config/icon.baloos_chase="res://games/baloos_chase/assets/icon.svg"
 
 [audio]
 
@@ -78,6 +88,10 @@ driver/enable_input.tuki_tuki=false
 driver/enable_input.yacomio=false
 driver/enable_input.florida_men=false
 driver/enable_input.rastro=false
+driver/enable_input.sailor_man=true
+driver/enable_input.capitans_walk=false
+driver/enable_input.puppy_kraft=false
+driver/enable_input.baloos_chase=false
 
 [autoload]
 
@@ -108,6 +122,10 @@ build/single_game_id.tuki_tuki="tuki_tuki"
 build/single_game_id.yacomio="yacomio"
 build/single_game_id.florida_men="florida_men"
 build/single_game_id.rastro="rastro"
+build/single_game_id.sailor_man="sailor_man"
+build/single_game_id.capitans_walk="capitans_walk"
+build/single_game_id.puppy_kraft="puppy_kraft"
+build/single_game_id.baloos_chase="baloos_chase"
 
 [display]
 

@@ -39,6 +39,7 @@ func _run() -> void:
 		_test_already_pinned_build(pinned, collection)
 	_test_unknown_game_is_refused(collection)
 	_test_project_launch_default()
+	_test_export_identities()
 	_test_explicit_collection(collection)
 	for id in collection:
 		_test_pinned_catalog(id)
@@ -116,6 +117,54 @@ func _test_project_launch_default() -> void:
 		and str(presets.get_value("preset.0", "custom_features", "")) == "collection",
 		"The collection export preset must activate the collection feature."
 	)
+
+
+## The website reads export tags, so every discovered game needs a complete identity.
+func _test_export_identities() -> void:
+	if not OS.has_feature("editor"):
+		return
+	var tags_by_id: Dictionary = {}
+	var save_owners: Dictionary = {}
+	var prefix := GameCatalog.SINGLE_GAME_SETTING + "."
+	var default_directory := str(
+		ProjectSettings.get_setting("application/config/custom_user_dir_name", "")
+	)
+	for property in ProjectSettings.get_property_list():
+		var key := str(property.get("name", ""))
+		if not key.begins_with(prefix):
+			continue
+		var id := str(ProjectSettings.get_setting(key, ""))
+		if id.is_empty():
+			continue
+		var tag := key.trim_prefix(prefix)
+		if not tags_by_id.has(id):
+			tags_by_id[id] = tag
+		var directory := str(ProjectSettings.get_setting(
+			"application/config/custom_user_dir_name." + tag, ""
+		)).strip_edges()
+		_expect(
+			not directory.is_empty() and directory != default_directory,
+			"Export tag '%s' needs a save directory separate from the collection." % tag
+		)
+		if not directory.is_empty():
+			_expect(
+				not save_owners.has(directory) or str(save_owners[directory]) == id,
+				"Export tag '%s' must not share another game's save directory." % tag
+			)
+			save_owners[directory] = id
+	for manifest in GameCatalog.all():
+		var tag := str(tags_by_id.get(manifest.id, ""))
+		_expect(
+			not tag.is_empty(),
+			"'%s' needs an export tag so the website can list it." % manifest.id
+		)
+		if tag.is_empty():
+			continue
+		_expect(
+			str(ProjectSettings.get_setting("application/config/name." + tag, ""))
+			== manifest.title,
+			"Export tag '%s' must use the manifest's title for the website." % tag
+		)
 
 
 ## Requesting all games must override a standalone default without changing
@@ -267,20 +316,22 @@ func _test_pinned_title_screen(id: String) -> void:
 		"The title screen must not list games beside Play in a '%s' build." % id
 	)
 
-	var logo := GameCatalog.theme().logo_texture()
+	var cover := presentation.cover_texture()
+	var artwork := cover if cover != null else presentation.logo_texture()
 	var face := menu.get_node_or_null("%Face") as Sprite3D
 	_expect(
-		face != null and face.texture != null and (logo == null or face.texture == logo),
-		"A standalone '%s' build must show that game's logo on the plaque." % id
+		face != null and face.texture != null and (artwork == null or face.texture == artwork),
+		"A standalone '%s' build must show its cover, or its original logo fallback." % id
 	)
 	if face != null and face.texture != null:
+		var span_key := "COVER_FACE_SPAN" if cover != null else "LOGO_FACE_SPAN"
 		var span := float(
-			menu.get_script().get_script_constant_map().get("LOGO_FACE_SPAN", 0.0)
+			menu.get_script().get_script_constant_map().get(span_key, 0.0)
 		)
 		var longest := maxf(face.texture.get_width(), face.texture.get_height())
 		_expect(
 			is_equal_approx(face.pixel_size * longest, span),
-			"The '%s' logo must be scaled to the plaque, whatever its resolution." % id
+			"The '%s' art must be scaled to the plaque, whatever its resolution." % id
 		)
 
 	_test_menu_presentation(menu, presentation, id)
@@ -293,10 +344,12 @@ func _test_pinned_title_screen(id: String) -> void:
 ## Exercise the real menu, not just the manifest: partial skins and materials
 ## must survive the runtime copies that protect the collection's presentation.
 func _test_menu_presentation(menu: Node, presentation: GameTheme, id: String) -> void:
+	var art_color := Color.WHITE if presentation.cover_texture() != null \
+		else presentation.logo_color
 	_expect(
 		_same_color((menu.get_node("%FocusAccent") as ColorRect).color, presentation.accent)
-		and _same_color((menu.get_node("%Face") as Sprite3D).modulate, presentation.logo_color),
-		"The '%s' menu must use its declared focus and logo colours." % id
+		and _same_color((menu.get_node("%Face") as Sprite3D).modulate, art_color),
+		"The '%s' menu must keep its focus colour and tint only logo fallback art." % id
 	)
 	_expect(
 		bool(menu.get("_firm_menu_motion"))
