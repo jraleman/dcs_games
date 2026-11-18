@@ -147,6 +147,7 @@ var _scaled_styles: Dictionary[StringName, StyleBox] = {}
 
 
 func _ready() -> void:
+	Router.set_game_selection_origin(scene_file_path)
 	_reduced_motion = Settings.reduced_motion_enabled()
 	_studio_accent = GameCatalog.theme().accent
 	_accent_shown = _studio_accent

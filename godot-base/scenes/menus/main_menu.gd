@@ -4,6 +4,7 @@ extends MenuScreen
 ## the cartridge seats in shared, game-neutral hardware before the usual route.
 
 @export_file("*.tscn") var game_select_scene := "res://scenes/menus/game_select.tscn"
+@export_file("*.tscn") var arcade_select_scene := "res://scenes/menus/arcade_select.tscn"
 @export_file("*.tscn") var play_scene := "res://scenes/menus/mode_select.tscn"
 @export_file("*.tscn") var instructions_scene := "res://scenes/menus/instructions.tscn"
 @export_file("*.tscn") var settings_scene := "res://scenes/menus/settings_menu.tscn"
@@ -14,6 +15,7 @@ extends MenuScreen
 @export var music: AudioStream
 
 const ConsoleModel = preload("res://ui/components/cartridge_console.gd")
+const KonamiCode = preload("res://scripts/konami_code.gd")
 const LOGO_FACE_SPAN := 2.08
 const COVER_FACE_SPAN := 2.24
 const INSERT_TIME := 0.58
@@ -60,9 +62,11 @@ var _reduced_motion := false
 var _firm_menu_motion := false
 var _logo_intro_tween: Tween
 var _launch_tween: Tween
+var _konami := KonamiCode.new()
 
 
 func _ready() -> void:
+	Router.set_game_selection_origin("")
 	_reduced_motion = Settings.reduced_motion_enabled()
 	_firm_menu_motion = GameCatalog.theme().menu_motion == GameTheme.MenuMotion.FIRM
 	Settings.changed.connect(_on_setting_changed)
@@ -104,6 +108,22 @@ func _ready() -> void:
 	_logo_intro_tween.tween_property(_logo_showcase, "modulate:a", 1.0, 0.45)
 	set_process(not _reduced_motion)
 	super()
+
+
+func _input(event: InputEvent) -> void:
+	if GameCatalog.all().size() < 2 or _closing or Router.is_transitioning():
+		return
+	var result := _konami.feed(event)
+	if result == KonamiCode.Result.PASS:
+		return
+	get_viewport().set_input_as_handled()
+	if result == KonamiCode.Result.COMPLETE:
+		_leave_menu(arcade_select_scene)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_konami.reset()
 
 
 func _process(delta: float) -> void:

@@ -6,7 +6,9 @@ extends SceneTree
 const MAIN_MENU := "res://scenes/menus/main_menu.tscn"
 const GAME_SELECT := "res://scenes/menus/game_select.tscn"
 const MODE_SELECT := "res://scenes/menus/mode_select.tscn"
+const ARCADE_SELECT := "res://scenes/menus/arcade_select.tscn"
 const ConsoleModel = preload("res://ui/components/cartridge_console.gd")
+const KonamiCode = preload("res://scripts/konami_code.gd")
 
 var _failures := PackedStringArray()
 var _routes := PackedStringArray()
@@ -41,6 +43,9 @@ func _run() -> void:
 	await _test_cover_fallback()
 	await _test_reduced_motion()
 	await _test_setup_details()
+	_test_konami_recognizer()
+	await _test_konami_entry()
+	await _test_konami_is_collection_only()
 	await _test_launch(false, false)
 	await _test_launch(true, false)
 	await _test_launch(false, true)
@@ -285,6 +290,8 @@ func _test_launch(reduced: bool, interrupt_motion: bool) -> void:
 	menu.call("_on_settings_pressed")
 	menu.call("go_back")
 	menu.call("_on_progression_changed", "test_unlock", true)
+	for key: int in KonamiCode.SEQUENCE:
+		root.push_input(_code_key(key))
 	_expect(menu.get("_launch_tween") == tween,
 		"Repeated activation must not restart insertion or schedule another route.")
 	for button: Button in menu.get("_menu_buttons"):
@@ -349,6 +356,120 @@ func _test_standalone_launch() -> void:
 		"A standalone cartridge must use the selected game's setup route, not the picker.")
 	await _close_current()
 	GameCatalog.clear_restriction()
+
+
+func _test_konami_recognizer() -> void:
+	var code := KonamiCode.new()
+	for index in KonamiCode.SEQUENCE.size():
+		var key: int = KonamiCode.SEQUENCE[index]
+		var result := code.feed(_code_key(key))
+		_expect(result == (KonamiCode.Result.COMPLETE if index == 9
+			else KonamiCode.Result.CONSUME if index == 8 else KonamiCode.Result.PASS),
+			"Only B/A may intercept normal title navigation, and only the full code opens town.")
+		code.feed(_code_key(key, false))
+	code.feed(_code_key(KEY_UP))
+	code.feed(_code_key(KEY_UP))
+	code.feed(_code_key(KEY_UP))
+	for key: int in KonamiCode.SEQUENCE.slice(2, 9):
+		code.feed(_code_key(key))
+	_expect(code.feed(_code_key(KEY_A)) == KonamiCode.Result.COMPLETE,
+		"An overlapping up/up prefix must recover without requiring a title reload.")
+	for key: int in KonamiCode.SEQUENCE.slice(0, 5):
+		code.feed(_code_key(key))
+	code.feed(_code_key(KEY_SPACE))
+	for key: int in KonamiCode.SEQUENCE.slice(5):
+		_expect(code.feed(_code_key(key)) != KonamiCode.Result.COMPLETE,
+			"An unrelated press must reset a partial code.")
+	code.reset()
+	var repeated := _code_key(KEY_UP)
+	repeated.echo = true
+	code.feed(_code_key(KEY_UP))
+	code.feed(repeated)
+	for key: int in KonamiCode.SEQUENCE.slice(2):
+		_expect(code.feed(_code_key(key)) != KonamiCode.Result.COMPLETE,
+			"Keyboard echo must not stand in for the second Up press.")
+	code.reset()
+	for key: int in KonamiCode.SEQUENCE.slice(0, 8):
+		code.feed(_code_key(key))
+	var modified := _code_key(KEY_B)
+	modified.ctrl_pressed = true
+	code.feed(modified)
+	_expect(code.feed(_code_key(KEY_A)) != KonamiCode.Result.COMPLETE,
+		"Modified shortcuts must not complete the code.")
+	code.reset()
+	for key: int in KonamiCode.SEQUENCE.slice(0, 4):
+		code.feed(_code_key(key))
+	code.reset()
+	for key: int in KonamiCode.SEQUENCE.slice(4):
+		_expect(code.feed(_code_key(key)) != KonamiCode.Result.COMPLETE,
+			"Resetting the recognizer must abandon a partial entry.")
+
+
+func _test_konami_entry() -> void:
+	for use_pad in [false, true]:
+		var menu := await _open(MAIN_MENU)
+		if menu == null:
+			return
+		current_scene = menu
+		var count := _routes.size()
+		(menu.get_node("%QuitButton") as Button).grab_focus()
+		for key: int in KonamiCode.SEQUENCE:
+			if use_pad:
+				var button := InputEventJoypadButton.new()
+				button.button_index = KonamiCode.PAD_KEYS.find_key(key)
+				button.pressed = true
+				root.push_input(button)
+				button = button.duplicate()
+				button.pressed = false
+				root.push_input(button)
+			else:
+				root.push_input(_code_key(key))
+				root.push_input(_code_key(key, false))
+		_expect(bool(menu.get("_closing")) and not bool(menu.get("_launching_game")),
+			"The full code must open town directly, not activate a focused title action.")
+		await _wait_for_route(ARCADE_SELECT)
+		_expect(current_scene != null and current_scene.has_method("_enter_nearby"),
+			"The Konami destination must load the working town controller, not an empty scene.")
+		_expect(_routes.size() == count + 1,
+			"The %s code must route to town exactly once." % ("gamepad" if use_pad else "keyboard"))
+		await _close_current()
+	var title := await _open(MAIN_MENU)
+	if title == null:
+		return
+	root.push_input(_code_key(KEY_UP))
+	root.push_input(_code_key(KEY_UP))
+	title.call("_notification", Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	for key: int in KonamiCode.SEQUENCE.slice(2):
+		root.push_input(_code_key(key))
+	_expect(not bool(title.get("_closing")),
+		"Losing application focus must abandon the title's partial code.")
+	root.push_input(_code_key(KEY_B))
+	root.push_input(_code_key(KEY_A))
+	_expect(not bool(title.get("_closing"))
+		and str(_router.call("game_selection_return_scene", GAME_SELECT, MAIN_MENU)) == GAME_SELECT,
+		"A new title visit must forget the code and restore the ordinary Play picker.")
+	await _close(title)
+
+
+func _test_konami_is_collection_only() -> void:
+	GameCatalog.restrict_to("triangle_rush")
+	var menu := await _open(MAIN_MENU)
+	if menu != null:
+		for key: int in KonamiCode.SEQUENCE:
+			root.push_input(_code_key(key))
+			root.push_input(_code_key(key, false))
+		_expect(not bool(menu.get("_closing")),
+			"Standalone title screens must not activate the collection's secret selector.")
+		await _close(menu)
+	GameCatalog.clear_restriction()
+
+
+func _code_key(key: int, pressed := true) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = key
+	event.physical_keycode = key
+	event.pressed = pressed
+	return event
 
 
 func _wait_for_route(path: String) -> void:

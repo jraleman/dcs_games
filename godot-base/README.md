@@ -76,6 +76,46 @@ adding another paragraph. Store and Gallery still appear only for games that
 declare them. **Saves** appears in any build as soon as a game it offers has
 progress or a backup; see *Saves and backups*.
 
+The collection has a secret alternative selector: enter **Up, Up, Down, Down,
+Left, Right, Left, Right, B, A** on the title screen, using the keyboard arrows
+and B/A keys or a gamepad's D-pad and B/A buttons (east face button, then south).
+No Enter/Start terminator is needed. It immediately opens **Arcade Town**
+(`scenes/menus/arcade_select.tscn`), an original, freely walkable 3D toy town
+with a fixed-angle isometric camera and a little robot mascot. The code has no
+speed requirement; releases and keyboard repeats do not count, wrong presses
+restart it, and losing application focus abandons a partial entry. Only the
+final B/A are intercepted, so ordinary menu navigation still works.
+
+Walk with **WASD/arrows**, the **left stick/D-pad**, or the independent on-screen
+touch pad. At a doorway, use **E/Enter**, **A**, or **Enter** on screen to open
+that game's usual setup/instructions. **Directory / M / Y** marks a destination
+with a HERE marker and screen-relative distance/direction, without teleporting
+or starting anything. Its list scrolls by touch or keyboard/gamepad focus.
+Every `GameCatalog.all()` manifest gets a numbered storefront wearing its own
+theme and cover/logo; locked games remain visible with shutters and their real
+unlock requirement, and cannot launch. No game-specific selector branches,
+new manifest fields, gameplay previews, microphones or saved unlocks are involved.
+
+Storefronts cycle through seven original architectural families: gabled market,
+Art Deco theatre, domed observatory, sawtooth workshop, clocktower hall, retro
+diner and butterfly-roof pavilion. Their roof shapes, porches, windows, trim and
+marquees differ; each keeps its game's colours, numbered entrance and branded
+side poster. Paved crossings, banner lamps, planted tree beds, slatted benches
+and an inlaid fountain plaza give the streets a shared toy-town setting.
+All new scenery is static, including the clock faces and water rings.
+
+**Title / Esc / B** leaves town (closing the directory first when open).
+Back from setup returns to the chosen doorstep through the router's temporary
+selection origin; returning to the title clears that origin and the code must
+be entered again. Normal **Play** still opens the original cartridge picker,
+and standalone title menus are unchanged. Touch-only players need a keyboard
+or gamepad to enter the secret code, but can then walk and enter with separate
+fingers. The isolated Compatibility viewport uses vertex-colour batches per
+surface finish for facades and static street districts, keeping glossy windows
+separate. It bounds its walker with real collisions, fades occluding shops using
+their actual roof/trim bounds and private facade materials, and removes bob,
+limb swing and camera easing under Reduced motion; it adds no flashes or shake.
+
 Menu toggles use compact, translucent tracks and square thumbs rather than the
 old bright pills. Thumb position and check/minus marks distinguish On and Off
 without relying on colour; disabled states are dimmed and focus stays outlined.
@@ -119,6 +159,7 @@ windows use the compact heading caps and wrapping Start labels too.
 | `scripts/studio_info.gd` | Studio identity: project title, tagline, intro cards, credits, palette. **Start here when renaming the project.** |
 | `scripts/game_manifest.gd` | `GameManifest` resource — everything the framework needs to know about one game (scene, copy, achievements, tunables, share art). |
 | `scripts/game_catalog.gd` | `GameCatalog` static registry — discovers `games/*/game.gd`, skipping `_`- and `.`-prefixed archive/private folders, and tracks the selected game. |
+| `scripts/konami_code.gd` | Title-local keyboard/gamepad sequence recognition, with no saved unlock, time limit or global input-map changes. |
 | `scripts/game_unlock_rule.gd` | `GameUnlockRule` base class for gating a game behind progress in another. |
 | `scripts/game_saves.gd` | `GameSaves` static helper — what one game's save holds (its achievements, store wallet and declared `save_files`), and deleting, backing up and restoring it without touching another game or any option. |
 | `scripts/game_shell.gd` | `GameShell` base class — the shared round loop, HUD, results/stats panels, pause, sharing and accessibility plumbing every game inherits. |
@@ -129,8 +170,9 @@ windows use the compact heading caps and wrapping Start labels too.
 | `autoload/achievement_manager.gd` | Persistent achievement registry, per-game unlock progression and queued global achievement toasts. |
 | `autoload/store.gd` | Per-game cosmetics store: wallets, purchases, equipped slots and round payouts, persisted to `user://store.cfg`. |
 | `autoload/share_manager.gd` | Renders reusable 1200×630 session cards, downloads them on web and saves them for desktop sharing. |
-| `autoload/router.gd` | `Router.goto(path)` — scene changes with a fade. Owns the top overlay layer (fade + FPS counter). `start_selected_game()` is the single definition of "begin the selected game", shared by the title screen and the picker. |
+| `autoload/router.gd` | `Router.goto(path)` — scene changes with a fade. Owns the top overlay layer (fade + FPS counter). `start_selected_game()` defines "begin the selected game"; the temporary selection origin sends setup Back to the selector that opened it. |
 | `scenes/menus/game_select.tscn` | The picker the **Play** button opens: a carousel of cartridges in a console rack, one per available game, built from `GameCatalog.available()`, with the chosen one's details and Play beside or below it. Reached only when there is more than one game to choose from. |
+| `scenes/menus/arcade_select.tscn` | The collection's Konami-only walkable selector, catalog-driven locked/open doors, touch/keyboard/gamepad input, wayfinding directory and unchanged game-start route. |
 | `scenes/menus/store.tscn` | The shop: one card per item a game declares in `store_items`, grouped by heading. Reached from the title screen in a standalone build and from the pause menu in any build. |
 | `scenes/menus/gallery.tscn` | The museum: one plinth per entry in `gallery_exhibits`, turned and zoomed on a game-owned stage scene. Reached from the same two places as the store. |
 | `scenes/menus/saves.tscn` | The save manager behind the title screen's **Saves** button: a card per game with progress or a backup — every such game in a collection, only its own in a standalone build — with Back up, Delete save and each backup's Restore and Delete. |
@@ -139,6 +181,8 @@ windows use the compact heading caps and wrapping Start labels too.
 | `ui/theme/dcs_theme.tres` | Base buttons, panels, sliders and tabs. A standalone `GameTheme` can recolour it and merge a game-owned partial skin. |
 | `ui/components/background.tscn` | Animated gradient backdrop (shader), aspect-corrected and tinted by the current `GameTheme`. |
 | `ui/components/cartridge_console.gd` | Original menu console, cartridge shell and controller meshes. Exposes insertion progress and a stationary reduced-motion pose; the title screen owns navigation. |
+| `ui/components/arcade_town.gd` | Original procedural town/mascot, batched storefront meshes, capsule/wall collisions, door proximity, occlusion handling and fixed-angle following camera. Reads no autoload instances. |
+| `ui/components/arcade_walk_pad.gd` | Contact-owned touch movement; another finger can independently activate a doorway or menu action. |
 | `ui/components/achievement_toast.tscn` | Small reusable unlock notification used by `AchievementManager`. |
 | `ui/components/audio_caption.tscn` | Reusable gameplay caption panel for important sound-only events. |
 | `ui/components/game_card.tscn` | One game on the picker, drawn as a cartridge in that game's `GameTheme`: optional square cover (logo/title fallback), then poster, mode chips and a looping, muted walkthrough only while it is the cartridge in hand. A view only — it reads no autoload. |
@@ -2366,11 +2410,22 @@ cartridge-label materials, backdrop aspect correction and the reduced-motion swi
 `main_menu_test.gd` checks real menu layouts and 44px touch targets from a
 320px phone to ultrawide, optional setup details, insertion before routing,
 duplicate-input guards, standalone/collection destinations and reduced motion
-both before and during launch. `game_select_test.gd` does the same for the
+both before and during launch, plus complete keyboard/gamepad Konami entry,
+incorrect/overlapping/repeated inputs, collection-only activation and a fresh
+normal title after leaving town. `game_select_test.gd` does the same for the
 picker's rack: a cartridge per available game, browsing by key, pad, arrow,
 drag and wheel that stops at either end, a single live preview, layouts from a
 portrait phone to ultrawide, and a seating (or reduced-motion fade) that starts
-the game exactly once. `saves_test.gd` validates every declared `save_files`
+the game exactly once. It also exercises Arcade Town's catalog/lock gates, actual
+keyboard/stick/multitouch walking, wall and boundary collisions, clear doorway
+approaches, distinct building silhouettes and complete roof occlusion bounds,
+isolated facade fading, live reduced motion, directory scrolling, enlarged-UI
+phone layouts, independent second-finger entry and setup/title return routes. Add
+`--arcade-only` after `-- --game=all` to run just those town cases. Without
+`--headless`, it checks real Compatibility pixels and a 350-visible-draw budget.
+Optional `--arcade-capture-dir=<absolute directory>` saves actual plaza,
+architectural-family, doorstep, occlusion and phone/directory screenshots.
+`saves_test.gd` validates every declared `save_files`
 entry, then deletes, backs up and restores one game without touching another,
 refuses newer, foreign and damaged backups, and checks the Saves screen from a
 320px phone to ultrawide, its confirmation's focus and Escape handling, and the

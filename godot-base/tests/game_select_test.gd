@@ -18,6 +18,8 @@ const GAME_SELECT := "res://scenes/menus/game_select.tscn"
 const MAIN_MENU := "res://scenes/menus/main_menu.tscn"
 const MODE_SELECT := "res://scenes/menus/mode_select.tscn"
 const INSTRUCTIONS := "res://scenes/menus/instructions.tscn"
+const ARCADE_SELECT := "res://scenes/menus/arcade_select.tscn"
+const Town = preload("res://ui/components/arcade_town.gd")
 const REDUCED_MOTION_KEY := "accessibility/reduced_motion"
 ## Long enough for a cartridge brought forward to start its clip.
 const PREVIEW_WAIT := GameCard.PREVIEW_DELAY + 0.15
@@ -40,6 +42,17 @@ var _failures := PackedStringArray()
 var _settings: Node
 var _router: Node
 var _routes := PackedStringArray()
+
+class TownGate:
+	extends GameUnlockRule
+
+	var opened := false
+
+	func is_unlocked(_state: Dictionary) -> bool:
+		return opened
+
+	func requirement_text(_state: Dictionary) -> String:
+		return "Finish the town test challenge."
 
 
 func _init() -> void:
@@ -69,22 +82,29 @@ func _run() -> void:
 	_set_reduced_motion(false)
 	_router.connect("scene_changed", _on_scene_changed)
 
-	await _test_main_menu_has_one_game_button()
-	await _test_cartridge_per_available_game()
-	await _test_cover_and_logo_fallback()
-	await _test_opens_on_the_selected_game()
-	await _test_only_the_cartridge_in_hand_previews()
-	await _test_reduced_motion_parks_previews()
-	await _test_browsing_with_keys_and_arrows()
-	await _test_pressing_a_standing_cartridge_brings_it_forward()
-	await _test_dragging_and_the_wheel()
-	await _test_layouts()
-	await _test_progression_rebuild()
-	await _test_back_targets()
-	# These hand the round to [Router], which replaces the running scene.
-	await _test_choosing_seats_the_cartridge()
-	await _test_reduced_motion_launch()
-	await _test_reduced_motion_mid_seat()
+	if not "--arcade-only" in OS.get_cmdline_user_args():
+		await _test_main_menu_has_one_game_button()
+		await _test_cartridge_per_available_game()
+		await _test_cover_and_logo_fallback()
+		await _test_opens_on_the_selected_game()
+		await _test_only_the_cartridge_in_hand_previews()
+		await _test_reduced_motion_parks_previews()
+		await _test_browsing_with_keys_and_arrows()
+		await _test_pressing_a_standing_cartridge_brings_it_forward()
+		await _test_dragging_and_the_wheel()
+		await _test_layouts()
+		await _test_progression_rebuild()
+		await _test_back_targets()
+		# These hand the round to [Router], which replaces the running scene.
+		await _test_choosing_seats_the_cartridge()
+		await _test_reduced_motion_launch()
+		await _test_reduced_motion_mid_seat()
+	await _test_arcade_catalog_and_gates()
+	await _test_arcade_architecture()
+	await _test_arcade_controls()
+	await _test_arcade_layouts()
+	await _test_arcade_launch_and_return()
+	await _test_arcade_instructions_return()
 
 	GameCatalog.select(original_selection)
 	_set_reduced_motion(original_reduced_motion)
@@ -877,6 +897,499 @@ func _test_reduced_motion_mid_seat() -> void:
 	await _close(screen)
 	await _clear_routed_scene()
 	_set_reduced_motion(false)
+
+
+# --- Secret arcade town -----------------------------------------------------
+
+
+func _test_arcade_catalog_and_gates() -> void:
+	var manifest := GameCatalog.all()[0]
+	var original_rule := manifest.unlock_rule
+	var original_hidden := manifest.hidden_until_unlocked
+	var gate := TownGate.new()
+	manifest.unlock_rule = gate
+	manifest.hidden_until_unlocked = true
+	var screen := await _open(ARCADE_SELECT)
+	if screen == null:
+		manifest.unlock_rule = original_rule
+		manifest.hidden_until_unlocked = original_hidden
+		return
+	var town := screen.get_node("%Town")
+	var shops: Dictionary = town.get("_shops")
+	_expect(shops.size() == GameCatalog.all().size() and shops.has(manifest.id)
+		and not GameCatalog.available().has(manifest),
+		"Town must include every catalog game, even a hidden, locked storefront.")
+	_expect((screen.get_node("%WorldViewport") as SubViewport).own_world_3d,
+		"The selector's 3D world must be isolated from games and other menu viewports.")
+	town.call("stand_at_game", manifest.id)
+	await physics_frame
+	var enter := screen.get_node("%EnterButton") as Button
+	_expect(enter.disabled and enter.text == "Locked"
+		and (screen.get_node("%GameStatus") as Label).text.contains("town test challenge"),
+		"A locked door must show its real requirement and refuse entry.")
+	_expect((town.get("_locks") as Dictionary)[manifest.id].visible,
+		"Locked doors need a shutter, not just a different colour.")
+	await _capture_arcade(screen, "town-locked")
+	var routes_before := _routes.size()
+	var selected_before := GameCatalog.current_id()
+	screen.call("_enter_nearby")
+	_expect(_routes.size() == routes_before and GameCatalog.current_id() == selected_before
+		and not bool(screen.get("_closing")),
+		"A locked doorway must never select or launch its game.")
+	var before: Vector3 = town.call("walker_position")
+	screen.call("_set_directory_open", true)
+	var buttons: Dictionary = screen.get("_directory_buttons")
+	(buttons[manifest.id] as Button).emit_signal("pressed")
+	_expect(str(screen.get("_destination_id")) == manifest.id
+		and (town.call("walker_position") as Vector3).is_equal_approx(before)
+		and not bool(screen.get("_closing")),
+		"A directory choice marks a locked or open door without teleporting or launching.")
+	screen.call("_set_directory_open", true)
+	_press_action("ui_cancel")
+	_expect(not (screen.get_node("%DirectoryOverlay") as Control).visible
+		and not bool(screen.get("_closing")),
+		"Escape must close the directory before leaving town.")
+	gate.opened = true
+	get_root().get_node("AchievementManager").emit_signal(
+		"progression_changed", "town_test_gate", true
+	)
+	_expect(not enter.disabled and enter.text == "Enter"
+		and not (town.get("_locks") as Dictionary)[manifest.id].visible,
+		"A live unlock must open the existing storefront and its action.")
+	(town.get("_walker") as Node3D).position = Town.SPAWN
+	screen.call("_enter_nearby")
+	_expect(not bool(screen.get("_closing")) and _routes.size() == routes_before,
+		"Entry must recheck actual proximity rather than trust a stale on-screen prompt.")
+	await _close(screen)
+	manifest.unlock_rule = original_rule
+	manifest.hidden_until_unlocked = original_hidden
+
+
+func _test_arcade_architecture() -> void:
+	var screen := await _open(ARCADE_SELECT)
+	if screen == null:
+		return
+	var town := screen.get_node("%Town")
+	var shops: Dictionary = town.get("_shops")
+	var silhouettes := {}
+	for id: String in shops:
+		var shop := shops[id] as Node3D
+		var silhouette := AABB()
+		var bounds: AABB = (town.get("_shop_bounds") as Dictionary)[id]
+		var contains_roof := true
+		for child in shop.get_children():
+			var instance := child as MeshInstance3D
+			if instance == null:
+				continue
+			silhouette = silhouette.merge(instance.transform * instance.get_aabb())
+			var vertices: PackedVector3Array = instance.mesh.surface_get_arrays(0)[
+				Mesh.ARRAY_VERTEX]
+			for point in vertices:
+				var local := instance.transform * point
+				if local.y > 1.4:
+					contains_roof = contains_roof and bounds.grow(0.01).has_point(
+						shop.transform * local)
+		var size := silhouette.size * 10
+		silhouettes[Vector3i(roundi(size.x), roundi(size.y), roundi(size.z))] = true
+		_expect(contains_roof,
+			"%s's occlusion volume must contain its actual tall roof and trim." % id)
+	_expect(silhouettes.size() >= mini(5, shops.size()),
+		"The town needs visibly different 3D building silhouettes, not recoloured boxes.")
+	for index in mini(7, GameCatalog.all().size()):
+		town.call("stand_at_game", GameCatalog.all()[index].id)
+		await _physics_frames(3)
+		await _capture_arcade(screen, "town-architecture-%02d" % (index + 1))
+	await _close(screen)
+
+
+func _test_arcade_controls() -> void:
+	var screen := await _open(ARCADE_SELECT)
+	if screen == null:
+		return
+	var town := screen.get_node("%Town")
+	var walker := town.get("_walker") as CharacterBody3D
+	walker.position = Town.SPAWN
+	var camera := town.get("_camera") as Camera3D
+	var angle := camera.rotation
+	_arcade_key(KEY_W, true)
+	await _physics_frames(16)
+	_arcade_key(KEY_W, false)
+	_expect(walker.position.distance_to(Town.SPAWN) > 0.5,
+		"WASD must move the actual 3D character, not just a menu cursor.")
+	_expect(camera.rotation.is_equal_approx(angle),
+		"The isometric camera angle must remain fixed while following.")
+	_arcade_key(KEY_W, true)
+	_arcade_key(KEY_D, true)
+	await _physics_frames(3)
+	_expect(walker.velocity.length() <= Town.WALK_SPEED + 0.01,
+		"Diagonal keyboard input must not walk faster.")
+	screen.call("_notification", Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	var stopped := walker.position
+	await _physics_frames(3)
+	_expect(walker.position.is_equal_approx(stopped),
+		"Focus loss must release held keys immediately.")
+	_arcade_axis(0, JOY_AXIS_LEFT_X, 0.1)
+	await _physics_frames(3)
+	_expect(walker.position.is_equal_approx(stopped), "Stick drift must stay inside the deadzone.")
+	_arcade_axis(0, JOY_AXIS_LEFT_X, 0.85)
+	await _physics_frames(12)
+	_expect(walker.position.distance_to(stopped) > 0.3,
+		"The left stick must move the same walker as the keyboard.")
+	screen.call("_on_pad_connection_changed", 0, false)
+	stopped = walker.position
+	await _physics_frames(3)
+	_expect(walker.position.is_equal_approx(stopped),
+		"Disconnecting a controller must not leave a stored stick direction.")
+	screen.call("_set_touch_mode")
+	for frame in 3:
+		await process_frame
+	var pad := screen.get_node("%WalkPad") as Control
+	var press_at := pad.get_global_rect().get_center() + Vector2(pad.size.x * 0.3, 0)
+	_arcade_touch(3, press_at, true)
+	await _physics_frames(8)
+	_expect(walker.position.distance_to(stopped) > 0.2,
+		"An owned touch contact must steer the real walker.")
+	_arcade_touch(7, Vector2(1, 1), false)
+	_expect((town.get("_walk_input") as Vector2).length() > 0.0,
+		"Another finger's release must not steal the movement contact.")
+	_arcade_touch(3, Vector2(1, 1), false)
+	stopped = walker.position
+	await _physics_frames(3)
+	_expect(walker.position.is_equal_approx(stopped),
+		"A movement finger released outside the pad must still stop walking.")
+	var directory_button := screen.get_node("%DirectoryButton") as Control
+	_arcade_touch(7, directory_button.get_global_rect().get_center(), true)
+	_arcade_touch(7, directory_button.get_global_rect().get_center(), false)
+	_expect((screen.get_node("%DirectoryOverlay") as Control).visible,
+		"A real touch tap must open the directory without mouse emulation.")
+	for frame in 3:
+		await process_frame
+	var scroll := screen.get_node("%DirectoryScroll") as ScrollContainer
+	var scroll_before := scroll.scroll_vertical
+	var start := scroll.get_global_rect().get_center()
+	var travel := Vector2(0, -scroll.size.y * 0.3)
+	var destination_before := str(screen.get("_destination_id"))
+	_arcade_touch(9, start, true)
+	for step in 5:
+		_arcade_drag(9, start + travel * (step + 1) / 5.0, travel / 5.0)
+		await process_frame
+	_arcade_touch(9, start + travel, false)
+	_expect(scroll.scroll_vertical > scroll_before
+		and str(screen.get("_destination_id")) == destination_before,
+		"A directory swipe must scroll, not accidentally choose the touched game.")
+	for id: String in screen.get("_directory_buttons"):
+		var destination := (screen.get("_directory_buttons") as Dictionary)[id] as Button
+		if scroll.get_global_rect().encloses(destination.get_global_rect()):
+			var at := destination.get_global_rect().get_center()
+			stopped = walker.position
+			_arcade_touch(9, at, true)
+			_arcade_touch(9, at, false)
+			_expect(str(screen.get("_destination_id")) == id
+				and not (screen.get_node("%DirectoryOverlay") as Control).visible
+				and walker.position.is_equal_approx(stopped),
+				"A touch directory tap must mark its door without moving or launching.")
+			break
+	var copy := screen.get_node("%GameStatus") as Label
+	var original_copy := copy.text
+	copy.text = "A long, descriptive doorway requirement remains readable. ".repeat(20)
+	for frame in 3:
+		await process_frame
+	var info_scroll := screen.get_node("%InfoScroll") as ScrollContainer
+	start = info_scroll.get_global_rect().get_center()
+	travel = Vector2(0, -info_scroll.size.y * 0.7)
+	_arcade_touch(5, start, true)
+	_arcade_drag(5, start + travel, travel)
+	_arcade_touch(5, start + travel, false)
+	_expect(info_scroll.scroll_vertical > 0,
+		"Long doorway requirements must also scroll under a real touch contact.")
+	copy.text = original_copy
+	info_scroll.scroll_vertical = 0
+	_arcade_key(KEY_D, true)
+	_set_reduced_motion(true)
+	await _physics_frames(6)
+	var mascot := town.get("_mascot") as Node3D
+	var parked := true
+	for limb: Node3D in town.get("_limbs"):
+		parked = parked and limb.rotation.is_zero_approx()
+	_expect(parked and is_zero_approx(mascot.position.y)
+		and walker.position.distance_to(stopped) > 0.1,
+		"Reduced motion must park bob and limbs without disabling essential walking.")
+	_arcade_key(KEY_D, false)
+	await _physics_frames(2)
+	var camera_pose := camera.transform
+	await _physics_frames(3)
+	_expect(camera.transform.is_equal_approx(camera_pose),
+		"A parked reduced-motion town must have no ambient camera drift.")
+	var id := GameCatalog.all()[0].id
+	town.call("stand_at_game", id)
+	var door: Vector3 = town.call("door_position", id)
+	var down := Vector3(Town.CAMERA_OFFSET.x, 0, Town.CAMERA_OFFSET.z).normalized()
+	town.call("set_walk_input", Vector2(down.x, -down.z))
+	await _physics_frames(40)
+	town.call("set_walk_input", Vector2.ZERO)
+	_expect(walker.position.z >= door.z - 1.1 and absf(walker.position.x - door.x) < 0.1,
+		"Shop walls must block the capsule instead of allowing it through a facade.")
+	var shop := (town.get("_shops") as Dictionary)[id] as Node3D
+	walker.position = shop.position + Vector3(-2, 0, -3.4)
+	town.call("_follow_camera", 0.0, true)
+	town.call("_update_occlusion")
+	_expect(bool((town.get("_faded") as Dictionary).get(id, false)),
+		"A facade between the camera and mascot must become see-through.")
+	var facade_faded := true
+	for child in shop.get_children():
+		if child is MeshInstance3D:
+			var material := (child as MeshInstance3D).material_override as StandardMaterial3D
+			facade_faded = facade_faded and is_equal_approx(material.albedo_color.a, 0.16)
+	_expect(facade_faded and is_equal_approx(
+		(town.get("_foliage") as StandardMaterial3D).albedo_color.a, 1.0),
+		"Every facade material must fade without making shared town foliage transparent.")
+	await _capture_arcade(screen, "town-occlusion")
+	var space := walker.get_world_3d().direct_space_state
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = (walker.get_child(0) as CollisionShape3D).shape
+	query.exclude = [walker.get_rid()]
+	for target: Vector3 in (town.get("_doors") as Dictionary).values():
+		for step in 6:
+			query.transform = Transform3D(Basis.IDENTITY,
+				target + Vector3(0, 1.04, step * 0.4))
+			_expect(space.intersect_shape(query).is_empty(),
+				"Every doorway needs a clear path to the street, past its porch and planters.")
+	var bounds: Rect2 = town.get("_bounds")
+	walker.position = Vector3(bounds.position.x + 0.7, 0, 11)
+	town.call("set_walk_input", Vector2(-down.z, -down.x))
+	await _physics_frames(12)
+	_expect(walker.position.x >= bounds.position.x + 0.5,
+		"The walking character must remain on the town's bounded ground.")
+	screen.call("_clear_walk_input")
+	await _close(screen)
+	_set_reduced_motion(false)
+
+
+func _test_arcade_layouts() -> void:
+	var screen := await _open(ARCADE_SELECT)
+	if screen == null:
+		return
+	screen.call("_set_touch_mode")
+	var town := screen.get_node("%Town")
+	(town.get("_walker") as Node3D).position = Town.SPAWN
+	town.call("_follow_camera", 0.0, true)
+	await _physics_frames(3)
+	await _capture_arcade(screen, "town-plaza")
+	town.call("stand_at_game", GameCatalog.all()[0].id)
+	var original_scale: Variant = _settings.call("get_value", "ui/scale", 1.0)
+	var windows := WINDOWS.duplicate()
+	windows["small phone"] = Vector2i(320, 568)
+	for scale_value in [1.0, 1.5]:
+		_set_memory_setting("ui/scale", scale_value)
+		for window_name: String in windows:
+			screen.call("_set_directory_open", false)
+			await _resize(windows[window_name])
+			for frame in 3:
+				await process_frame
+			var bounds := (screen as Control).get_global_rect()
+			var physical := float(get_root().size.x) / bounds.size.x
+			for button_name in ["DirectoryButton", "BackButton", "EnterButton"]:
+				var button := screen.get_node("%" + button_name) as Button
+				_expect(bounds.grow(1).encloses(button.get_global_rect())
+					and button.size.y * physical >= MIN_TOUCH_TARGET - 0.5,
+					"Town %s at %.1fx: %s must fit and retain a 44px target."
+					% [window_name, scale_value, button_name])
+			var pad := screen.get_node("%WalkPad") as Control
+			var card := screen.get_node("%InfoCard") as Control
+			_expect(bounds.grow(1).encloses(pad.get_global_rect())
+				and not pad.get_global_rect().intersects(card.get_global_rect()),
+				"Town %s at %.1fx: movement and entry must not overlap."
+				% [window_name, scale_value])
+			_expect((screen.get_node("%InfoScroll") as Control).size.y * physical > 12,
+				"Town's game copy must keep usable scroll space on %s." % window_name)
+			var viewport := screen.get_node("%WorldViewport") as SubViewport
+			_expect(viewport.size.x <= get_root().size.x * 2,
+				"Town must not oversample a small phone as a desktop 3D viewport.")
+			if scale_value == 1.0 and window_name in [
+				"desktop", "portrait phone", "landscape phone",
+			]:
+				await _capture_arcade(screen, "town-" + window_name)
+			screen.call("_set_directory_open", true)
+			for frame in 3:
+				await process_frame
+			var scroll := screen.get_node("%DirectoryScroll") as ScrollContainer
+			_expect(scroll.follow_focus and scroll.size.y * physical >= 44,
+				"The town directory needs real focus-following scroll space on %s." % window_name)
+			var buttons: Array = (screen.get("_directory_buttons") as Dictionary).values()
+			for index in [0, buttons.size() - 1]:
+				var button := buttons[index] as Button
+				button.grab_focus()
+				for frame in 3:
+					await process_frame
+				_expect(scroll.get_global_rect().grow(1).encloses(button.get_global_rect())
+					and button.size.y * physical >= MIN_TOUCH_TARGET - 0.5,
+					"Directory row %d must fit %s at %.1fx: row %s, scroll %s."
+					% [index, window_name, scale_value, button.get_global_rect(),
+						scroll.get_global_rect()])
+			var close := screen.get_node("%DirectoryClose") as Button
+			_expect(bounds.grow(1).encloses(close.get_global_rect())
+				and close.size.y * physical >= MIN_TOUCH_TARGET - 0.5,
+				"The directory's Close action must remain usable at every UI scale.")
+			if scale_value == 1.0 and window_name == "portrait phone":
+				await _capture_arcade(screen, "directory-portrait")
+	_set_memory_setting("ui/scale", original_scale)
+	screen.call("_set_directory_open", false)
+	await _resize(WINDOWS["desktop"])
+	await _close(screen)
+
+
+func _test_arcade_launch_and_return() -> void:
+	var manifest := GameCatalog.available()[0]
+	for use_touch in [false, true]:
+		var screen := await _open(ARCADE_SELECT)
+		if screen == null:
+			return
+		current_scene = screen
+		var town := screen.get_node("%Town")
+		town.call("stand_at_game", manifest.id)
+		_routes.clear()
+		if use_touch:
+			screen.call("_set_touch_mode")
+			for frame in 3:
+				await process_frame
+			var pad := screen.get_node("%WalkPad") as Control
+			_arcade_touch(2, pad.get_global_rect().get_center()
+				+ Vector2(pad.size.x * 0.2, 0), true)
+			var enter := screen.get_node("%EnterButton") as Control
+			_arcade_touch(4, enter.get_global_rect().get_center(), true)
+			_arcade_touch(4, enter.get_global_rect().get_center(), false)
+			_arcade_touch(2, Vector2.ZERO, false)
+		else:
+			screen.call("_release_focus_for_walking")
+			var event := InputEventJoypadButton.new()
+			event.button_index = JOY_BUTTON_A
+			event.pressed = true
+			get_root().push_input(event)
+		_expect(bool(screen.get("_closing")) and GameCatalog.current_id() == manifest.id,
+			"A nearby %s interaction must latch and select exactly that game."
+			% ("second-finger" if use_touch else "gamepad"))
+		screen.call("_enter_nearby")
+		await _await_route()
+		_expect(_routes.size() == 1 and _routes[0] in _start_routes(),
+			"Town entry must start once through the normal setup/instructions route.")
+		var setup := current_scene
+		_expect(setup != null and str(setup.get("back_scene")) == ARCADE_SELECT,
+			"Setup must return to the town that launched it, not the normal picker.")
+		if setup != null:
+			setup.call("go_back")
+			await _await_arcade_route(ARCADE_SELECT)
+			if current_scene != null and current_scene.scene_file_path == ARCADE_SELECT:
+				var restored := current_scene.get_node("%Town")
+				_expect(str(restored.call("nearby_game")) == manifest.id,
+					"Returning from setup must put the mascot back at the chosen door.")
+				current_scene.call("go_back")
+				await _await_arcade_route(MAIN_MENU)
+				_expect(str(_router.call(
+					"game_selection_return_scene", GAME_SELECT, MAIN_MENU
+				)) == GAME_SELECT, "Returning to the title must forget the secret route.")
+		await _clear_routed_scene()
+
+
+func _capture_arcade(screen: Node, name: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	await RenderingServer.frame_post_draw
+	var viewport := screen.get_node("%WorldViewport") as SubViewport
+	var image := viewport.get_texture().get_image()
+	var colours := {}
+	if image != null and not image.is_empty():
+		for y in range(0, image.get_height(), maxi(1, image.get_height() / 24)):
+			for x in range(0, image.get_width(), maxi(1, image.get_width() / 24)):
+				colours[image.get_pixel(x, y).to_rgba32()] = true
+	_expect(colours.size() > 20,
+		"The real Compatibility town must render geometry, not an empty viewport.")
+	var draws := viewport.get_render_info(
+		Viewport.RENDER_INFO_TYPE_VISIBLE, Viewport.RENDER_INFO_DRAW_CALLS_IN_FRAME)
+	_expect(draws <= 350,
+		"The detailed town must batch its trim rather than draw each piece separately.")
+	print("Arcade %s: %d visible draws." % [
+		name, draws,
+	])
+	for argument in OS.get_cmdline_user_args():
+		if not argument.begins_with("--arcade-capture-dir="):
+			continue
+		var directory := argument.trim_prefix("--arcade-capture-dir=")
+		_expect(DirAccess.make_dir_recursive_absolute(directory) == OK,
+			"Could not create the requested arcade screenshot directory.")
+		_expect(get_root().get_texture().get_image().save_png(
+			directory.path_join(name.validate_filename() + ".png")
+		) == OK, "Could not capture the actual town screen.")
+
+
+func _test_arcade_instructions_return() -> void:
+	for manifest in GameCatalog.available():
+		if manifest.supports_multiplayer or not manifest.characters.is_empty() \
+			or not manifest.levels.is_empty() or not manifest.solo_setup_choices.is_empty():
+			continue
+		GameCatalog.select(manifest.id)
+		get_root().get_node("GameSession").call("configure_single_player")
+		_router.call("set_game_selection_origin", ARCADE_SELECT)
+		var guide := await _open(INSTRUCTIONS)
+		if guide != null:
+			_expect(str(guide.get("back_scene")) == ARCADE_SELECT,
+				"A game that skips setup must return directly from its guide to town.")
+			await _close(guide)
+		_router.call("set_game_selection_origin", "")
+		break
+
+
+func _arcade_key(key: int, pressed: bool) -> void:
+	var event := InputEventKey.new()
+	event.keycode = key
+	event.physical_keycode = key
+	event.pressed = pressed
+	get_root().push_input(event)
+
+
+func _arcade_axis(device: int, axis: int, value: float) -> void:
+	var event := InputEventJoypadMotion.new()
+	event.device = device
+	event.axis = axis
+	event.axis_value = value
+	get_root().push_input(event)
+
+
+func _arcade_touch(index: int, at: Vector2, pressed: bool) -> void:
+	var event := InputEventScreenTouch.new()
+	event.index = index
+	event.position = at
+	event.pressed = pressed
+	get_root().push_input(event, true)
+
+
+func _arcade_drag(index: int, at: Vector2, relative: Vector2) -> void:
+	var event := InputEventScreenDrag.new()
+	event.index = index
+	event.position = at
+	event.relative = relative
+	get_root().push_input(event, true)
+
+
+func _physics_frames(count: int) -> void:
+	for frame in count:
+		await physics_frame
+
+
+func _set_memory_setting(key: String, value: Variant) -> void:
+	var values: Dictionary = (_settings.get("_values") as Dictionary).duplicate()
+	values[key] = value
+	_settings.set("_values", values)
+	_settings.emit_signal("changed", key, value)
+
+
+func _await_arcade_route(path: String) -> void:
+	var deadline := Time.get_ticks_msec() + 6000
+	while Time.get_ticks_msec() < deadline:
+		if current_scene != null and current_scene.scene_file_path == path \
+			and not bool(_router.call("is_transitioning")):
+			return
+		await process_frame
+	_expect(false, "The arcade flow did not finish routing to " + path)
 
 
 # --- Helpers ----------------------------------------------------------------

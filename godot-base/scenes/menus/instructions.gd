@@ -97,9 +97,7 @@ func _ready() -> void:
 		game == null or (game.characters.is_empty() and game.solo_setup_choices.is_empty()
 			and game.levels.is_empty())
 	):
-		back_scene = (
-			game_select_scene if GameCatalog.offers_a_choice() else main_menu_scene
-		)
+		back_scene = Router.game_selection_return_scene(game_select_scene, main_menu_scene)
 	_populate_instructions()
 	if not _in_game_help:
 		_setup_video()

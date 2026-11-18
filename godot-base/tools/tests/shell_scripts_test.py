@@ -182,13 +182,15 @@ class ShellScriptsTest(unittest.TestCase):
     def test_tutorial_variants_alias_and_explicit_quality(self) -> None:
         result = self.run_script(
             SCRIPTS[0], "--ffmpeg", str(self.tools / "ffmpeg stub"),
-            "--games", "TUKI_TUKI,anti_chess,chicken_pit,capitans_walk,puppy_kraft",
+            "--games",
+            "TUKI_TUKI,anti_chess,chicken_pit,capitans_walk,puppy_kraft,baloos_chase",
             "--variants", "local", "--quality", "9",
         )
         self.assert_success(result)
         for folder, suffix in (
             ("tuki-tuki_agents", "_local"), ("anti_chess", "_local"),
             ("chicken_pit", ""), ("capitans_walk", ""), ("puppy_kraft", ""),
+            ("baloos_chase", ""),
         ):
             bank = self.project / "games" / folder / "assets" / "video"
             self.assertTrue((bank / f"tutorial{suffix}.ogv").is_file())

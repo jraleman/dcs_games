@@ -18,6 +18,7 @@ var _layer: CanvasLayer
 var _fade: ColorRect
 var _fps: Label
 var _busy := false
+var _game_selection_origin := ""
 
 
 func _ready() -> void:
@@ -122,6 +123,20 @@ func goto(path: String, fade := true) -> void:
 
 func is_transitioning() -> bool:
 	return _busy
+
+
+## Setup returns to the selector that opened it, without saving a menu preference.
+func set_game_selection_origin(path: String) -> void:
+	_game_selection_origin = path
+
+
+## The title clears the origin, so a secret selector never replaces normal Play.
+func game_selection_return_scene(collection_scene: String, title_scene: String) -> String:
+	if GameCatalog.is_single_game_build():
+		return title_scene
+	if not _game_selection_origin.is_empty():
+		return _game_selection_origin
+	return collection_scene if GameCatalog.offers_a_choice() else title_scene
 
 
 ## Starts the game [GameCatalog] currently has selected, stopping at whichever

@@ -1,0 +1,279 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/menus/arcade_select.gd" id="1_menu"]
+[ext_resource type="Script" path="res://ui/components/arcade_town.gd" id="2_town"]
+[ext_resource type="Script" path="res://ui/components/arcade_walk_pad.gd" id="3_pad"]
+
+[sub_resource type="StyleBoxFlat" id="Style_glass"]
+bg_color = Color(0.055, 0.1, 0.13, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.72, 0.87, 0.9, 0.4)
+content_margin_left = 24.0
+content_margin_top = 18.0
+content_margin_right = 24.0
+content_margin_bottom = 18.0
+
+[node name="ArcadeSelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+back_scene = "res://scenes/menus/main_menu.tscn"
+
+[node name="WorldContainer" type="SubViewportContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+stretch = true
+
+[node name="WorldViewport" type="SubViewport" parent="WorldContainer"]
+unique_name_in_owner = true
+handle_input_locally = false
+own_world_3d = true
+size = Vector2i(1280, 720)
+render_target_update_mode = 4
+msaa_3d = 1
+
+[node name="Town" type="Node3D" parent="WorldContainer/WorldViewport"]
+unique_name_in_owner = true
+script = ExtResource("2_town")
+
+[node name="Margins" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Layout" type="VBoxContainer" parent="Margins"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="HeaderPanel" type="PanelContainer" parent="Margins/Layout"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_glass")
+
+[node name="Header" type="HBoxContainer" parent="Margins/Layout/HeaderPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Titles" type="VBoxContainer" parent="Margins/Layout/HeaderPanel/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Heading" type="Label" parent="Margins/Layout/HeaderPanel/Header/Titles"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MenuHeading"
+theme_override_colors/font_color = Color(0.95, 0.97, 0.98, 1)
+theme_override_font_sizes/font_size = 42
+text = "Arcade Town"
+
+[node name="Subtitle" type="Label" parent="Margins/Layout/HeaderPanel/Header/Titles"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.86, 0.88, 1)
+text = "A secret way to play."
+
+[node name="DirectoryButton" type="Button" parent="Margins/Layout/HeaderPanel/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavigationButton"
+text = "Directory"
+tooltip_text = "Mark a game doorway. M on keyboard, Y on gamepad."
+accessibility_name = "Town directory"
+
+[node name="BackButton" type="Button" parent="Margins/Layout/HeaderPanel/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavigationButton"
+text = "Title"
+tooltip_text = "Return to the normal title menu. Esc on keyboard, B on gamepad."
+metadata/ui_sound_handled = true
+
+[node name="Wayfinding" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.96, 0.85, 1)
+theme_override_colors/font_shadow_color = Color(0.06, 0.13, 0.16, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_constants/outline_size = 8
+theme_override_colors/font_outline_color = Color(0.06, 0.13, 0.16, 1)
+autowrap_mode = 3
+
+[node name="Space" type="Control" parent="Margins/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Controls" type="Label" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.98, 0.91, 1)
+theme_override_colors/font_outline_color = Color(0.06, 0.13, 0.16, 1)
+theme_override_constants/outline_size = 8
+autowrap_mode = 3
+
+[node name="Footer" type="HBoxContainer" parent="Margins/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="WalkPad" type="Control" parent="Margins/Layout/Footer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 8
+mouse_filter = 2
+script = ExtResource("3_pad")
+
+[node name="Space" type="Control" parent="Margins/Layout/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="InfoCard" type="PanelContainer" parent="Margins/Layout/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(660, 220)
+layout_mode = 2
+size_flags_vertical = 8
+theme_override_styles/panel = SubResource("Style_glass")
+
+[node name="Info" type="VBoxContainer" parent="Margins/Layout/Footer/InfoCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="InfoScroll" type="ScrollContainer" parent="Margins/Layout/Footer/InfoCard/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+follow_focus = true
+
+[node name="Copy" type="VBoxContainer" parent="Margins/Layout/Footer/InfoCard/Info/InfoScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="GameTitle" type="Label" parent="Margins/Layout/Footer/InfoCard/Info/InfoScroll/Copy"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.97, 0.98, 1)
+theme_override_font_sizes/font_size = 28
+text = "Find your next game"
+autowrap_mode = 3
+
+[node name="GameStatus" type="Label" parent="Margins/Layout/Footer/InfoCard/Info/InfoScroll/Copy"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.77, 0.86, 0.88, 1)
+text = "Walk to a doorway."
+autowrap_mode = 3
+
+[node name="EnterButton" type="Button" parent="Margins/Layout/Footer/InfoCard/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"NavigationButton"
+text = "Find a door"
+disabled = true
+tooltip_text = "Enter the nearby game. E / Enter on keyboard, A on gamepad."
+
+[node name="DirectoryOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Scrim" type="ColorRect" parent="DirectoryOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.07, 0.09, 0.7)
+
+[node name="DirectoryMargins" type="MarginContainer" parent="DirectoryOverlay"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="DirectoryOverlay/DirectoryMargins"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_glass")
+
+[node name="Contents" type="VBoxContainer" parent="DirectoryOverlay/DirectoryMargins/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Header" type="HBoxContainer" parent="DirectoryOverlay/DirectoryMargins/Panel/Contents"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="DirectoryTitle" type="Label" parent="DirectoryOverlay/DirectoryMargins/Panel/Contents/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.95, 0.97, 0.98, 1)
+text = "Town directory"
+autowrap_mode = 3
+
+[node name="DirectoryClose" type="Button" parent="DirectoryOverlay/DirectoryMargins/Panel/Contents/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavigationButton"
+text = "Close"
+tooltip_text = "Return to walking."
+
+[node name="DirectoryHelp" type="Label" parent="DirectoryOverlay/DirectoryMargins/Panel/Contents"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.77, 0.86, 0.88, 1)
+text = "Choose a destination, then follow the HERE marker to its door. Locked games stay closed."
+autowrap_mode = 3
+
+[node name="DirectoryScroll" type="ScrollContainer" parent="DirectoryOverlay/DirectoryMargins/Panel/Contents"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+follow_focus = true
+
+[node name="DirectoryList" type="VBoxContainer" parent="DirectoryOverlay/DirectoryMargins/Panel/Contents/DirectoryScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12

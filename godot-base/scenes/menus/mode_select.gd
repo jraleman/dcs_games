@@ -177,8 +177,7 @@ func _ready() -> void:
 	)
 	first_focus = _single_player_button
 	margins = _margins
-	if GameCatalog.offers_a_choice():
-		back_scene = game_select_scene
+	back_scene = Router.game_selection_return_scene(game_select_scene, back_scene)
 	_select_default_opponent()
 	_populate_cpu_difficulties()
 	_cpu_difficulty.item_selected.connect(_on_cpu_difficulty_selected)
