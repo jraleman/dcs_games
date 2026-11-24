@@ -66,3 +66,7 @@
 	path = godot-base/games/rastro
 	url = git@github.com:jraleman/rastro.git
 	branch = main
+[submodule "godot-base/games/asmr_doctor"]
+	path = godot-base/games/asmr_doctor
+	url = git@github.com:jraleman/asmr_doctor.git
+	branch = main

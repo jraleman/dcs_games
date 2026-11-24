@@ -21,6 +21,7 @@ git submodule update --init --recursive
 | --- | --- |
 | `anti_checkers` | submodule — [jraleman/anti_checkers](https://github.com/jraleman/anti_checkers) |
 | `anti_chess` | submodule — [jraleman/anti_chess](https://github.com/jraleman/anti_chess) |
+| `asmr_doctor` | submodule — [jraleman/asmr_doctor](https://github.com/jraleman/asmr_doctor) |
 | `baloos_chase` | submodule — [jraleman/baloos_chase](https://github.com/jraleman/baloos_chase) |
 | `capitans_walk` | submodule — [jraleman/capitans_walk](https://github.com/jraleman/capitans_walk) |
 | `chicken_pit` | submodule — [jraleman/chicken_pit](https://github.com/jraleman/chicken_pit) |
