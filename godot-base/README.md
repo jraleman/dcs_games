@@ -30,6 +30,7 @@ godot --path . -- --game=tuki_tuki      # Venezuelan DDR-style solo practice/sto
 godot --path . -- --game=yacomio        # five-era 3D evolution, offline resources, cosmetic store and leaps
 godot --path . -- --game=florida_men     # 24-space party board, six 3D minigames, 1-4 humans and CPU guests
 godot --path . -- --game=rastro          # 3D car garage; customization only, no competitions yet
+godot --path . -- --game=asmr_doctor     # illustrated clinic, gentle treatments and optional local mic
 godot --path . -- --game=all            # explicitly select the full collection
 ```
 
@@ -79,12 +80,16 @@ progress or a backup; see *Saves and backups*.
 The collection has a secret alternative selector: enter **Up, Up, Down, Down,
 Left, Right, Left, Right, B, A** on the title screen, using the keyboard arrows
 and B/A keys or a gamepad's D-pad and B/A buttons (east face button, then south).
-No Enter/Start terminator is needed. It immediately opens **Arcade Town**
-(`scenes/menus/arcade_select.tscn`), an original, freely walkable 3D toy town
-with a fixed-angle isometric camera and a little robot mascot. The code has no
-speed requirement; releases and keyboard repeats do not count, wrong presses
-restart it, and losing application focus abandons a partial entry. Only the
-final B/A are intercepted, so ordinary menu navigation still works.
+No Enter/Start terminator is needed. A short **Code accepted** marquee and
+arcade chime give way to a whirl of teal mist, brass sparks, and a soft drum
+roll. The portal pulls in the title and opens onto **Arcade Town**
+(`scenes/menus/arcade_select.tscn`), a freely walkable 3D toy town with a
+fixed-angle isometric camera and a little robot mascot. Reduced motion or
+disabled visual effects use an opacity-only reveal, with no flashes.
+The code has no speed requirement; releases and keyboard repeats do not count,
+wrong presses restart it, and losing application focus abandons a partial
+entry. Only the final B/A are intercepted, so ordinary menu navigation still
+works.
 
 Walk with **WASD/arrows**, the **left stick/D-pad**, or the independent on-screen
 touch pad. At a doorway, use **E/Enter**, **A**, or **Enter** on screen to open
@@ -100,9 +105,10 @@ Storefronts cycle through seven original architectural families: gabled market,
 Art Deco theatre, domed observatory, sawtooth workshop, clocktower hall, retro
 diner and butterfly-roof pavilion. Their roof shapes, porches, windows, trim and
 marquees differ; each keeps its game's colours, numbered entrance and branded
-side poster. Paved crossings, banner lamps, planted tree beds, slatted benches
-and an inlaid fountain plaza give the streets a shared toy-town setting.
-All new scenery is static, including the clock faces and water rings.
+side poster. After-hours lighting pairs warm streetlamps and shop windows
+with cool pavement and illuminated marquees. An inlaid fountain and gently
+turning arcade token mark the arrival plaza. The token stays still with
+reduced motion; walking and door interaction work as usual.
 
 **Title / Esc / B** leaves town (closing the directory first when open).
 Back from setup returns to the chosen doorstep through the router's temporary
@@ -194,6 +200,7 @@ windows use the compact heading caps and wrapping Start labels too.
 | `ui/components/share_preview.tscn` | Modal generated-image preview with close and open-original actions. |
 | `ui/components/splash_motion.gd` | Lightweight animated geometry for logo stings and splash screens. |
 | `games/triangle_rush/` | Triangle Rush: manifest, gameplay scene, targets, options, arcade theme and its own tests. |
+| `games/asmr_doctor/` | ASMR Doctor: self-paced three-patient shifts, six illustrated visitors and treatments, original synthesized soundscapes, explicitly enabled local microphone, journal, rest mode and cosmetic clinic decor. |
 | `games/desk_can_saw/` | Desk-Can-Saw: manifest, gameplay scene, cans, chainsaw cursor, workshop theme and its own tests. |
 | `games/dead_metal_jam/` | Dead Metal Jam: manifest, pitch-detection instrument input, encounters, its own intro and theme, and its own tests. |
 | `games/chicken_pit/` | Chicken Pit: a real 3D toy-farm tug-of-war inside the 2D shell, with deterministic pulling, three CPU birds, Timer/Lives rules, original models/audio, and its own regression coverage. |
@@ -2411,8 +2418,8 @@ cartridge-label materials, backdrop aspect correction and the reduced-motion swi
 320px phone to ultrawide, optional setup details, insertion before routing,
 duplicate-input guards, standalone/collection destinations and reduced motion
 both before and during launch, plus complete keyboard/gamepad Konami entry,
-incorrect/overlapping/repeated inputs, collection-only activation and a fresh
-normal title after leaving town. `game_select_test.gd` does the same for the
+the portal handoff and fade-only fallback, collection-only activation and a
+fresh normal title after leaving town. `game_select_test.gd` does the same for the
 picker's rack: a cartridge per available game, browsing by key, pad, arrow,
 drag and wheel that stops at either end, a single live preview, layouts from a
 portrait phone to ultrawide, and a seating (or reduced-motion fade) that starts

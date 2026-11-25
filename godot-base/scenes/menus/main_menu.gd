@@ -16,6 +16,7 @@ extends MenuScreen
 
 const ConsoleModel = preload("res://ui/components/cartridge_console.gd")
 const KonamiCode = preload("res://scripts/konami_code.gd")
+const ARCADE_PORTAL := preload("res://ui/shaders/arcade_portal.gdshader")
 const LOGO_FACE_SPAN := 2.08
 const COVER_FACE_SPAN := 2.24
 const INSERT_TIME := 0.58
@@ -47,6 +48,15 @@ const INSERT_TIME := 0.58
 @onready var _key_light: DirectionalLight3D = %KeyLight
 @onready var _fill_light: OmniLight3D = %FillLight
 @onready var _focus_accent: ColorRect = %FocusAccent
+@onready var _arcade_reveal: Control = %ArcadeReveal
+@onready var _arcade_display: CenterContainer = %ArcadeDisplay
+@onready var _arcade_marquee: PanelContainer = %ArcadeMarquee
+@onready var _arcade_contents: VBoxContainer = %ArcadeContents
+@onready var _arcade_coin: Label = %ArcadeCoin
+@onready var _arcade_accepted: Label = %ArcadeAccepted
+@onready var _arcade_title: Label = %ArcadeTitle
+@onready var _arcade_light_slot: Control = %ArcadeLightSlot
+@onready var _arcade_trim: ColorRect = %ArcadeTrim
 
 var _menu_buttons: Array[Button] = []
 var _navigation_styles: Dictionary[StringName, StyleBox] = {}
@@ -62,6 +72,8 @@ var _reduced_motion := false
 var _firm_menu_motion := false
 var _logo_intro_tween: Tween
 var _launch_tween: Tween
+var _arcade_reveal_tween: Tween
+var _arcade_reveal_motion := false
 var _konami := KonamiCode.new()
 
 
@@ -102,6 +114,9 @@ func _ready() -> void:
 	_menu_scroll.get_v_scroll_bar().value_changed.connect(
 		func(_value: float) -> void: _sync_focus_accent.call_deferred()
 	)
+	for part: Control in [_arcade_display, _arcade_trim]:
+		_center_pivot(part)
+		part.resized.connect(_center_pivot.bind(part))
 	_apply_theme()
 	_logo_showcase.modulate.a = 0.0
 	_logo_intro_tween = create_tween()
@@ -118,7 +133,7 @@ func _input(event: InputEvent) -> void:
 		return
 	get_viewport().set_input_as_handled()
 	if result == KonamiCode.Result.COMPLETE:
-		_leave_menu(arcade_select_scene)
+		_reveal_arcade()
 
 
 func _notification(what: int) -> void:
@@ -138,6 +153,8 @@ func _on_layout_changed(size: Vector2) -> void:
 	var unit := maxf(1.0, size.x * preference / maxf(get_window().size.x, 1.0) / 1.5)
 	var usable := size.x - _margins.get_theme_constant("margin_left") \
 		- _margins.get_theme_constant("margin_right")
+	if GameCatalog.all().size() >= 2:
+		_fit_arcade_reveal(usable, unit)
 	var column_width := minf(
 		520.0 * unit, usable if portrait
 		else size.x * 0.42 - _margins.get_theme_constant("margin_left")
@@ -244,7 +261,7 @@ func _on_button_focus_exited(button: Button) -> void:
 
 func _sync_focus_accent() -> void:
 	_focus_accent.hide()
-	if _launching_game:
+	if _closing:
 		return
 	for button in _menu_buttons:
 		if not button.has_focus() or not button.is_visible_in_tree():
@@ -281,18 +298,81 @@ func _apply_theme() -> void:
 
 
 func _on_setting_changed(key: String, value: Variant) -> void:
-	if key != "accessibility/reduced_motion":
+	if key == Settings.REDUCED_MOTION_KEY:
+		_reduced_motion = bool(value)
+		set_process(not _reduced_motion and not _closing)
+		if _reduced_motion:
+			if _launching_game and not _launch_routed:
+				# Replace the callback along with the tween so Play still routes.
+				_play_reduced_launch()
+			elif not _closing:
+				_console.park()
+	elif key != Settings.VISUAL_EFFECTS_KEY:
 		return
-	_reduced_motion = bool(value)
-	set_process(not _reduced_motion and not _launching_game)
-	if not _reduced_motion:
-		return
-	if _launching_game and not _launch_routed:
-		# Killing a tween does not emit finished. Replace the pending route with
-		# an opacity-only completion so a live accessibility change cannot trap Play.
-		_play_reduced_launch()
-	else:
-		_console.park()
+	if _arcade_reveal_motion and _arcade_reveal_tween.is_running() \
+		and (_reduced_motion or not Settings.visual_effects_enabled()):
+		_play_arcade_reveal(false)
+
+
+func _center_pivot(part: Control) -> void:
+	part.pivot_offset = part.size * 0.5
+
+
+func _fit_arcade_reveal(usable: float, unit: float) -> void:
+	_arcade_marquee.custom_minimum_size.x = minf(520.0 * unit, usable)
+	_arcade_contents.add_theme_constant_override("separation", roundi(10.0 * unit))
+	_arcade_coin.custom_minimum_size = Vector2.ONE * (82.0 * unit)
+	_arcade_coin.add_theme_font_size_override("font_size", roundi(56.0 * unit))
+	_arcade_accepted.add_theme_font_size_override("font_size", roundi(18.0 * unit))
+	_arcade_title.add_theme_font_size_override("font_size", roundi(52.0 * unit))
+	_arcade_light_slot.custom_minimum_size = Vector2(150, 4) * unit
+	var frame := _arcade_marquee.get_theme_stylebox("panel") as StyleBoxFlat
+	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		frame.set_content_margin(side, 27.0 * unit)
+	frame.set_corner_radius_all(roundi(20.0 * unit))
+	frame.shadow_size = roundi(16.0 * unit)
+	var coin := _arcade_coin.get_theme_stylebox("normal") as StyleBoxFlat
+	coin.set_corner_radius_all(roundi(41.0 * unit))
+	coin.set_border_width_all(roundi(3.0 * unit))
+	coin.shadow_size = roundi(9.0 * unit)
+
+
+func _reveal_arcade() -> void:
+	_closing = true
+	for button in _menu_buttons:
+		button.disabled = true
+	_focus_accent.hide()
+	set_process(false)
+	var motion := not _reduced_motion and Settings.visual_effects_enabled()
+	_arcade_reveal.modulate.a = 0.0
+	_arcade_display.scale = Vector2.ONE * (0.9 if motion else 1.0)
+	_arcade_trim.scale.x = 0.06 if motion else 1.0
+	_arcade_reveal.show()
+	AudioManager.play_level_unlock()
+	_play_arcade_reveal(motion)
+
+
+func _play_arcade_reveal(motion: bool) -> void:
+	if _arcade_reveal_tween and _arcade_reveal_tween.is_valid():
+		_arcade_reveal_tween.kill()
+	_arcade_reveal_motion = motion
+	_arcade_reveal_tween = create_tween().set_parallel(true)
+	_arcade_reveal_tween.tween_property(_arcade_reveal, "modulate:a", 1.0,
+		0.26 if motion else 0.16)
+	if motion:
+		_arcade_reveal_tween.tween_property(_arcade_display, "scale", Vector2.ONE, 0.38) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_arcade_reveal_tween.tween_property(_arcade_trim, "scale:x", 1.0, 0.27) \
+			.set_delay(0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_arcade_reveal_tween.chain().tween_interval(0.10 if motion else 0.20)
+	_arcade_reveal_tween.chain().tween_callback(_enter_arcade.bind(motion))
+
+
+func _enter_arcade(motion: bool) -> void:
+	_arcade_reveal_motion = false
+	if motion:
+		AudioManager.play_portal()
+	Router.goto(arcade_select_scene, true, ARCADE_PORTAL if motion else null)
 
 
 func _on_play_pressed() -> void:

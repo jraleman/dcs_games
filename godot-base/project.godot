@@ -75,6 +75,10 @@ config/name.baloos_chase="Baloo's Chase"
 config/description.baloos_chase="He gets the ball. You do the fetching."
 config/custom_user_dir_name.baloos_chase="DeskCanSaw Games/Baloo's Chase"
 config/icon.baloos_chase="res://games/baloos_chase/assets/icon.svg"
+config/name.asmr_doctor="ASMR Doctor"
+config/description.asmr_doctor="A little care. A little quieter. A self-paced, magical clinic of calm."
+config/custom_user_dir_name.asmr_doctor="DeskCanSaw Games/ASMR Doctor"
+config/icon.asmr_doctor="res://games/asmr_doctor/assets/icon.svg"
 
 [audio]
 
@@ -92,6 +96,7 @@ driver/enable_input.sailor_man=true
 driver/enable_input.capitans_walk=false
 driver/enable_input.puppy_kraft=false
 driver/enable_input.baloos_chase=false
+driver/enable_input.asmr_doctor=true
 
 [autoload]
 
@@ -126,6 +131,7 @@ build/single_game_id.sailor_man="sailor_man"
 build/single_game_id.capitans_walk="capitans_walk"
 build/single_game_id.puppy_kraft="puppy_kraft"
 build/single_game_id.baloos_chase="baloos_chase"
+build/single_game_id.asmr_doctor="asmr_doctor"
 
 [display]
 
@@ -143,6 +149,7 @@ window/handheld/orientation.lazer_nfc=1
 window/handheld/orientation.tifo_beato=6
 window/handheld/orientation.florida_men=6
 window/handheld/orientation.rastro=6
+window/handheld/orientation.asmr_doctor=6
 
 [editor]
 

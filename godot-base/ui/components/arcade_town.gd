@@ -10,6 +10,10 @@ const DOOR_REACH := 2.4
 const SHOP_PITCH := Vector2(11.0, 13.0)
 const CAMERA_OFFSET := Vector3(15.0, 23.0, 18.0)
 const SPAWN := Vector3(0.0, 0.0, 12.0)
+const INK := Color("24233c")
+const AQUA := Color("82f2df")
+const AMBER := Color("ffce82")
+const COIN_HEADING := 0.65
 const SHOP_PROFILES := [
 	{"style": &"gable", "height": 3.55, "roof": Color("a96850")},
 	{"style": &"deco", "height": 4.45, "roof": Color("536b76")},
@@ -33,6 +37,8 @@ var _mascot: Node3D
 var _limbs: Array[Node3D] = []
 var _camera: Camera3D
 var _destination: Node3D
+var _plaza_coin: Node3D
+var _coin_phase := 0.0
 var _walk_input := Vector2.ZERO
 var _nearby_id := ""
 var _bounds := Rect2()
@@ -49,18 +55,18 @@ var _wood: StandardMaterial3D
 func _ready() -> void:
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color("bedde0")
+	environment.background_color = Color("17182d")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("dce9ec")
-	environment.ambient_light_energy = 0.35
+	environment.ambient_light_color = Color("a6b0dc")
+	environment.ambient_light_energy = 0.48
 	environment.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	var world_environment := WorldEnvironment.new()
 	world_environment.environment = environment
 	add_child(world_environment)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-58, -35, 0)
-	sun.light_color = Color("fff0d4")
-	sun.light_energy = 0.65
+	sun.light_color = Color("cdcfff")
+	sun.light_energy = 0.62
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 55.0
 	add_child(sun)
@@ -71,18 +77,19 @@ func _ready() -> void:
 	_camera.far = 150.0
 	add_child(_camera)
 	_camera.current = true
+	set_process(false)
 	set_physics_process(false)
 
 
 ## The catalog supplies order and identity; adding a game needs no town edit.
 func configure(manifests: Array[GameManifest]) -> void:
 	assert(_walker == null, "ArcadeTown is configured once per visit.")
-	_stone = _material(Color("d8d1bc"))
-	_ink = _material(Color("263e48"))
-	_cream = _material(Color("f6ead3"))
-	_grass = _material(Color("89b79a"))
-	_foliage = _material(Color("65947d"))
-	_wood = _material(Color("ad8462"))
+	_stone = _material(Color("657495"))
+	_ink = _material(INK)
+	_cream = _material(Color("c6c8e3"))
+	_grass = _material(Color("33566c"))
+	_foliage = _material(Color("3d8287"))
+	_wood = _material(Color("a86e77"))
 	var columns := mini(4, maxi(1, ceili(sqrt(float(manifests.size())))))
 	var rows := maxi(1, ceili(float(manifests.size()) / columns))
 	var width := columns * SHOP_PITCH.x + 8.0
@@ -100,14 +107,15 @@ func configure(manifests: Array[GameManifest]) -> void:
 	_destination = Node3D.new()
 	_destination.name = "Destination"
 	add_child(_destination)
-	_cylinder(_destination, 1.0, 0.045, Vector3(0, 0.08, 0),
-		_material(Color("f6c76c")))
-	_cylinder(_destination, 0.79, 0.05, Vector3(0, 0.1, 0), _stone)
-	var beacon := _label(_destination, "HERE", Vector3(0, 3.0, 0), 56)
+	_cylinder(_destination, 1.1, 0.035, Vector3(0, 0.12, 0), _ink)
+	_ring(_destination, 0.88, 1.07, Vector3(0, 0.145, 0), _neon(AMBER)).scale.y = 0.14
+	var beacon := _label(_destination, "HERE", Vector3(0, 2.95, 0), 64)
+	beacon.modulate = AMBER
 	beacon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	beacon.no_depth_test = true
 	_destination.hide()
 	_follow_camera(0.0, true)
+	set_process(not _reduced_motion)
 	set_physics_process(true)
 
 
@@ -116,9 +124,10 @@ func set_walk_input(direction: Vector2) -> void:
 	_walk_input = direction.limit_length()
 
 
-## Essential walking remains; bob, limb swing and camera easing do not.
+## Essential walking remains; ambient motion and camera easing do not.
 func set_reduced_motion(enabled: bool) -> void:
 	_reduced_motion = enabled
+	set_process(not enabled and _plaza_coin != null)
 	if _mascot != null and enabled:
 		_pose_walker(false, 0.0)
 		_follow_camera(0.0, true)
@@ -128,7 +137,7 @@ func set_reduced_motion(enabled: bool) -> void:
 func set_game_open(id: String, is_open: bool) -> void:
 	assert(_statuses.has(id), "Only catalog storefronts can change status.")
 	_statuses[id].text = "OPEN" if is_open else "LOCKED"
-	_statuses[id].modulate = Color("effce9") if is_open else Color("ffe0ad")
+	_statuses[id].modulate = AQUA if is_open else AMBER
 	_locks[id].visible = not is_open
 
 
@@ -179,8 +188,15 @@ func nearby_game() -> String:
 
 
 ## Match the real viewport rather than rendering a desktop canvas on a phone.
-func fit_camera(aspect: float) -> void:
-	_camera.size = clampf(24.0 / sqrt(maxf(aspect, 0.2)), 20.0, 35.0)
+func fit_camera(aspect: float, short_landscape: bool) -> void:
+	_camera.size = clampf(25.0 / sqrt(maxf(aspect, 0.2)), 21.0, 35.0)
+	# Frame the streets ahead, but keep the walker above the close-up card.
+	_camera.v_offset = _camera.size * (0.035 if short_landscape else 0.1)
+
+
+func _process(delta: float) -> void:
+	_coin_phase = fmod(_coin_phase + delta, TAU)
+	_plaza_coin.rotation.y = COIN_HEADING + sin(_coin_phase) * 0.38
 
 
 func _physics_process(delta: float) -> void:
@@ -244,11 +260,14 @@ func _update_occlusion() -> void:
 func _build_streets(columns: int, rows: int) -> void:
 	var center := _bounds.get_center()
 	var area := Vector3(_bounds.size.x, 0.45, _bounds.size.y)
-	_box(self, area + Vector3(1, 0, 1), Vector3(center.x, -0.5, center.y), _ink)
+	_box(self, area + Vector3(1.7, 0.45, 1.7), Vector3(center.x, -0.8, center.y), _ink)
+	_box(self, area + Vector3(1.8, -0.36, 1.8), Vector3(center.x, -0.55, center.y),
+		_neon(Color("6266ae")))
+	_box(self, area + Vector3(1, 0, 1), Vector3(center.x, -0.28, center.y), _ink)
 	_box(self, area, Vector3(center.x, -0.23, center.y), _grass)
-	var road := _material(Color("607e83"))
-	var joint := _material(Color("b4b5a4"))
-	var light := _material(Color("fff0bc"))
+	var road := _material(Color("3d4463"))
+	var joint := _material(Color("4a5775"))
+	var light := _neon(AMBER)
 	for row in rows:
 		var street := Node3D.new()
 		street.name = "Street_%02d" % row
@@ -286,13 +305,11 @@ func _build_streets(columns: int, rows: int) -> void:
 	for side: float in [-1.0, 1.0]:
 		var x := side * (_bounds.size.x * 0.5 - 0.3)
 		var z := center.y
-		_box(self, Vector3(0.18, 0.55, _bounds.size.y),
-			Vector3(x, 0.27, z), _cream)
+		_box(self, Vector3(0.24, 0.55, _bounds.size.y), Vector3(x, 0.27, z), _ink)
 		_solid(self, Vector3(0.4, 2, _bounds.size.y),
 			Vector3(x, 1, z))
 		var end_z := _bounds.position.y if side < 0 else _bounds.end.y
-		_box(self, Vector3(_bounds.size.x, 0.55, 0.18),
-			Vector3(0, 0.27, end_z), _cream)
+		_box(self, Vector3(_bounds.size.x, 0.55, 0.24), Vector3(0, 0.27, end_z), _ink)
 		_solid(self, Vector3(_bounds.size.x, 2, 0.4),
 			Vector3(0, 1, end_z))
 	_batch_geometry(self)
@@ -309,14 +326,14 @@ func _build_shop(manifest: GameManifest, index: int, at: Vector3) -> void:
 	var profile: Dictionary = SHOP_PROFILES[index % SHOP_PROFILES.size()]
 	var style: StringName = profile["style"]
 	var height := float(profile["height"]) + posmod(manifest.id.hash(), 3) * 0.1
-	var accent := _material(presentation.accent.lerp(Color("f6ead3"), 0.14))
-	var wall := _material(Color("eee3cf").lerp(presentation.accent, 0.12))
-	var dark := _material(presentation.plaque_color.lerp(Color("263e48"), 0.7))
-	var glass := _material(Color("648c9b").lerp(presentation.accent, 0.12))
-	glass.roughness = 0.35
+	var accent := _material(presentation.accent.lightened(0.13))
+	var sign_light := _neon(presentation.accent.lightened(0.32))
+	var wall := _material(Color("929abd").lerp(presentation.accent, 0.2))
+	var dark := _material(presentation.plaque_color.lerp(INK, 0.7))
+	var glass := _neon(Color("dfa16d").lerp(presentation.accent, 0.24))
 	var roof_color: Color = profile["roof"]
-	var roof := _material(roof_color.lerp(presentation.accent, 0.28))
-	var trim := _material(Color("d9b67f").lerp(presentation.accent, 0.12))
+	var roof := _material(roof_color.lerp(INK, 0.35).lerp(presentation.accent, 0.22))
+	var trim := _material(Color("b9a2c2").lerp(presentation.accent, 0.2))
 	_box(shop, Vector3(7.8, 0.16, 5.85), Vector3(0, 0.1, 0), _stone)
 	if style in [&"diner", &"dome"]:
 		var body := _profile_mesh(shop, _clipped_rectangle(Vector2(7, 5), 0.55),
@@ -365,11 +382,14 @@ func _build_shop(manifest: GameManifest, index: int, at: Vector3) -> void:
 	var inset_shape := Transform2D(0.0, Vector2.ZERO).scaled(
 		Vector2(0.965, 0.84)) * sign_shape
 	_profile_mesh(shop, inset_shape, 0.08, Vector3(0, sign_y, 3.26), dark)
+	for side: float in [-1.0, 1.0]:
+		_box(shop, Vector3(6.52, 0.049, 0.038),
+			Vector3(0, sign_y + side * 0.48, 3.32), sign_light)
 	if style == &"deco":
 		for bulb in 13:
 			for side: float in [-1.0, 1.0]:
 				_box(shop, Vector3.ONE * 0.09,
-					Vector3(-3.35 + bulb * 0.56, sign_y + side * 0.61, 3.28), wall)
+					Vector3(-3.35 + bulb * 0.56, sign_y + side * 0.61, 3.28), sign_light)
 	var title := _label(shop, manifest.title,
 		Vector3(0.65, sign_y, 3.32), 62)
 	title.width = 530
@@ -402,6 +422,7 @@ func _build_shop(manifest: GameManifest, index: int, at: Vector3) -> void:
 	shutter.hide()
 	_locks[manifest.id] = shutter
 	_box(shop, Vector3(2.2, 0.06, 1.1), Vector3(0, 0.07, 3.8), accent)
+	_box(shop, Vector3(2.2, 0.025, 0.07), Vector3(0, 0.1, 4.32), sign_light)
 	_shop_bounds[manifest.id] = shop.transform * _facade_bounds(shop)
 	_shop_materials[manifest.id] = _batch_geometry(shop)
 
@@ -614,9 +635,9 @@ func _facade_bounds(shop: Node3D) -> AABB:
 func _batch_geometry(
 	parent: Node3D, recursive := false
 ) -> Array[StandardMaterial3D]:
-	# Vertex paint joins colour changes without losing the windows' glossier finish.
+	# Keep illuminated inserts separate without a draw call per colour or bulb.
 	# Shop shutters stay separate; static street districts can be baked recursively.
-	var surfaces: Dictionary[float, SurfaceTool] = {}
+	var surfaces: Dictionary[Vector2, SurfaceTool] = {}
 	var children := parent.get_children()
 	if recursive:
 		children = parent.find_children("*", "MeshInstance3D", true, false)
@@ -627,7 +648,7 @@ func _batch_geometry(
 		var material := instance.material_override as StandardMaterial3D
 		assert(material != null, "Town geometry requires an explicit material.")
 		assert(material.albedo_texture == null, "Town baking expects untextured geometry.")
-		var finish := material.roughness
+		var finish := Vector2(material.roughness, material.shading_mode)
 		if not surfaces.has(finish):
 			var surface := SurfaceTool.new()
 			surface.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -651,7 +672,8 @@ func _batch_geometry(
 	for finish in surfaces:
 		surfaces[finish].index()
 		var material := _material(Color.WHITE)
-		material.roughness = finish
+		material.roughness = finish.x
+		material.shading_mode = int(finish.y) as BaseMaterial3D.ShadingMode
 		material.vertex_color_use_as_albedo = true
 		material.vertex_color_is_srgb = true
 		materials.append(material)
@@ -663,18 +685,22 @@ func _build_plaza() -> void:
 	var plaza := Node3D.new()
 	plaza.name = "Plaza"
 	add_child(plaza)
-	var gold := _material(Color("d9b16c"))
-	var water := _material(Color("68adb7"))
-	var ripple := _material(Color("a2d4d1"))
+	var gold := _material(Color("ca915c"))
+	var water := _material(Color("367e93"))
+	var ripple := _neon(Color("79ccc9"))
+	var lamp_glass := _neon(AMBER)
 	_cylinder(plaza, 9.3, 0.07, Vector3(0, 0.02, 6), _ink)
 	_cylinder(plaza, 9.05, 0.075, Vector3(0, 0.035, 6), _stone)
-	var border := _ring(plaza, 8.55, 8.7, Vector3(0, 0.09, 6), _cream)
+	var border := _ring(plaza, 8.55, 8.7, Vector3(0, 0.09, 6), ripple)
 	border.scale.y = 0.15
 	for spoke in 16:
 		var angle := spoke * TAU / 16.0
 		var seam := _box(plaza, Vector3(0.035, 0.008, 5.6),
-			Vector3(sin(angle) * 5.55, 0.077, 6 + cos(angle) * 5.55), _cream)
+			Vector3(sin(angle) * 5.55, 0.077, 6 + cos(angle) * 5.55), _ink)
 		seam.rotation.y = angle
+		var inlay := _box(plaza, Vector3(0.25, 0.013, 0.52),
+			Vector3(sin(angle) * 7.95, 0.085, 6 + cos(angle) * 7.95), ripple)
+		inlay.rotation.y = angle
 	_cylinder(plaza, 2.65, 0.15, Vector3(0, 0.16, 6), _ink)
 	_cylinder(plaza, 2.5, 0.34, Vector3(0, 0.33, 6), _cream)
 	_cylinder(plaza, 2.22, 0.035, Vector3(0, 0.52, 6), water)
@@ -686,12 +712,7 @@ func _build_plaza() -> void:
 	_cylinder(plaza, 0.7, 0.2, Vector3(0, 0.65, 6), gold)
 	_cylinder(plaza, 0.48, 1.1, Vector3(0, 1.15, 6), _ink)
 	_cylinder(plaza, 0.64, 0.18, Vector3(0, 1.71, 6), gold)
-	var sculpture := _box(plaza, Vector3(1.2, 1.2, 1.2),
-		Vector3(0, 2.35, 6), gold)
-	sculpture.rotation_degrees = Vector3(0, 35, 15)
-	var crown := _box(plaza, Vector3(0.48, 0.48, 0.48),
-		Vector3(0.12, 3.16, 6), _cream)
-	crown.rotation_degrees = Vector3(0, 35, -15)
+	_pool_light(plaza, Vector3(0, 2.2, 6), AQUA, 7.5, 0.9)
 	var plinth := StaticBody3D.new()
 	add_child(plinth)
 	var shape := CylinderShape3D.new()
@@ -716,6 +737,7 @@ func _build_plaza() -> void:
 			_box(bench, Vector3(0.1, 0.45, 0.65), Vector3(leg, 0.94, 0), _ink)
 		_solid(bench, Vector3(2.6, 1.3, 0.9), Vector3(0, 0.65, 0))
 		_tree(plaza, Vector3(side * 10, 0, 12), 2)
+		_lamp(plaza, Vector3(side * 9.9, 0, 7.7), lamp_glass)
 		_box(plaza, Vector3(2.1, 0.28, 1.0), Vector3(side * 9.1, 0.2, 7.7), _cream)
 		for bush in 3:
 			_sphere(plaza, Vector3(0.5, 0.4, 0.4),
@@ -731,8 +753,27 @@ func _build_plaza() -> void:
 		0.2, Vector3(0, 2.5, 0), gold)
 	_profile_mesh(sign, _clipped_rectangle(Vector2(4.45, 1.26), 0.16),
 		0.08, Vector3(0, 2.5, 0.15), _ink)
-	_label(sign, "DCS\nARCADE TOWN", Vector3(0, 2.5, 0.21), 48)
+	_label(sign, "ARCADE TOWN\nAFTER HOURS", Vector3(0, 2.5, 0.21), 48)
 	_batch_geometry(plaza, true)
+	_build_plaza_coin(plaza, gold)
+
+
+func _build_plaza_coin(plaza: Node3D, gold: StandardMaterial3D) -> void:
+	_plaza_coin = Node3D.new()
+	_plaza_coin.name = "PlazaCoin"
+	_plaza_coin.position = Vector3(0, 2.95, 6)
+	_plaza_coin.rotation.y = COIN_HEADING
+	plaza.add_child(_plaza_coin)
+	var face := _material(Color("784a67"))
+	var glow := _neon(AMBER)
+	_disc(_plaza_coin, 1.13, 0.32, Vector3.ZERO, gold)
+	for side: float in [-1.0, 1.0]:
+		_disc(_plaza_coin, 0.94, 0.05, Vector3(0, 0, side * 0.16), face)
+		var rim := _ring(_plaza_coin, 0.94, 1.05, Vector3(0, 0, side * 0.18), glow)
+		rim.rotation.x = PI * 0.5
+		_box(_plaza_coin, Vector3(1.13, 0.28, 0.048), Vector3(0, 0, side * 0.195), glow)
+		_box(_plaza_coin, Vector3(0.28, 1.13, 0.054), Vector3(0, 0, side * 0.195), glow)
+	_batch_geometry(_plaza_coin)
 
 
 func _tree(parent: Node3D, at: Vector3, variant: int) -> void:
@@ -767,6 +808,16 @@ func _lamp(parent: Node3D, at: Vector3, light: StandardMaterial3D) -> void:
 	_box(lamp, Vector3(0.56, 1.0, 0.055), Vector3(0.35, 2.4, 0), _wood)
 	_box(lamp, Vector3(0.1, 0.65, 0.07), Vector3(0.35, 2.4, 0.04), _cream)
 	_solid(lamp, Vector3(0.5, 3.3, 0.5), Vector3(0, 1.65, 0))
+	_pool_light(lamp, Vector3(-0.53, 2.8, 0), AMBER, 5.5, 0.82)
+
+
+func _pool_light(parent: Node3D, at: Vector3, tint: Color, reach: float, energy: float) -> void:
+	var light := OmniLight3D.new()
+	light.position = at
+	light.light_color = tint
+	light.light_energy = energy
+	light.omni_range = reach
+	parent.add_child(light)
 
 
 func _build_walker() -> void:
@@ -786,17 +837,19 @@ func _build_walker() -> void:
 	_mascot.name = "Mascot"
 	_mascot.rotation.y = 0.55
 	_walker.add_child(_mascot)
-	var jacket := _material(Color("63b7cc"))
-	var boots := _material(Color("ecab56"))
+	var jacket := _material(Color("62d3d5"))
+	var boots := _material(AMBER)
+	var glow := _neon(AQUA)
+	_ring(_walker, 0.65, 0.74, Vector3(0, 0.09, 0), glow).scale.y = 0.15
 	_box(_mascot, Vector3(0.82, 0.72, 0.52), Vector3(0, 1.07, 0), jacket)
 	_sphere(_mascot, Vector3(0.49, 0.38, 0.38), Vector3(0, 1.72, 0), _cream)
 	_box(_mascot, Vector3(0.66, 0.24, 0.12), Vector3(0, 1.74, 0.35), _ink)
 	for side: float in [-1.0, 1.0]:
 		_sphere(_mascot, Vector3.ONE * 0.055,
-			Vector3(side * 0.17, 1.76, 0.43), _cream)
+			Vector3(side * 0.17, 1.76, 0.43), glow)
 	_box(_mascot, Vector3(0.53, 0.48, 0.26), Vector3(0, 1.13, -0.36), boots)
 	_cylinder(_mascot, 0.045, 0.22, Vector3(0, 2.15, 0), _ink)
-	_sphere(_mascot, Vector3.ONE * 0.1, Vector3(0, 2.28, 0), boots)
+	_sphere(_mascot, Vector3.ONE * 0.1, Vector3(0, 2.28, 0), _neon(AMBER))
 	for index in 4:
 		var limb := Node3D.new()
 		var side := -1.0 if index % 2 == 0 else 1.0
@@ -808,7 +861,8 @@ func _build_walker() -> void:
 		_box(limb, Vector3(0.23, 0.46, 0.3), Vector3(0, -0.22, 0), jacket)
 		_box(limb, Vector3(0.29, 0.22, 0.4),
 			Vector3(0, -0.49, 0.05), _cream if arm else boots)
-	var marker := _label(_walker, "YOU", Vector3(0, 2.9, 0), 32)
+	var marker := _label(_walker, "YOU", Vector3(0, 2.9, 0), 42)
+	marker.modulate = AQUA
 	marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	marker.no_depth_test = true
 
@@ -828,6 +882,12 @@ func _material(color: Color) -> StandardMaterial3D:
 	material.albedo_color = color
 	material.roughness = 0.95
 	material.metallic_specular = 0.25
+	return material
+
+
+func _neon(color: Color) -> StandardMaterial3D:
+	var material := _material(color)
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	return material
 
 
@@ -971,6 +1031,6 @@ func _label(parent: Node3D, text: String, at: Vector3, font_size: int) -> Label3
 	label.pixel_size = 0.01
 	label.outline_size = 8
 	label.modulate = Color("fff4db")
-	label.outline_modulate = Color("263e48")
+	label.outline_modulate = INK
 	parent.add_child(label)
 	return label

@@ -27,6 +27,8 @@ const PAD_HELP := "Stick / D-pad: walk   A: enter   Y: directory   B: title"
 @onready var _world_container: SubViewportContainer = %WorldContainer
 @onready var _margins: MarginContainer = %Margins
 @onready var _layout: VBoxContainer = %Layout
+@onready var _header: HBoxContainer = %Header
+@onready var _brand: PanelContainer = %Brand
 @onready var _heading: Label = %Heading
 @onready var _subtitle: Label = %Subtitle
 @onready var _controls: Label = %Controls
@@ -36,8 +38,10 @@ const PAD_HELP := "Stick / D-pad: walk   A: enter   Y: directory   B: title"
 @onready var _walk_pad: WalkPad = %WalkPad
 @onready var _info_card: PanelContainer = %InfoCard
 @onready var _info_scroll: ScrollContainer = %InfoScroll
+@onready var _info_eyebrow: Label = %InfoEyebrow
 @onready var _game_title: Label = %GameTitle
 @onready var _game_status: Label = %GameStatus
+@onready var _wayfinding_chip: PanelContainer = %WayfindingChip
 @onready var _wayfinding: Label = %Wayfinding
 @onready var _enter_button: Button = %EnterButton
 @onready var _directory: Control = %DirectoryOverlay
@@ -80,7 +84,7 @@ func _ready() -> void:
 	if returning and GameCatalog.has(GameCatalog.current_id()):
 		_town.stand_at_game(GameCatalog.current_id())
 	_refresh_info()
-	_subtitle.text = "%d games. One little town." % GameCatalog.all().size()
+	_subtitle.text = "AFTER HOURS  /  %02d GAMES" % GameCatalog.all().size()
 	_controls.text = PAD_HELP if GameSession.gamepad_connected() else KEY_HELP
 	_controls.tooltip_text = KEY_HELP + "\n" + PAD_HELP
 	_controls.accessibility_description = _controls.tooltip_text
@@ -278,7 +282,8 @@ func _handle_touch_press(event: InputEventScreenTouch, threshold: float) -> bool
 			buttons.append(_directory_close)
 			buttons.append_array(_directory_buttons.values())
 		for button in buttons:
-			if not button.disabled and button.get_global_rect().has_point(event.position):
+			if button.is_visible_in_tree() and not button.disabled \
+				and button.get_global_rect().has_point(event.position):
 				_touch_buttons[event.index] = button
 				_touch_origins[event.index] = event.position
 				return true
@@ -335,7 +340,7 @@ func _build_directory() -> void:
 	for manifest in GameCatalog.all():
 		var button := Button.new()
 		button.name = "Destination_" + manifest.id
-		button.theme_type_variation = &"NavigationButton"
+		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -373,18 +378,21 @@ func _on_game_approached(_id: String) -> void:
 
 func _refresh_info() -> void:
 	var id := _town.nearby_game()
+	_enter_button.visible = not id.is_empty()
+	_fit_card_height(viewport_size().y)
 	if id.is_empty():
-		_game_title.text = "Find your next game"
-		_game_status.text = "Walk to a doorway. The directory can mark one for you."
-		_enter_button.text = "Find a door"
+		_info_eyebrow.text = "ARCADE GUIDE"
+		_game_title.text = "Pick a storefront"
+		_game_status.text = "Walk to a door, or pin one in the directory."
 		_enter_button.disabled = true
-		_enter_button.accessibility_name = "Walk to a game doorway to enter."
-		_enter_button.accessibility_description = _game_status.text
 		_game_title.tooltip_text = _game_title.text
 		_game_status.tooltip_text = _game_status.text
 		return
 	var manifest := GameCatalog.get_manifest(id)
 	var is_open := AchievementManager.is_game_unlocked(id)
+	_info_eyebrow.text = "DOOR %02d  /  %s" % [
+		GameCatalog.all().find(manifest) + 1, "OPEN" if is_open else "LOCKED",
+	]
 	_game_title.text = manifest.title
 	_game_status.text = manifest.tagline if is_open else _lock_description(id)
 	_enter_button.text = "Enter" if is_open else "Locked"
@@ -426,7 +434,7 @@ func _choose_destination(id: String) -> void:
 	_destination_id = id
 	_last_wayfinding = ""
 	_town.mark_destination(id)
-	_wayfinding.show()
+	_wayfinding_chip.show()
 	_set_directory_open(false)
 
 
@@ -474,7 +482,22 @@ func _fit_world() -> void:
 	_world_container.stretch_shrink = maxi(
 		1, floori(viewport_size().x / maxf(get_window().size.x, 1))
 	)
-	_town.fit_camera(_world_container.size.x / maxf(_world_container.size.y, 1.0))
+	var height := maxf(_world_container.size.y, 1.0)
+	var aspect := _world_container.size.x / height
+	_town.fit_camera(aspect, aspect >= 1.0 and height / _unit < 750.0)
+
+
+func _fit_card_height(height: float) -> void:
+	var card_height := 242.0 if _enter_button.visible else 162.0
+	_info_card.custom_minimum_size.y = minf(card_height * _unit, height * 0.38)
+
+
+func _fit_panel_padding(panel: PanelContainer, padding: Vector2) -> void:
+	var style := panel.get_theme_stylebox("panel")
+	for side in [SIDE_LEFT, SIDE_RIGHT]:
+		style.set_content_margin(side, padding.x * _unit)
+	for side in [SIDE_TOP, SIDE_BOTTOM]:
+		style.set_content_margin(side, padding.y * _unit)
 
 
 func _on_layout_changed(area: Vector2) -> void:
@@ -485,28 +508,39 @@ func _on_layout_changed(area: Vector2) -> void:
 	var gap := 16.0 * _unit
 	var side := _margins.get_theme_constant("margin_left")
 	var inner_width := area.x - 2 * side
+	_fit_panel_padding(_brand, Vector2(22, 12))
+	# The doorway card, wayfinding chip and directory share one scene-local style.
+	_fit_panel_padding(_info_card, Vector2(22, 14))
 	_layout.add_theme_constant_override("separation", roundi(gap))
+	_header.add_theme_constant_override("separation", roundi(12 * _unit))
 	_footer.add_theme_constant_override("separation", roundi(gap))
 	_heading.add_theme_font_size_override("font_size", roundi((30 if compact else 42) * _unit))
 	_heading.text = "Arcade" if compact else "Arcade Town"
 	_heading.accessibility_name = "Arcade Town"
 	_heading.tooltip_text = "Arcade Town"
 	_subtitle.visible = not compact
-	_subtitle.add_theme_font_size_override("font_size", roundi(20 * _unit))
+	_subtitle.add_theme_font_size_override("font_size", roundi(16 * _unit))
 	_controls.visible = not compact and not _touch_mode
 	_controls.add_theme_font_size_override("font_size", roundi(18 * _unit))
 	var pad := minf(210.0 * _unit, inner_width * 0.36) if _touch_mode else 0.0
+	var card_width := minf(560.0 * _unit, inner_width - pad - (gap if _touch_mode else 0.0))
 	_walk_pad.custom_minimum_size = Vector2.ONE * pad
-	_info_card.custom_minimum_size = Vector2(
-		minf(660.0 * _unit, inner_width - pad - (gap if _touch_mode else 0.0)),
-		minf((250 if compact else 220) * _unit, area.y * 0.36)
+	_info_card.custom_minimum_size.x = card_width
+	_controls.custom_minimum_size.x = minf(
+		640.0 * _unit, maxf(0, inner_width - card_width - gap * 2.0)
 	)
+	_fit_card_height(area.y)
+	_wayfinding_chip.custom_minimum_size.x = minf(480.0 * _unit, inner_width)
 	for button: Button in [
 		_directory_button, _back_button, _enter_button, _directory_close,
 	]:
 		button.custom_minimum_size.y = 72.0 * _unit
 		button.add_theme_font_size_override("font_size", roundi(24 * _unit))
 	_directory_button.text = "Map" if compact else "Directory"
+	_directory_button.custom_minimum_size.x = 68.0 * _unit
+	_back_button.custom_minimum_size.x = 68.0 * _unit
+	_info_eyebrow.visible = area.y / _unit >= 640.0
+	_info_eyebrow.add_theme_font_size_override("font_size", roundi(16 * _unit))
 	_game_title.add_theme_font_size_override("font_size", roundi(28 * _unit))
 	for label: Label in [_game_status, _wayfinding, _directory_help]:
 		label.add_theme_font_size_override("font_size", roundi(20 * _unit))
@@ -515,7 +549,10 @@ func _on_layout_changed(area: Vector2) -> void:
 		button.custom_minimum_size.y = 76.0 * _unit
 		button.add_theme_font_size_override("font_size", roundi(24 * _unit))
 	_directory_list.add_theme_constant_override("separation", roundi(12 * _unit))
-	for edge in ["left", "right", "top", "bottom"]:
+	var directory_side := maxi(side, roundi((area.x - 1050.0 * _unit) * 0.5))
+	for edge in ["left", "right"]:
+		_directory_margins.add_theme_constant_override("margin_" + edge, directory_side)
+	for edge in ["top", "bottom"]:
 		_directory_margins.add_theme_constant_override("margin_" + edge,
 			_margins.get_theme_constant("margin_" + edge))
 	_fit_world()

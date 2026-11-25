@@ -4,12 +4,13 @@ extends Node
 ## layer (fade rectangle and FPS counter).
 ##
 ## Use `Router.goto("res://scenes/...")` instead of `change_scene_to_file()` so
-## every transition looks the same and the tree is never swapped mid-fade.
+## the overlay and input lock stay in place across the scene swap.
 
 signal scene_changed(path: String)
 signal transition_finished(path: String)
 
 const FADE_TIME := 0.3
+const WIPE_TIME := 0.7
 const OVERLAY_LAYER := 128
 
 var current_scene_path := ""
@@ -18,6 +19,7 @@ var _layer: CanvasLayer
 var _fade: ColorRect
 var _fps: Label
 var _busy := false
+var _wipe_moving := false
 var _game_selection_origin := ""
 
 
@@ -90,8 +92,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## Fades out, swaps to [param path], then fades back in.
-func goto(path: String, fade := true) -> void:
+## Covers the screen, swaps to [param path], then uncovers it. A [param wipe]
+## reads ColorRect alpha as coverage (0 clear, 1 black). The router sets
+## `uncovering` on arrival and `frozen_coverage` if motion is turned off mid-wipe.
+func goto(path: String, fade := true, wipe: Shader = null) -> void:
 	if _busy or path.is_empty():
 		return
 	if not ResourceLoader.exists(path):
@@ -101,6 +105,13 @@ func goto(path: String, fade := true) -> void:
 	_busy = true
 	_fade.mouse_filter = Control.MOUSE_FILTER_STOP
 	if fade:
+		if wipe != null and _wipe_allowed():
+			var overlay := ShaderMaterial.new()
+			overlay.shader = wipe
+			overlay.set_shader_parameter("uncovering", false)
+			overlay.set_shader_parameter("frozen_coverage", -1.0)
+			_fade.material = overlay
+			_wipe_moving = true
 		await _fade_to(1.0)
 
 	# A paused tree would freeze the incoming scene as well.
@@ -115,7 +126,13 @@ func goto(path: String, fade := true) -> void:
 	# Give the new scene one frame to build before revealing it.
 	await get_tree().process_frame
 	if fade:
+		if _wipe_moving:
+			(_fade.material as ShaderMaterial).set_shader_parameter("uncovering", true)
+		else:
+			_fade.material = null
 		await _fade_to(0.0)
+	_fade.material = null
+	_wipe_moving = false
 	_busy = false
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	transition_finished.emit(current_scene_path)
@@ -180,11 +197,20 @@ func quit_game() -> void:
 
 func _fade_to(alpha: float) -> void:
 	var tween := create_tween()
-	tween.tween_property(_fade, "color:a", alpha, FADE_TIME)
+	tween.tween_property(_fade, "color:a", alpha, WIPE_TIME if _wipe_moving else FADE_TIME)
 	await tween.finished
+
+
+func _wipe_allowed() -> bool:
+	return not Settings.reduced_motion_enabled() and Settings.visual_effects_enabled()
 
 
 func _on_setting_changed(key: String, value: Variant) -> void:
 	if key == "ui/show_fps":
 		_fps.visible = bool(value)
 		set_process(_fps.visible)
+	elif _wipe_moving and key in [Settings.REDUCED_MOTION_KEY, Settings.VISUAL_EFFECTS_KEY] \
+		and not _wipe_allowed():
+		# Park the rim and distortion while the same tween completes its fade.
+		(_fade.material as ShaderMaterial).set_shader_parameter("frozen_coverage", _fade.color.a)
+		_wipe_moving = false

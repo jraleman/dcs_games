@@ -921,10 +921,11 @@ func _test_arcade_catalog_and_gates() -> void:
 		"Town must include every catalog game, even a hidden, locked storefront.")
 	_expect((screen.get_node("%WorldViewport") as SubViewport).own_world_3d,
 		"The selector's 3D world must be isolated from games and other menu viewports.")
+	var enter := screen.get_node("%EnterButton") as Button
+	_expect(not enter.visible, "Arrival guidance should not show an action before reaching a door.")
 	town.call("stand_at_game", manifest.id)
 	await physics_frame
-	var enter := screen.get_node("%EnterButton") as Button
-	_expect(enter.disabled and enter.text == "Locked"
+	_expect(enter.visible and enter.disabled and enter.text == "Locked"
 		and (screen.get_node("%GameStatus") as Label).text.contains("town test challenge"),
 		"A locked door must show its real requirement and refuse entry.")
 	_expect((town.get("_locks") as Dictionary)[manifest.id].visible,
@@ -1011,6 +1012,8 @@ func _test_arcade_controls() -> void:
 	walker.position = Town.SPAWN
 	var camera := town.get("_camera") as Camera3D
 	var angle := camera.rotation
+	var coin := town.get_node("Plaza/PlazaCoin") as Node3D
+	var arrival_pose := coin.rotation
 	_arcade_key(KEY_W, true)
 	await _physics_frames(16)
 	_arcade_key(KEY_W, false)
@@ -1018,6 +1021,8 @@ func _test_arcade_controls() -> void:
 		"WASD must move the actual 3D character, not just a menu cursor.")
 	_expect(camera.rotation.is_equal_approx(angle),
 		"The isometric camera angle must remain fixed while following.")
+	_expect(not coin.rotation.is_equal_approx(arrival_pose),
+		"The plaza token should turn with motion enabled, independently of walking.")
 	_arcade_key(KEY_W, true)
 	_arcade_key(KEY_D, true)
 	await _physics_frames(3)
@@ -1117,9 +1122,11 @@ func _test_arcade_controls() -> void:
 	_arcade_key(KEY_D, false)
 	await _physics_frames(2)
 	var camera_pose := camera.transform
+	var coin_pose := coin.transform
 	await _physics_frames(3)
-	_expect(camera.transform.is_equal_approx(camera_pose),
-		"A parked reduced-motion town must have no ambient camera drift.")
+	_expect(camera.transform.is_equal_approx(camera_pose)
+		and coin.transform.is_equal_approx(coin_pose),
+		"A reduced-motion town must hold the camera and plaza coin still when idle.")
 	var id := GameCatalog.all()[0].id
 	town.call("stand_at_game", id)
 	var door: Vector3 = town.call("door_position", id)

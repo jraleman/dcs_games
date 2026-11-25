@@ -406,10 +406,17 @@ func _test_konami_recognizer() -> void:
 
 
 func _test_konami_entry() -> void:
-	for use_pad in [false, true]:
+	var effects_before: bool = _settings.call("visual_effects_enabled")
+	var size_before := root.size
+	for mode: String in ["full", "interrupt marquee", "interrupt portal", "reduced", "effects off"]:
+		var use_pad := mode == "reduced"
+		var animated := not mode in ["reduced", "effects off"]
+		root.size = Vector2i(320, 568) if use_pad else Vector2i(1280, 720)
+		_set_setting(Settings.REDUCED_MOTION_KEY, mode == "reduced")
+		_set_setting(Settings.VISUAL_EFFECTS_KEY, mode != "effects off")
 		var menu := await _open(MAIN_MENU)
 		if menu == null:
-			return
+			break
 		current_scene = menu
 		var count := _routes.size()
 		(menu.get_node("%QuitButton") as Button).grab_focus()
@@ -427,12 +434,47 @@ func _test_konami_entry() -> void:
 				root.push_input(_code_key(key, false))
 		_expect(bool(menu.get("_closing")) and not bool(menu.get("_launching_game")),
 			"The full code must open town directly, not activate a focused title action.")
+		var reveal := menu.get_node("%ArcadeReveal") as Control
+		var display := menu.get_node("%ArcadeDisplay") as Control
+		var trim := menu.get_node("%ArcadeTrim") as Control
+		_expect(reveal.visible and not bool(_router.call("is_transitioning")),
+			"The unlocked marquee must be shown before the scene fade starts.")
+		menu.call("_on_play_pressed")
+		menu.call("_on_settings_pressed")
+		menu.call("go_back")
+		await create_timer(0.10).timeout
+		_expect(reveal.modulate.a > 0.0 and _routes.size() == count,
+			"The reveal must fade in visibly, without taking another title route.")
+		var marquee := menu.get_node("%ArcadeMarquee") as Control
+		_expect(menu.get_global_rect().encloses(marquee.get_global_rect()),
+			"The marquee must remain on-screen, including on narrow phones.")
+		if animated:
+			_expect(display.scale.x > 0.9 and display.scale.x < 1.0,
+				"The full reveal must pass through intermediate marquee sizes.")
+		else:
+			_expect(display.scale.is_equal_approx(Vector2.ONE)
+				and trim.scale.is_equal_approx(Vector2.ONE),
+				"The %s reveal must use opacity only." % mode)
+		if mode == "interrupt marquee":
+			_set_setting(Settings.REDUCED_MOTION_KEY, true)
+			var frozen := display.scale
+			var frozen_trim := trim.scale
+			await create_timer(0.08).timeout
+			_expect(display.scale.is_equal_approx(frozen) and trim.scale.is_equal_approx(frozen_trim),
+				"Enabling reduced motion mid-reveal must stop motion without stranding the route.")
+		await _check_arcade_handoff(mode, count)
 		await _wait_for_route(ARCADE_SELECT)
+		var overlay := _router.get("_fade") as ColorRect
+		_expect(overlay.material == null and is_zero_approx(overlay.color.a),
+			"The router must clear the portal before accepting input in town.")
 		_expect(current_scene != null and current_scene.has_method("_enter_nearby"),
 			"The Konami destination must load the working town controller, not an empty scene.")
 		_expect(_routes.size() == count + 1,
-			"The %s code must route to town exactly once." % ("gamepad" if use_pad else "keyboard"))
+			"The %s reveal must route to town exactly once." % mode)
 		await _close_current()
+	root.size = size_before
+	_set_setting(Settings.VISUAL_EFFECTS_KEY, effects_before)
+	_set_setting(Settings.REDUCED_MOTION_KEY, true)
 	var title := await _open(MAIN_MENU)
 	if title == null:
 		return
@@ -449,6 +491,44 @@ func _test_konami_entry() -> void:
 		and str(_router.call("game_selection_return_scene", GAME_SELECT, MAIN_MENU)) == GAME_SELECT,
 		"A new title visit must forget the code and restore the ordinary Play picker.")
 	await _close(title)
+
+
+func _check_arcade_handoff(mode: String, count: int) -> void:
+	var overlay := _router.get("_fade") as ColorRect
+	var deadline := Time.get_ticks_msec() + 4000
+	while overlay.color.a < 0.30 and _routes.size() == count and Time.get_ticks_msec() < deadline:
+		await process_frame
+	_expect(bool(_router.call("is_transitioning")) and _routes.size() == count,
+		"The title must stay put until the cover is complete.")
+	var portal := overlay.material as ShaderMaterial
+	if mode not in ["full", "interrupt portal"]:
+		_expect(portal == null, "Quiet entry must not activate the portal shader.")
+		return
+	_expect(portal != null and not bool(portal.get_shader_parameter("uncovering")),
+		"The moving portal must cover the title before swapping scenes.")
+	if mode == "interrupt portal" and portal != null:
+		var frozen := overlay.color.a
+		_set_setting(Settings.VISUAL_EFFECTS_KEY, false)
+		await create_timer(0.06).timeout
+		_expect(is_equal_approx(float(portal.get_shader_parameter("frozen_coverage")), frozen)
+			and overlay.color.a > frozen,
+			"Disabling effects mid-portal must park its motion without stopping the fade.")
+	while Time.get_ticks_msec() < deadline:
+		if current_scene != null and current_scene.scene_file_path == ARCADE_SELECT \
+			and overlay.color.a < 0.90:
+			break
+		await process_frame
+	if mode == "full":
+		_expect(portal != null and overlay.material == portal \
+			and bool(portal.get_shader_parameter("uncovering")),
+			"The same portal must open onto the actual town before unlocking input.")
+	else:
+		_expect(overlay.material == null, "Quiet mode must uncover the town with a plain fade.")
+	root.push_input(_code_key(KEY_M))
+	root.push_input(_code_key(KEY_M, false))
+	if current_scene != null and current_scene.scene_file_path == ARCADE_SELECT:
+		_expect(not (current_scene.get_node("%DirectoryOverlay") as Control).visible,
+			"The destination must not receive menu input until the reveal is complete.")
 
 
 func _test_konami_is_collection_only() -> void:

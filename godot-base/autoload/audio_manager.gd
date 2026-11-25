@@ -18,6 +18,7 @@ enum ProceduralSound {
 	CHAINSAW_START,
 	CAN_SLICE,
 	CAN_CLATTER,
+	PORTAL,
 }
 
 ## Placeholder UI sounds — swap these for your own.
@@ -194,6 +195,11 @@ func play_level_unlock() -> void:
 	_play_delayed_sfx(SFX_CLICK, 0.3, 0.0, 1.56)
 
 
+## A soft, accelerating drum roll and wind cue for a world transition.
+func play_portal() -> void:
+	play_sfx(_procedural_stream(ProceduralSound.PORTAL), -8.0)
+
+
 func play_share() -> void:
 	play_sfx(SFX_FOCUS, -2.0, 1.28)
 	_play_delayed_sfx(SFX_CLICK, 0.08, -2.0, 1.12)
@@ -238,6 +244,8 @@ func _procedural_stream(kind: int) -> AudioStreamWAV:
 			duration = 0.24
 		ProceduralSound.CAN_CLATTER:
 			duration = 0.38
+		ProceduralSound.PORTAL:
+			duration = 0.83
 
 	var sample_count := maxi(int(PROCEDURAL_MIX_RATE * duration), 1)
 	var data := PackedByteArray()
@@ -309,6 +317,13 @@ func _procedural_sample(
 				+ second_impact
 				+ _procedural_noise(sample_index) * 0.2
 			) * clatter_attack * clatter_decay
+		ProceduralSound.PORTAL:
+			var age := time - (0.47 if time >= 0.47 else 0.27 if time >= 0.27 else 0.0)
+			var drum := sin(TAU * (72.0 * age + 1.5 * (1.0 - exp(-27.0 * age))))
+			var roll := drum * minf(age * 90.0, 1.0) * exp(-25.0 * age)
+			var air := (_procedural_noise(sample_index) + _procedural_noise(sample_index - 1))
+			var gust := pow(sin(progress * PI), 2.0)
+			return roll * lerpf(0.32, 0.68, progress) + air * 0.14 * gust
 	return 0.0
 
 

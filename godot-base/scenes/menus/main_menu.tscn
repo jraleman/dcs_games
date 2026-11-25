@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scenes/menus/main_menu.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://ui/components/background.tscn" id="2_background"]
@@ -33,6 +33,40 @@ width = 256
 height = 16
 fill_from = Vector2(0, 0)
 fill_to = Vector2(1, 0)
+
+[sub_resource type="StyleBoxFlat" id="Style_arcade_marquee"]
+resource_local_to_scene = true
+bg_color = Color(0.071, 0.082, 0.153, 0.99)
+border_width_left = 1
+border_width_top = 2
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.69, 0.73, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+content_margin_left = 26.0
+content_margin_top = 28.0
+content_margin_right = 26.0
+content_margin_bottom = 28.0
+shadow_color = Color(0.35, 0.66, 0.68, 0.42)
+shadow_size = 16
+
+[sub_resource type="StyleBoxFlat" id="Style_arcade_coin"]
+resource_local_to_scene = true
+bg_color = Color(0.26, 0.16, 0.24, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.81, 0.51, 1)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_left = 40
+corner_radius_bottom_right = 40
+shadow_color = Color(1, 0.66, 0.36, 0.24)
+shadow_size = 9
 
 [node name="MainMenu" type="Control"]
 anchors_preset = 15
@@ -295,6 +329,97 @@ offset_right = 4.0
 offset_bottom = 72.0
 mouse_filter = 2
 color = Color(0.686275, 0.866667, 0.917647, 1)
+
+[node name="ArcadeReveal" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Scrim" type="ColorRect" parent="ArcadeReveal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.03, 0.03, 0.08, 0.83)
+
+[node name="ArcadeDisplay" type="CenterContainer" parent="ArcadeReveal"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ArcadeMarquee" type="PanelContainer" parent="ArcadeReveal/ArcadeDisplay"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_arcade_marquee")
+
+[node name="ArcadeContents" type="VBoxContainer" parent="ArcadeReveal/ArcadeDisplay/ArcadeMarquee"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="ArcadeCoin" type="Label" parent="ArcadeReveal/ArcadeDisplay/ArcadeMarquee/ArcadeContents"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(82, 82)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/normal = SubResource("Style_arcade_coin")
+theme_override_colors/font_color = Color(1, 0.81, 0.51, 1)
+theme_override_font_sizes/font_size = 56
+text = "+"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ArcadeAccepted" type="Label" parent="ArcadeReveal/ArcadeDisplay/ArcadeMarquee/ArcadeContents"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.81, 0.51, 1)
+theme_override_font_sizes/font_size = 18
+text = "CODE ACCEPTED"
+horizontal_alignment = 1
+
+[node name="ArcadeTitle" type="Label" parent="ArcadeReveal/ArcadeDisplay/ArcadeMarquee/ArcadeContents"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MenuHeading"
+theme_override_colors/font_color = Color(0.94, 0.97, 1, 1)
+theme_override_font_sizes/font_size = 52
+text = "Arcade Town"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ArcadeLightSlot" type="Control" parent="ArcadeReveal/ArcadeDisplay/ArcadeMarquee/ArcadeContents"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 4)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="ArcadeTrim" type="ColorRect" parent="ArcadeReveal/ArcadeDisplay/ArcadeMarquee/ArcadeContents/ArcadeLightSlot"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.51, 0.95, 0.87, 1)
 
 [connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/PlayButton" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="Margins/Layout/MenuScroll/ButtonRow/Buttons/SettingsButton" to="." method="_on_settings_pressed"]

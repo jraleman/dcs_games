@@ -47,14 +47,16 @@ func _steer(at: Vector2) -> void:
 func _draw() -> void:
 	var center := size * 0.5
 	var radius := minf(size.x, size.y) * 0.42
-	draw_circle(center, radius, Color(0.09, 0.17, 0.2, 0.86))
-	draw_arc(center, radius, 0, TAU, 48, Color("b9e2e8"), 2.0, true)
+	draw_circle(center, radius, Color(0.071, 0.082, 0.153, 0.94), true)
+	draw_arc(center, radius, 0, TAU, 48, Color("7687ad"), 2.0, true)
+	draw_arc(center, radius * 0.93, 0, TAU, 48, Color("374463"), 2.0, true)
 	for direction: Vector2 in [Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT]:
 		var tip: Vector2 = center + direction * radius * 0.72
 		var side: Vector2 = direction.orthogonal() * radius * 0.12
 		draw_polyline(PackedVector2Array([
 			tip - direction * radius * 0.14 + side, tip,
 			tip - direction * radius * 0.14 - side,
-		]), Color("d2e7e8"), maxf(2.0, radius * 0.025), true)
-	draw_circle(center + _direction * radius * 0.43,
-		radius * 0.27, Color("c2e6e9"))
+		]), Color("dce5fc"), maxf(2.0, radius * 0.025), true)
+	var thumb := center + _direction * radius * 0.43
+	draw_circle(thumb, radius * 0.29, Color("3c667f"), true)
+	draw_circle(thumb, radius * 0.24, Color("82f2df"), true)

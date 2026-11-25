@@ -32,13 +32,13 @@ param(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
         'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
         'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men', 'rastro',
-        'capitans_walk', 'puppy_kraft', 'baloos_chase'
+        'capitans_walk', 'puppy_kraft', 'baloos_chase', 'asmr_doctor'
     )]
     [string[]] $Games = @(
         'triangle_rush', 'desk_can_saw', 'dead_metal_jam', 'chicken_pit', 'anti_chess',
         'lazer_nfc', 'anti_checkers', 'creep_code', 'cube_trials', 'dolces_adventure',
         'sailor_man', 'tifo_beato', 'tuki_tuki', 'yacomio', 'florida_men', 'rastro',
-        'capitans_walk', 'puppy_kraft', 'baloos_chase'
+        'capitans_walk', 'puppy_kraft', 'baloos_chase', 'asmr_doctor'
     ),
     [ValidateSet('solo', 'local')]
     [string[]] $Variants = @('solo', 'local')
@@ -71,6 +71,7 @@ $PosterFrames = @{
     capitans_walk   = @('9.1', '0.68', '0.085', '0.08')
     puppy_kraft     = @('34.5', '0.60', '0.045', '0.145')
     baloos_chase    = @('5.5', '0.38', '0.32', '0.14')
+    asmr_doctor    = @('10.0', '0.49', '0.07', '0.18')
 }
 
 $GameFolders = @{ tuki_tuki = 'tuki-tuki_agents' }
